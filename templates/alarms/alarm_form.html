@@ -1,0 +1,1033 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} аварийного сигнала
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .required-field {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .form-label.required-field {
+        margin-bottom: 0.25rem;
+    }
+    
+    .form-control:disabled {
+        background-color: #f8f9fa !important;
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+        border-color: #dee2e6 !important;
+    }
+    
+    .form-control:not(:disabled) {
+        background-color: #fff !important;
+        opacity: 1 !important;
+        cursor: text !important;
+    }
+    
+    .form-label.disabled {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .field-hint {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .field-hint.text-success {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border: 1px solid #badbcc;
+    }
+    
+    .field-hint.text-warning {
+        background-color: #fff3cd;
+        color: #664d03;
+        border: 1px solid #ffecb5;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+  {% if form.errors %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <ul class="mb-0">
+        {% for field in form %}
+          {% for error in field.errors %}
+            <li>{{ field.label }}: {{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endif %}
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-exclamation-triangle"></i> 
+        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} аварийного сигнала
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'alarms:alarm_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear"></i> Настройки аварийного сигнала
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="alarmForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Основные настройки -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Основные настройки</h6>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.alarm_class.id_for_label }}" class="form-label required-field">
+                                    {{ form.alarm_class.label }}
+                                </label>
+                                <select name="{{ form.alarm_class.name }}" id="{{ form.alarm_class.id_for_label }}" class="form-control{% if form.alarm_class.errors %} is-invalid{% endif %}">
+                                    {% for val, label in form.alarm_class.field.choices %}
+                                        <option value="{{ val }}"{% if form.alarm_class.value == val %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.alarm_class.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.alarm_class.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.table.id_for_label }}" class="form-label required-field">
+                                    {{ form.table.label }}
+                                </label>
+                                <select name="{{ form.table.name }}" id="{{ form.table.id_for_label }}" class="form-control{% if form.table.errors %} is-invalid{% endif %}">
+                                    {% for val, label in form.table.field.choices %}
+                                        <option value="{{ val }}"{% if form.table.value == val %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.table.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.table.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.logic.id_for_label }}" class="form-label required-field">
+                                    {{ form.logic.label }}
+                                </label>
+                                <select name="{{ form.logic.name }}" id="{{ form.logic.id_for_label }}" class="form-control{% if form.logic.errors %} is-invalid{% endif %}">
+                                    {% for val, label in form.logic.field.choices %}
+                                        <option value="{{ val }}"{% if form.logic.value == val %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.logic.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.logic.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3" id="channelField">
+                                <label for="{{ form.channel.id_for_label }}" class="form-label required-field">
+                                    {{ form.channel.label }}
+                                </label>
+                                <input type="text" name="{{ form.channel.name }}" id="{{ form.channel.id_for_label }}" class="form-control{% if form.channel.errors %} is-invalid{% endif %}" value="{{ form.channel.value|default_if_none:'' }}">
+                                {% if form.channel.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.channel.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Дополнительные настройки -->
+                        <div class="col-md-6">
+                            <h6 class="mb-3">Дополнительные настройки</h6>
+                            
+                            <div class="mb-3" id="discreteValField">
+                                <label for="{{ form.discrete_val.id_for_label }}" class="form-label">
+                                    {{ form.discrete_val.label }}
+                                </label>
+                                {{ form.discrete_val }}
+                                {% if form.discrete_val.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.discrete_val.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3" id="limitTypeField">
+                                <label for="{{ form.limit_type.id_for_label }}" class="form-label required-field">
+                                    {{ form.limit_type.label }}
+                                </label>
+                                <select name="{{ form.limit_type.name }}" id="{{ form.limit_type.id_for_label }}" class="form-control{% if form.limit_type.errors %} is-invalid{% endif %}">
+                                    {% for val, label in form.limit_type.field.choices %}
+                                        <option value="{{ val }}"{% if form.limit_type.value == val %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.limit_type.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.limit_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3" id="limitConfigTypeField">
+                                <label for="{{ form.limit_config_type.id_for_label }}" class="form-label required-field">
+                                    {{ form.limit_config_type.label }}
+                                </label>
+                                <select name="{{ form.limit_config_type.name }}" id="{{ form.limit_config_type.id_for_label }}" class="form-control{% if form.limit_config_type.errors %} is-invalid{% endif %}">
+                                    {% for val, label in form.limit_config_type.field.choices %}
+                                        <option value="{{ val }}"{% if form.limit_config_type.value == val %} selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.limit_config_type.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.limit_config_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Настройки значений пределов -->
+                            <div id="limitValuesSection">
+                                <div class="mb-3" id="lowField">
+                                    <label for="{{ form.low.id_for_label }}" class="form-label">
+                                        {{ form.low.label }}
+                                    </label>
+                                    <input type="number" step="0.01" name="{{ form.low.name }}" id="{{ form.low.id_for_label }}" class="form-control{% if form.low.errors %} is-invalid{% endif %}" value="{{ form.low.value|default_if_none:'' }}">
+                                    {% if form.low.errors %}
+                                      <div class="invalid-feedback d-block">{{ form.low.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3" id="highField">
+                                    <label for="{{ form.high.id_for_label }}" class="form-label">
+                                        {{ form.high.label }}
+                                    </label>
+                                    <input type="number" step="0.01" name="{{ form.high.name }}" id="{{ form.high.id_for_label }}" class="form-control{% if form.high.errors %} is-invalid{% endif %}" value="{{ form.high.value|default_if_none:'' }}">
+                                    {% if form.high.errors %}
+                                      <div class="invalid-feedback d-block">{{ form.high.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Настройки каналов пределов -->
+                            <div id="limitChannelsSection">
+                                <div class="mb-3" id="chLowField">
+                                    <label for="{{ form.ch_low.id_for_label }}" class="form-label" id="chLowLabel">
+                                        {{ form.ch_low.label }}
+                                    </label>
+                                    <input type="text" name="{{ form.ch_low.name }}" id="{{ form.ch_low.id_for_label }}" class="form-control{% if form.ch_low.errors %} is-invalid{% endif %}" value="{{ form.ch_low.value|default_if_none:'' }}">
+                                    {% if form.ch_low.errors %}
+                                      <div class="invalid-feedback d-block">{{ form.ch_low.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mb-3" id="chHighField">
+                                    <label for="{{ form.ch_high.id_for_label }}" class="form-label" id="chHighLabel">
+                                        {{ form.ch_high.label }}
+                                    </label>
+                                    <input type="text" name="{{ form.ch_high.name }}" id="{{ form.ch_high.id_for_label }}" class="form-control{% if form.ch_high.errors %} is-invalid{% endif %}" value="{{ form.ch_high.value|default_if_none:'' }}">
+                                    {% if form.ch_high.errors %}
+                                      <div class="invalid-feedback d-block">{{ form.ch_high.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Гистерезис -->
+                    <div class="row" id="hysteresisSection">
+                        <div class="col-12">
+                            <h6 class="mb-3">Гистерезис</h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3" id="hystLowField">
+                                        <label for="{{ form.hyst_low.id_for_label }}" class="form-label">
+                                            {{ form.hyst_low.label }}
+                                        </label>
+                                        {{ form.hyst_low }}
+                                        {% if form.hyst_low.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.hyst_low.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3" id="hystHighField">
+                                        <label for="{{ form.hyst_high.id_for_label }}" class="form-label">
+                                            {{ form.hyst_high.label }}
+                                        </label>
+                                        {{ form.hyst_high }}
+                                        {% if form.hyst_high.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.hyst_high.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Общие настройки -->
+                    <div class="row">
+                        <div class="col-12">
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.msg.id_for_label }}" class="form-label required-field">
+                                    {{ form.msg.label }}
+                                </label>
+                                <textarea name="{{ form.msg.name }}" id="{{ form.msg.id_for_label }}" class="form-control{% if form.msg.errors %} is-invalid{% endif %}" rows="3">{{ form.msg.value|default_if_none:'' }}</textarea>
+                                {% if form.msg.errors %}
+                                  <div class="invalid-feedback d-block">{{ form.msg.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.confirm_method.id_for_label }}" class="form-label required-field">
+                                            {{ form.confirm_method.label }}
+                                        </label>
+                                        <select name="{{ form.confirm_method.name }}" id="{{ form.confirm_method.id_for_label }}" class="form-control{% if form.confirm_method.errors %} is-invalid{% endif %}">
+                                            {% for val, label in form.confirm_method.field.choices %}
+                                                <option value="{{ val }}"{% if form.confirm_method.value == val %} selected{% endif %}>{{ label }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        {% if form.confirm_method.errors %}
+                                          <div class="invalid-feedback d-block">{{ form.confirm_method.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="{{ form.prior.id_for_label }}" class="form-label">
+                                            {{ form.prior.label }}
+                                        </label>
+                                        {{ form.prior }}
+                                        {% if form.prior.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ form.prior.errors.0 }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'alarms:alarm_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> 
+                            {% if form.instance.pk %}Сохранить{% else %}Создать{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Справка -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Справка
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="helpContent">
+                    <h6>Типы логики:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>discrete</strong> - дискретное событие (0/не 0)</li>
+                        <li><strong>analog</strong> - аналоговое событие с пределами</li>
+                        <li><strong>change</strong> - любое изменение события</li>
+                        <li><strong>event</strong> - событие true/false</li>
+                    </ul>
+                    
+                    <h6>Классы аварий:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>error</strong> - ошибка (высокий приоритет)</li>
+                        <li><strong>warn</strong> - предупреждение</li>
+                        <li><strong>info</strong> - информация</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    console.log('DOM ready, initializing form logic...');
+    
+    // Проверяем существование элементов
+    console.log('Logic field exists:', $('#id_logic').length > 0);
+    console.log('Hysteresis section exists:', $('#hysteresisSection').length > 0);
+    console.log('Limit type field exists:', $('#limitTypeField').length > 0);
+    console.log('Low field exists:', $('#lowField').length > 0);
+    console.log('High field exists:', $('#highField').length > 0);
+    
+    // Обработчик изменения типа логики
+    $('#id_logic').change(function() {
+        console.log('Logic changed to:', $(this).val());
+        updateFieldsVisibility($(this).val());
+    });
+    
+    // Обработчик изменения типа ограничения
+    $('#id_limit_type').change(function() {
+        console.log('Limit type changed to:', $(this).val());
+        updateLimitTypeVisibility($(this).val());
+        updateLimitFieldsVisibility($(this).val());
+        
+        // Дополнительно обновляем видимость полей настройки пределов
+        const currentLimitConfigType = $('#id_limit_config_type').val();
+        if (currentLimitConfigType && currentLimitConfigType !== '') {
+            console.log('Updating limit config visibility after limit type change:', currentLimitConfigType);
+            updateLimitConfigVisibility(currentLimitConfigType);
+        }
+    });
+    
+    // Дополнительный обработчик для всех изменений в поле limit_type
+    $(document).on('change', '#id_limit_type', function() {
+        console.log('Document change handler: limit type changed to:', $(this).val());
+        updateLimitTypeVisibility($(this).val());
+        updateLimitFieldsVisibility($(this).val());
+        
+        // Дополнительно обновляем видимость полей настройки пределов
+        const currentLimitConfigType = $('#id_limit_config_type').val();
+        if (currentLimitConfigType && currentLimitConfigType !== '') {
+            console.log('Updating limit config visibility after limit type change:', currentLimitConfigType);
+            updateLimitConfigVisibility(currentLimitConfigType);
+        }
+    });
+    
+    // Обработчик изменения типа настройки пределов
+    $('#id_limit_config_type').change(function() {
+        console.log('Limit config type changed to:', $(this).val());
+        updateLimitConfigVisibility($(this).val());
+    });
+    
+    // Дополнительный обработчик для всех изменений в поле limit_config_type
+    $(document).on('change', '#id_limit_config_type', function() {
+        console.log('Document change handler: limit config type changed to:', $(this).val());
+        updateLimitConfigVisibility($(this).val());
+    });
+    
+    // Инициализация при загрузке страницы
+    const initialLogic = $('#id_logic').val();
+    console.log('Initial logic value:', initialLogic);
+    
+    // Если логика не выбрана, скрываем все условные поля
+    if (!initialLogic || initialLogic === '') {
+        console.log('No logic selected, hiding all conditional fields');
+        hideAllConditionalFields();
+    } else {
+        updateFieldsVisibility(initialLogic);
+    }
+    
+    // Инициализация полей пределов
+    const initialLimitType = $('#id_limit_type').val();
+    console.log('Initial limit type value:', initialLimitType);
+    updateLimitFieldsVisibility(initialLimitType);
+    
+    // Инициализация типа настройки пределов
+    const initialLimitConfigType = $('#id_limit_config_type').val();
+    console.log('Initial limit config type value:', initialLimitConfigType);
+    updateLimitTypeVisibility(initialLimitType);
+    updateLimitConfigVisibility(initialLimitConfigType);
+    
+    // Дополнительная инициализация для analog логики
+    if (initialLogic === 'analog' && initialLimitType && initialLimitConfigType) {
+        console.log('Initializing limit config sections for analog logic with existing values');
+        console.log('Limit type:', initialLimitType, 'Config type:', initialLimitConfigType);
+        
+        // Принудительно показываем поля настройки пределов
+        setTimeout(function() {
+            updateLimitConfigVisibility(initialLimitConfigType);
+        }, 100);
+    }
+    
+    // Инициализация звездочки для поля типа ограничения
+    if (initialLogic === 'analog') {
+        $('#limitTypeField .form-label').addClass('required-field');
+    }
+    
+    // Дополнительная инициализация с задержкой
+    setTimeout(function() {
+        console.log('Delayed initialization of limit fields');
+        const currentLimitType = $('#id_limit_type').val();
+        console.log('Current limit type after delay:', currentLimitType);
+        updateLimitFieldsVisibility(currentLimitType);
+        
+        // Дополнительная проверка полей гистерезиса
+        const currentLogic = $('#id_logic').val();
+        if (currentLogic === 'analog') {
+            console.log('Ensuring hysteresis fields are visible for analog logic');
+            $('#hysteresisSection, #hystLowField, #hystHighField').show();
+            $('#hysteresisSection, #hystLowField, #hystHighField').css('display', 'block');
+            
+            // Обновляем видимость секций настройки пределов
+            const currentLimitType = $('#id_limit_type').val();
+            const currentLimitConfigType = $('#id_limit_config_type').val();
+            updateLimitTypeVisibility(currentLimitType);
+            updateLimitConfigVisibility(currentLimitConfigType);
+        }
+    }, 500);
+    
+    function hideAllConditionalFields() {
+        const conditionalFields = [
+            '#channelField', '#discreteValField', 
+            '#limitTypeField', '#lowField', '#highField',
+            '#hystLowField', '#hystHighField', '#chLowField', '#chHighField'
+        ];
+        
+        // Скрываем секцию гистерезиса
+        $('#hysteresisSection').hide();
+        
+        conditionalFields.forEach(field => {
+            $(field).hide();
+        });
+    }
+    
+    function updateLimitTypeVisibility(limitType) {
+        console.log('Updating limit type visibility for limit type:', limitType);
+        
+        // Проверяем, выбран ли тип ограничения
+        if (!limitType || limitType === '') {
+            console.log('No limit type selected, hiding limit config fields');
+            $('#limitConfigTypeField').hide();
+            $('#limitValuesSection, #limitChannelsSection').hide();
+            return;
+        }
+        
+        // Если тип ограничения выбран, показываем поле типа настройки
+        console.log('Limit type selected, showing limit config type field');
+        $('#limitConfigTypeField').show();
+        $('#limitConfigTypeField').css('display', 'block');
+        
+        // Автоматически показываем поля настройки пределов, если тип настройки уже выбран
+        const currentLimitConfigType = $('#id_limit_config_type').val();
+        if (currentLimitConfigType && currentLimitConfigType !== '') {
+            console.log('Limit config type already selected, showing corresponding fields:', currentLimitConfigType);
+            updateLimitConfigVisibility(currentLimitConfigType);
+        }
+    }
+    
+    function updateLimitConfigVisibility(configType) {
+        console.log('Updating limit config visibility for config type:', configType);
+        
+        // Проверяем, выбран ли тип ограничения
+        const limitType = $('#id_limit_type').val();
+        if (!limitType || limitType === '') {
+            console.log('No limit type selected, hiding all limit config sections');
+            $('#limitValuesSection, #limitChannelsSection').hide();
+            return;
+        }
+        
+        // Скрываем обе секции по умолчанию
+        $('#limitValuesSection').hide();
+        $('#limitChannelsSection').hide();
+        
+        // Показываем соответствующую секцию
+        switch(configType) {
+            case 'values':
+                console.log('Showing limit values section');
+                $('#limitValuesSection').show();
+                $('#limitValuesSection').css('display', 'block');
+                
+                // Принудительно показываем все поля внутри секции
+                $('#limitValuesSection .mb-3, #limitValuesSection .row, #limitValuesSection .col-md-6').show();
+                $('#limitValuesSection .mb-3, #limitValuesSection .row, #limitValuesSection .col-md-6').css('display', 'block');
+                
+                // Дополнительно показываем поля внутри секции с задержкой
+                setTimeout(function() {
+                    $('#limitValuesSection .mb-3').show();
+                    $('#limitValuesSection .mb-3').css('display', 'block');
+                    console.log('Limit values section fields shown');
+                }, 50);
+                break;
+            case 'channels':
+                console.log('Showing limit channels section');
+                $('#limitChannelsSection').show();
+                $('#limitChannelsSection').css('display', 'block');
+                
+                // Принудительно показываем все поля внутри секции
+                $('#limitChannelsSection .mb-3, #limitChannelsSection .row, #limitChannelsSection .col-md-6').show();
+                $('#limitChannelsSection .mb-3, #limitChannelsSection .row, #limitChannelsSection .col-md-6').css('display', 'block');
+                
+                // Дополнительно показываем поля внутри секции с задержкой
+                setTimeout(function() {
+                    $('#limitChannelsSection .mb-3').show();
+                    $('#limitChannelsSection .mb-3').css('display', 'block');
+                    console.log('Limit channels section fields shown');
+                }, 50);
+                break;
+            default:
+                console.log('No config type selected, keeping sections hidden');
+                break;
+        }
+    }
+    
+    function updateLimitFieldsVisibility(limitType) {
+        console.log('Updating limit fields visibility for limit type:', limitType);
+        
+        // Проверяем существование полей
+        const lowField = $('#id_low');
+        const highField = $('#id_high');
+        
+        console.log('Low field found:', lowField.length > 0);
+        console.log('High field found:', highField.length > 0);
+        
+        if (lowField.length === 0 || highField.length === 0) {
+            console.error('Limit fields not found!');
+            return;
+        }
+        
+        // Блокируем оба поля по умолчанию
+        lowField.prop('disabled', true);
+        highField.prop('disabled', true);
+        
+        // Обновляем подписи полей
+        lowField.closest('.mb-3').find('.form-label').removeClass('disabled');
+        highField.closest('.mb-3').find('.form-label').removeClass('disabled');
+        
+        // Удаляем старые подсказки
+        $('.field-hint').remove();
+        
+        // Разблокируем поля в зависимости от типа ограничения
+        switch(limitType) {
+            case 'low':
+                console.log('Enabling low limit field');
+                lowField.prop('disabled', false);
+                lowField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения снизу</div>');
+                highField.closest('.mb-3').find('.form-label').addClass('disabled');
+                console.log('Low field disabled after enabling:', lowField.prop('disabled'));
+                break;
+            case 'high':
+                console.log('Enabling high limit field');
+                highField.prop('disabled', false);
+                highField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения сверху</div>');
+                lowField.closest('.mb-3').find('.form-label').addClass('disabled');
+                console.log('High field disabled after enabling:', highField.prop('disabled'));
+                break;
+            case 'low_high':
+                console.log('Enabling both limit fields (low_high)');
+                lowField.prop('disabled', false);
+                highField.prop('disabled', false);
+                lowField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения снизу</div>');
+                highField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения сверху</div>');
+                console.log('Both fields disabled after enabling:', lowField.prop('disabled'), highField.prop('disabled'));
+                break;
+            default:
+                console.log('No limit type selected, keeping fields disabled');
+                lowField.closest('.mb-3').find('.form-label').addClass('disabled');
+                highField.closest('.mb-3').find('.form-label').addClass('disabled');
+                lowField.closest('.mb-3').append('<div class="field-hint text-warning">⚠ Выберите тип ограничения для активации полей</div>');
+                break;
+        }
+        
+        // Принудительно обновляем состояние полей
+        lowField.trigger('change');
+        highField.trigger('change');
+        
+        // Также обновляем каналы пределов
+        updateLimitChannelsVisibility(limitType);
+    }
+    
+    function updateLimitChannelsVisibility(limitType) {
+        console.log('Updating limit channels visibility for limit type:', limitType);
+        
+        // Проверяем существование полей
+        const chLowField = $('#id_ch_low');
+        const chHighField = $('#id_ch_high');
+        
+        console.log('Ch low field found:', chLowField.length > 0);
+        console.log('Ch high field found:', chHighField.length > 0);
+        
+        if (chLowField.length === 0 || chHighField.length === 0) {
+            console.error('Limit channel fields not found!');
+            return;
+        }
+        
+        // Блокируем оба поля по умолчанию
+        chLowField.prop('disabled', true);
+        chHighField.prop('disabled', true);
+        
+        // Обновляем подписи полей
+        chLowField.closest('.mb-3').find('.form-label').removeClass('disabled');
+        chHighField.closest('.mb-3').find('.form-label').removeClass('disabled');
+        
+        // Удаляем старые подсказки для каналов
+        $('.field-hint').filter(function() {
+            return $(this).closest('#limitChannelsSection').length > 0;
+        }).remove();
+        
+        // Разблокируем поля в зависимости от типа ограничения
+        switch(limitType) {
+            case 'low':
+                console.log('Enabling ch low field');
+                chLowField.prop('disabled', false);
+                chLowField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения снизу</div>');
+                chHighField.closest('.mb-3').find('.form-label').addClass('disabled');
+                console.log('Ch low field disabled after enabling:', chLowField.prop('disabled'));
+                break;
+            case 'high':
+                console.log('Enabling ch high field');
+                chHighField.prop('disabled', false);
+                chHighField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения сверху</div>');
+                chLowField.closest('.mb-3').find('.form-label').addClass('disabled');
+                console.log('Ch high field disabled after enabling:', chHighField.prop('disabled'));
+                break;
+            case 'low_high':
+                console.log('Enabling both limit channel fields (low_high)');
+                chLowField.prop('disabled', false);
+                chHighField.prop('disabled', false);
+                chLowField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения снизу</div>');
+                chHighField.closest('.mb-3').append('<div class="field-hint text-success">✓ Поле активно для ограничения сверху</div>');
+                console.log('Both channel fields disabled after enabling:', chLowField.prop('disabled'), chHighField.prop('disabled'));
+                break;
+            default:
+                console.log('No limit type selected, keeping channel fields disabled');
+                chLowField.closest('.mb-3').find('.form-label').addClass('disabled');
+                chHighField.closest('.mb-3').find('.form-label').addClass('disabled');
+                chLowField.closest('.mb-3').append('<div class="field-hint text-warning">⚠ Выберите тип ограничения для активации полей</div>');
+                break;
+        }
+        
+        // Принудительно обновляем состояние полей
+        chLowField.trigger('change');
+        chHighField.trigger('change');
+    }
+    
+    function updateFieldsVisibility(logic) {
+        console.log('Updating fields visibility for logic:', logic);
+        
+        // Скрываем все условные поля и секции
+        const conditionalFields = [
+            '#channelField', '#discreteValField', 
+            '#limitTypeField'
+        ];
+        
+        // Скрываем секции
+        console.log('Hiding hysteresis section');
+        $('#hysteresisSection').hide();
+        
+        console.log('Hiding limit config sections');
+        $('#limitValuesSection, #limitChannelsSection').hide();
+        
+        conditionalFields.forEach(field => {
+            console.log('Hiding field:', field, 'exists:', $(field).length > 0);
+            $(field).hide();
+        });
+        
+        // Убираем звездочку с поля типа ограничения по умолчанию
+        $('#limitTypeField .form-label').removeClass('required-field');
+        
+        // Показываем поля в зависимости от логики
+        switch(logic) {
+            case 'discrete':
+                console.log('Showing discrete fields');
+                $('#channelField, #discreteValField').show();
+                break;
+            case 'analog':
+                console.log('Showing analog fields');
+                $('#channelField, #limitTypeField').show();
+                console.log('Showing hysteresis section');
+                $('#hysteresisSection').show();
+                
+                // Добавляем звездочку для поля типа ограничения при analog логике
+                $('#limitTypeField .form-label').addClass('required-field');
+                
+                // Принудительно показываем поля с помощью CSS
+                $('#channelField, #limitTypeField, #hysteresisSection').css('display', 'block');
+                
+                // Отложенное выполнение для гарантии
+                setTimeout(function() {
+                    $('#channelField, #limitTypeField, #hysteresisSection').show();
+                    $('#channelField, #limitTypeField, #hysteresisSection').css('display', 'block');
+                    
+                    // Дополнительно показываем поля гистерезиса
+                    $('#hystLowField, #hystHighField').show();
+                    $('#hystLowField, #hystHighField').css('display', 'block');
+                }, 100);
+                
+                // Дополнительная проверка для analog
+                console.log('After showing analog fields:');
+                console.log('- Channel field visible:', $('#channelField').is(':visible'));
+                console.log('- Limit type field visible:', $('#limitTypeField').is(':visible'));
+                console.log('- Limit config type field visible:', $('#limitConfigTypeField').is(':visible'));
+                console.log('- Hysteresis section visible:', $('#hysteresisSection').is(':visible'));
+                console.log('- Hyst low field visible:', $('#hystLowField').is(':visible'));
+                console.log('- Hyst high field visible:', $('#hystHighField').is(':visible'));
+                
+                // Обновляем поля пределов после показа полей
+                setTimeout(function() {
+                    const currentLimitType = $('#id_limit_type').val();
+                    const currentLimitConfigType = $('#id_limit_config_type').val();
+                    console.log('Updating limit fields after showing analog fields, limit type:', currentLimitType, 'config type:', currentLimitConfigType);
+                    updateLimitFieldsVisibility(currentLimitType);
+                    updateLimitConfigVisibility(currentLimitConfigType);
+                }, 200);
+                break;
+            case 'change':
+                console.log('Showing change field');
+                $('#channelField').show();
+                break;
+        }
+        
+        // Обновляем справку
+        updateHelpContent(logic);
+    }
+    
+    function updateHelpContent(logic) {
+        let helpText = '';
+        
+        switch(logic) {
+            case 'discrete':
+                helpText = `
+                    <h6>Логика "discrete":</h6>
+                    <p>Дискретное событие: ноль/отличное от ноля. Укажите канал и значение предела.</p>
+                `;
+                break;
+            case 'analog':
+                helpText = `
+                    <h6>Логика "analog":</h6>
+                    <p>Аналоговое событие с пределами. Сначала выберите тип ограничения, затем способ настройки пределов.</p>
+                    <p><strong>Порядок настройки:</strong></p>
+                    <ol>
+                        <li>Выберите <strong>тип ограничения</strong> (снизу/сверху/снизу и сверху)</li>
+                        <li>Выберите <strong>тип настройки пределов</strong>:
+                            <ul>
+                                <li><strong>Значения пределов</strong> - укажите числовые значения</li>
+                                <li><strong>Каналы пределов</strong> - укажите каналы с значениями</li>
+                            </ul>
+                        </li>
+                    </ol>
+                    <p><strong>Важно:</strong> Настройки пределов появятся только после выбора типа ограничения!</p>
+                `;
+                break;
+            default:
+                helpText = `
+                    <h6>Выберите способ наблюдения:</h6>
+                    <ul class="list-unstyled">
+                        <li><strong>discrete</strong> - дискретное событие (0/не 0)</li>
+                        <li><strong>analog</strong> - аналоговое событие с пределами</li>
+                        <li><strong>change</strong> - любое изменение события</li>
+                    </ul>
+                `;
+                break;
+        }
+        
+        $('#helpContent').html(helpText);
+    }
+    
+    // Валидация формы перед отправкой
+    $('#alarmForm').submit(function(e) {
+        console.log('=== FORM SUBMIT START ===');
+        console.log('submit start');
+        const logic = $('#id_logic').val();
+        const limitType = $('#id_limit_type').val();
+        const channel = $('#id_channel').val();
+        
+        console.log('Validation values:', { logic, limitType, channel });
+        
+        // Удаляем старые предупреждения
+        $('#limitTypeField .invalid-feedback.js-limit-type').remove();
+        $('#id_limit_type').removeClass('is-invalid');
+        $('#lowField .invalid-feedback.js-low').remove();
+        $('#highField .invalid-feedback.js-high').remove();
+        $('#chLowField .invalid-feedback.js-ch-low').remove();
+        $('#chHighField .invalid-feedback.js-ch-high').remove();
+        $('#channelField .invalid-feedback.js-channel').remove();
+        $('#id_low').removeClass('is-invalid');
+        $('#id_high').removeClass('is-invalid');
+        $('#id_ch_low').removeClass('is-invalid');
+        $('#id_ch_high').removeClass('is-invalid');
+        $('#id_channel').removeClass('is-invalid');
+
+        let valid = true;
+        let firstInvalid = null;
+
+        // Проверяем канал для analog логики
+        if (logic === 'analog' && !isFilled(channel)) {
+            console.log('Channel validation failed');
+            valid = false;
+            $('#id_channel').addClass('is-invalid');
+            if (!firstInvalid) firstInvalid = $('#id_channel');
+        }
+
+        if (logic === 'analog' && (!limitType || limitType === '')) {
+            console.log('Limit type validation failed');
+            valid = false;
+            $('#id_limit_type').addClass('is-invalid');
+            if (!firstInvalid) firstInvalid = $('#id_limit_type');
+        }
+
+        if (logic === 'analog' && limitType) {
+            const limitConfigType = $('#id_limit_config_type').val();
+            console.log('Limit config type:', limitConfigType);
+            
+            // low
+            const lowField = $('#id_low');
+            const highField = $('#id_high');
+            const chLowField = $('#id_ch_low');
+            const chHighField = $('#id_ch_high');
+            console.log('Field values:', {
+                low: lowField.val(),
+                high: highField.val(), 
+                ch_low: chLowField.val(), 
+                ch_high: chHighField.val()
+            });
+            console.log('Field states:', {
+                lowDisabled: lowField.prop('disabled'),
+                highDisabled: highField.prop('disabled'),
+                chLowDisabled: chLowField.prop('disabled'),
+                chHighDisabled: chHighField.prop('disabled')
+            });
+            
+            // Валидируем поля в зависимости от типа настройки пределов
+            if (limitConfigType === 'values') {
+                // Валидируем только поля значений пределов
+                // low
+                if (!lowField.prop('disabled')) {
+                    if (!isFilled(lowField.val())) {
+                        console.log('Low field validation failed');
+                        lowField.addClass('is-invalid');
+                        $('#lowField').append('<div class="invalid-feedback d-block js-low">Обязательное поле</div>');
+                        if (!firstInvalid) firstInvalid = lowField;
+                        valid = false;
+                    }
+                } else {
+                    if (!isFilled(lowField.val())) {
+                        lowField.val('0');
+                    }
+                }
+                // high
+                if (!highField.prop('disabled')) {
+                    if (!isFilled(highField.val())) {
+                        console.log('High field validation failed');
+                        highField.addClass('is-invalid');
+                        $('#highField').append('<div class="invalid-feedback d-block js-high">Обязательное поле</div>');
+                        if (!firstInvalid) firstInvalid = highField;
+                        valid = false;
+                    }
+                } else {
+                    if (!isFilled(highField.val())) {
+                        highField.val('0');
+                    }
+                }
+            } else if (limitConfigType === 'channels') {
+                // Валидируем только поля каналов пределов
+                // ch_low
+                if (!chLowField.prop('disabled')) {
+                    if (!isFilled(chLowField.val())) {
+                        console.log('Ch low field validation failed');
+                        chLowField.addClass('is-invalid');
+                        $('#chLowField').append('<div class="invalid-feedback d-block js-ch-low">Обязательное поле</div>');
+                        if (!firstInvalid) firstInvalid = chLowField;
+                        valid = false;
+                    }
+                } else {
+                    if (!isFilled(chLowField.val())) {
+                        chLowField.val('0');
+                    }
+                }
+                // ch_high
+                if (!chHighField.prop('disabled')) {
+                    if (!isFilled(chHighField.val())) {
+                        console.log('Ch high field validation failed');
+                        chHighField.addClass('is-invalid');
+                        $('#chHighField').append('<div class="invalid-feedback d-block js-ch-high">Обязательное поле</div>');
+                        if (!firstInvalid) firstInvalid = chHighField;
+                        valid = false;
+                    }
+                } else {
+                    if (!isFilled(chHighField.val())) {
+                        chHighField.val('0');
+                    }
+                }
+            }
+        }
+        
+        console.log('Validation result:', valid);
+        if (!valid) {
+            e.preventDefault();
+            if (firstInvalid) {
+                firstInvalid.focus();
+                console.log('Focus set to:', firstInvalid.attr('id'));
+            }
+            console.log('submit blocked by validation');
+            console.log('=== FORM SUBMIT BLOCKED ===');
+            return false;
+        }
+        console.log('submit end - form is valid');
+        console.log('=== FORM SUBMIT END - PROCEEDING ===');
+        return true;
+    });
+
+    // Удаляем предупреждение при вводе
+    $('#id_limit_type, #id_low, #id_high, #id_ch_low, #id_ch_high, #id_channel').on('change input', function() {
+        $(this).removeClass('is-invalid');
+        $(this).closest('.mb-3').find('.invalid-feedback').remove();
+    });
+
+    function updateRequiredStars() {
+        // Канал нижнего предела
+        if (!$('#id_ch_low').prop('disabled')) {
+            $('#chLowLabel').addClass('required-field');
+        } else {
+            $('#chLowLabel').removeClass('required-field');
+        }
+        // Канал верхнего предела
+        if (!$('#id_ch_high').prop('disabled')) {
+            $('#chHighLabel').addClass('required-field');
+        } else {
+            $('#chHighLabel').removeClass('required-field');
+        }
+    }
+    $('#id_limit_type, #id_limit_config_type').on('change', updateRequiredStars);
+    $(document).ready(updateRequiredStars);
+});
+
+function isFilled(val) {
+    if (val === undefined || val === null) return false;
+    const v = String(val).replace(/\s+/g, '');
+    return v !== '' && v !== 'NaN';
+}
+</script>
+{% endblock %} 

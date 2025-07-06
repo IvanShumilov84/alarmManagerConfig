@@ -1,0 +1,295 @@
+{% extends 'base.html' %}
+
+{% block title %}Аварийные сигналы - Система управления аварийными сигналами{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2" role="group">
+            <a href="?display_mode=compact{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}" class="btn btn-outline-secondary {% if display_mode == 'compact' %}active{% endif %}">
+                <i class="bi bi-list"></i> Компактно
+            </a>
+            <a href="?display_mode=full{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}" class="btn btn-outline-secondary {% if display_mode == 'full' %}active{% endif %}">
+                <i class="bi bi-card-text"></i> Полно
+            </a>
+        </div>
+        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Добавить сигнал
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if alarms %}
+            {% if display_mode == 'compact' %}
+                <!-- Компактное отображение -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    <a href="?{% if current_sort == 'id' and current_order == 'asc' %}sort=id&order=desc{% else %}sort=id&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        ID
+                                        {% if current_sort == 'id' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'alarm_class' and current_order == 'asc' %}sort=alarm_class&order=desc{% else %}sort=alarm_class&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Класс
+                                        {% if current_sort == 'alarm_class' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'table' and current_order == 'asc' %}sort=table&order=desc{% else %}sort=table&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Таблица
+                                        {% if current_sort == 'table' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'logic' and current_order == 'asc' %}sort=logic&order=desc{% else %}sort=logic&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Логика
+                                        {% if current_sort == 'logic' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'channel' and current_order == 'asc' %}sort=channel&order=desc{% else %}sort=channel&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Канал
+                                        {% if current_sort == 'channel' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'msg' and current_order == 'asc' %}sort=msg&order=desc{% else %}sort=msg&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Сообщение
+                                        {% if current_sort == 'msg' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="?{% if current_sort == 'prior' and current_order == 'asc' %}sort=prior&order=desc{% else %}sort=prior&order=asc{% endif %}&display_mode={{ display_mode }}{% if page_obj.number > 1 %}&page={{ page_obj.number }}{% endif %}" 
+                                       class="text-decoration-none text-dark">
+                                        Приоритет
+                                        {% if current_sort == 'prior' %}
+                                            <i class="bi bi-arrow-{% if current_order == 'asc' %}up{% else %}down{% endif %}"></i>
+                                        {% endif %}
+                                    </a>
+                                </th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for alarm in alarms %}
+                            <tr>
+                                <td>{{ alarm.id }}</td>
+                                <td>
+                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %}">
+                                        {{ alarm.get_alarm_class_display }}
+                                    </span>
+                                </td>
+                                <td>{{ alarm.table.name }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                </td>
+                                <td>
+                                    {% if alarm.channel %}
+                                        <code>{{ alarm.channel }}</code>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ alarm.msg|truncatechars:60 }}</td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ alarm.prior }}</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
+                                           class="btn btn-sm btn-outline-primary" 
+                                           title="Редактировать">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
+                                           class="btn btn-sm btn-outline-danger" 
+                                           title="Удалить"
+                                           onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <!-- Полное отображение -->
+                <div class="row">
+                    {% for alarm in alarms %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">
+                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %} me-2">
+                                        {{ alarm.get_alarm_class_display }}
+                                    </span>
+                                    ID: {{ alarm.id }}
+                                </h6>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
+                                       class="btn btn-sm btn-outline-primary" 
+                                       title="Редактировать">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
+                                       class="btn btn-sm btn-outline-danger" 
+                                       title="Удалить"
+                                       onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Таблица:</strong></div>
+                                    <div class="col-8">{{ alarm.table.name }}</div>
+                                </div>
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Логика:</strong></div>
+                                    <div class="col-8">
+                                        <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                    </div>
+                                </div>
+                                {% if alarm.channel %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Канал:</strong></div>
+                                    <div class="col-8"><code>{{ alarm.channel }}</code></div>
+                                </div>
+                                {% endif %}
+                                {% if alarm.limit_type %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Тип лимита:</strong></div>
+                                    <div class="col-8">{{ alarm.get_limit_type_display }}</div>
+                                </div>
+                                {% endif %}
+                                {% if alarm.low or alarm.high %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Лимиты:</strong></div>
+                                    <div class="col-8">
+                                        {% if alarm.low %}<div>Низкий: {{ alarm.low }}</div>{% endif %}
+                                        {% if alarm.high %}<div>Высокий: {{ alarm.high }}</div>{% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if alarm.discrete_val %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Дискретное значение:</strong></div>
+                                    <div class="col-8">{{ alarm.discrete_val }}</div>
+                                </div>
+                                {% endif %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Сообщение:</strong></div>
+                                    <div class="col-8">{{ alarm.msg }}</div>
+                                </div>
+                                {% if alarm.hyst_low or alarm.hyst_high %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Гистерезис:</strong></div>
+                                    <div class="col-8">
+                                        {% if alarm.hyst_low %}<div>Низкий: {{ alarm.hyst_low }}</div>{% endif %}
+                                        {% if alarm.hyst_high %}<div>Высокий: {{ alarm.hyst_high }}</div>{% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if alarm.ch_low or alarm.ch_high %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Каналы гистерезиса:</strong></div>
+                                    <div class="col-8">
+                                        {% if alarm.ch_low %}<div>Низкий: {{ alarm.ch_low }}</div>{% endif %}
+                                        {% if alarm.ch_high %}<div>Высокий: {{ alarm.ch_high }}</div>{% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% if alarm.confirm_method %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Подтверждение:</strong></div>
+                                    <div class="col-8">{{ alarm.get_confirm_method_display }}</div>
+                                </div>
+                                {% endif %}
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Приоритет:</strong></div>
+                                    <div class="col-8">
+                                        <span class="badge bg-secondary">{{ alarm.prior }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer text-muted">
+                                <small>Создан: {{ alarm.created_at|date:"d.m.Y H:i" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <!-- Пагинация -->
+            {% if is_paginated %}
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1&display_mode={{ display_mode }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}">&laquo; Первая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&display_mode={{ display_mode }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}">Предыдущая</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&display_mode={{ display_mode }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}">Следующая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&display_mode={{ display_mode }}{% if current_sort %}&sort={{ current_sort }}{% endif %}{% if current_order %}&order={{ current_order }}{% endif %}">Последняя &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1"></i>
+                <h4>Аварийные сигналы не найдены</h4>
+                <p>Создайте первый аварийный сигнал для начала работы</p>
+                <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Создать первый сигнал
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

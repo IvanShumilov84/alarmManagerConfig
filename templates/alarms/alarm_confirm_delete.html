@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Удаление аварийного сигнала{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-exclamation-triangle"></i> Удаление аварийного сигнала
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'alarms:alarm_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Вы действительно хотите удалить аварийный сигнал:
+                </p>
+                
+                <div class="alert alert-warning">
+                    <h6>Детали сигнала:</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>ID:</strong> {{ object.id }}</li>
+                        <li><strong>Класс:</strong> {{ object.get_alarm_class_display }}</li>
+                        <li><strong>Логика:</strong> {{ object.get_logic_display }}</li>
+                        <li><strong>Сообщение:</strong> {{ object.msg }}</li>
+                        <li><strong>Таблица:</strong> {{ object.table.name }}</li>
+                    </ul>
+                </div>
+                
+                <p class="text-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Внимание!</strong> Это действие нельзя отменить.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'alarms:alarm_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} таблицы аварий
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-table"></i> 
+        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} таблицы аварий
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'alarms:table_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-gear"></i> Настройки таблицы
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                            {{ form.name.label }}
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.name.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Укажите уникальное название для таблицы аварий
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            {{ form.description.label }}
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Описание поможет понять назначение таблицы
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'alarms:table_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i> 
+                            {% if form.instance.pk %}Сохранить{% else %}Создать{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Справка -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Справка
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Таблицы аварий:</h6>
+                <p>Таблицы аварий используются для группировки аварийных сигналов по функциональным областям или системам.</p>
+                
+                <h6>Рекомендации:</h6>
+                <ul>
+                    <li>Используйте понятные названия</li>
+                    <li>Добавляйте описания для лучшего понимания</li>
+                    <li>Группируйте связанные аварии в одну таблицу</li>
+                </ul>
+                
+                {% if form.instance.pk %}
+                    <hr>
+                    <h6>Статистика:</h6>
+                    <p><strong>Аварийных сигналов:</strong> {{ form.instance.alarms.count }}</p>
+                    <p><strong>Создана:</strong> {{ form.instance.created_at|date:"d.m.Y H:i" }}</p>
+                    <p><strong>Обновлена:</strong> {{ form.instance.updated_at|date:"d.m.Y H:i" }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

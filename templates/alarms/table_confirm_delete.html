@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Удаление таблицы аварий{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-table"></i> Удаление таблицы аварий
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'alarms:table_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-exclamation-triangle"></i> Подтверждение удаления
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    Вы действительно хотите удалить таблицу аварий:
+                </p>
+                
+                <div class="alert alert-warning">
+                    <h6>Детали таблицы:</h6>
+                    <ul class="list-unstyled mb-0">
+                        <li><strong>ID:</strong> {{ object.id }}</li>
+                        <li><strong>Название:</strong> {{ object.name }}</li>
+                        <li><strong>Описание:</strong> 
+                            {% if object.description %}
+                                {{ object.description }}
+                            {% else %}
+                                <span class="text-muted">Описание отсутствует</span>
+                            {% endif %}
+                        </li>
+                        <li><strong>Аварийных сигналов:</strong> {{ object.alarms.count }}</li>
+                    </ul>
+                </div>
+                
+                {% if object.alarms.count > 0 %}
+                    <div class="alert alert-danger">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Внимание!</strong> В этой таблице содержится {{ object.alarms.count }} аварийных сигналов. 
+                        При удалении таблицы все связанные сигналы также будут удалены!
+                    </div>
+                {% endif %}
+                
+                <p class="text-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Внимание!</strong> Это действие нельзя отменить.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'alarms:table_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
