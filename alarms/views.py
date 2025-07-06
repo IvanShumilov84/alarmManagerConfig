@@ -196,9 +196,9 @@ def export_json(request):
                     'alarm_class': alarm.alarm_class,
                     'table_id': alarm.table.id,
                     'logic': alarm.logic,
-                    'event': alarm.event,
                     'channel': alarm.channel,
                     'limit_type': alarm.limit_type,
+                    'limit_config_type': alarm.limit_config_type,
                     'low': alarm.low,
                     'high': alarm.high,
                     'discrete_val': alarm.discrete_val,
@@ -236,25 +236,20 @@ def get_logic_fields(request):
         
         # Определяем какие поля нужно показать/скрыть
         fields_config = {
-            'event': {
-                'show': ['event', 'msg', 'confirm_method', 'prior'],
-                'hide': ['channel', 'limit_type', 'low', 'high', 'discrete_val', 
-                        'hyst_low', 'hyst_high', 'ch_low', 'ch_high']
-            },
             'discrete': {
                 'show': ['channel', 'discrete_val', 'msg', 'confirm_method', 'prior'],
-                'hide': ['event', 'limit_type', 'low', 'high', 'hyst_low', 
+                'hide': ['limit_type', 'limit_config_type', 'low', 'high', 'hyst_low', 
                         'hyst_high', 'ch_low', 'ch_high']
             },
             'analog': {
-                'show': ['channel', 'limit_type', 'low', 'high', 'msg', 
+                'show': ['channel', 'limit_type', 'limit_config_type', 'low', 'high', 'msg', 
                         'hyst_low', 'hyst_high', 'ch_low', 'ch_high', 
                         'confirm_method', 'prior'],
-                'hide': ['event', 'discrete_val']
+                'hide': ['discrete_val']
             },
             'change': {
                 'show': ['channel', 'msg', 'confirm_method', 'prior'],
-                'hide': ['event', 'limit_type', 'low', 'high', 'discrete_val', 
+                'hide': ['limit_type', 'limit_config_type', 'low', 'high', 'discrete_val', 
                         'hyst_low', 'hyst_high', 'ch_low', 'ch_high']
             }
         }
