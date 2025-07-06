@@ -1,0 +1,158 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Позволяет запускать вручную
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install nuitka
+        
+    - name: Create virtual environment
+      run: |
+        python -m venv venv
+        venv\Scripts\activate
+        pip install -r requirements.txt
+        pip install nuitka
+        
+    - name: Run migrations
+      run: |
+        venv\Scripts\activate
+        python manage.py migrate
+        
+    - name: Build executable with Nuitka
+      run: |
+        venv\Scripts\activate
+        python -m nuitka --standalone --include-package=django --include-package=rest_framework --include-package=alarm_manager --include-package=alarms --output-dir=dist --assume-yes-for-downloads --show-progress --show-memory --remove-output run_server.py
+        
+    - name: Copy project files
+      run: |
+        $exeDir = "dist\run_server.dist"
+        if (Test-Path $exeDir) {
+          Copy-Item "manage.py" $exeDir -Force
+          Copy-Item "db.sqlite3" $exeDir -Force
+          Copy-Item "alarm_manager" $exeDir -Recurse -Force
+          Copy-Item "alarms" $exeDir -Recurse -Force
+          Copy-Item "templates" $exeDir -Recurse -Force
+          Copy-Item "static" $exeDir -Recurse -Force
+          Write-Host "Files copied successfully"
+        } else {
+          Write-Host "Executable directory not found"
+        }
+        
+    - name: Create README
+      run: |
+        $exeDir = "dist\run_server.dist"
+        $readmeContent = @"
+# Система управления аварийными сигналами
+
+## Запуск приложения
+
+1. Дважды кликните на файл `run_server.exe`
+2. Дождитесь запуска сервера
+3. Браузер откроется автоматически по адресу http://127.0.0.1:8000
+
+## Остановка сервера
+
+Нажмите Ctrl+C в окне консоли или закройте окно.
+
+## Структура файлов
+
+- `run_server.exe` - главный исполняемый файл
+- `manage.py` - файл управления Django
+- `db.sqlite3` - база данных
+- `alarm_manager/` - настройки проекта
+- `alarms/` - приложение аварийных сигналов
+- `templates/` - HTML шаблоны
+- `static/` - статические файлы
+
+## Возможности
+
+- ✅ Создание и управление таблицами аварийных сигналов
+- ✅ Настройка аварийных сигналов с различными типами логики
+- ✅ Экспорт конфигурации в JSON файл
+- ✅ Современный и удобный интерфейс
+
+## Поддержка
+
+При возникновении проблем проверьте:
+1. Антивирус не блокирует приложение
+2. Порт 8000 не занят другими приложениями
+3. Браузер поддерживает современные веб-стандарты
+
+## Сборка
+
+Этот установщик был автоматически собран с помощью GitHub Actions.
+Дата сборки: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+"@
+        
+        if (Test-Path $exeDir) {
+          $readmePath = Join-Path $exeDir "README.txt"
+          $readmeContent | Out-File -FilePath $readmePath -Encoding UTF8
+          Write-Host "README created at: $readmePath"
+        }
+        
+    - name: Create release archive
+      run: |
+        $exeDir = "dist\run_server.dist"
+        if (Test-Path $exeDir) {
+          $archiveName = "alarm_manager_windows_$(Get-Date -Format 'yyyyMMdd_HHmmss').zip"
+          Compress-Archive -Path $exeDir\* -DestinationPath $archiveName
+          Write-Host "Archive created: $archiveName"
+        }
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: alarm-manager-windows
+        path: |
+          dist/run_server.dist/
+          *.zip
+        retention-days: 30
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          dist/run_server.dist/run_server.exe
+          *.zip
+        tag_name: v${{ github.run_number }}
+        name: Release v${{ github.run_number }}
+        body: |
+          Автоматическая сборка системы управления аварийными сигналами
+          
+          ## Что нового:
+          - Автоматическая сборка с помощью GitHub Actions
+          - Standalone .exe файл для Windows
+          - Все зависимости включены
+          
+          ## Установка:
+          1. Скачайте архив
+          2. Распакуйте в любую папку
+          3. Запустите `run_server.exe`
+          
+          ## Системные требования:
+          - Windows 10/11
+          - 4 GB RAM
+          - 500 MB свободного места
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
