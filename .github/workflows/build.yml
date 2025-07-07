@@ -61,49 +61,34 @@ jobs:
     - name: Create README
       run: |
         $exeDir = "dist\run_server.dist"
-        $readmeContent = @"
-# Система управления аварийными сигналами
-
-## Запуск приложения
-
-1. Дважды кликните на файл `run_server.exe`
-2. Дождитесь запуска сервера
-3. Браузер откроется автоматически по адресу http://127.0.0.1:8000
-
-## Остановка сервера
-
-Нажмите Ctrl+C в окне консоли или закройте окно.
-
-## Структура файлов
-
-- `run_server.exe` - главный исполняемый файл
-- `manage.py` - файл управления Django
-- `db.sqlite3` - база данных
-- `alarm_manager/` - настройки проекта
-- `alarms/` - приложение аварийных сигналов
-- `templates/` - HTML шаблоны
-- `static/` - статические файлы
-
-## Возможности
-
-- ✅ Создание и управление таблицами аварийных сигналов
-- ✅ Настройка аварийных сигналов с различными типами логики
-- ✅ Экспорт конфигурации в JSON файл
-- ✅ Современный и удобный интерфейс
-
-## Поддержка
-
-При возникновении проблем проверьте:
-1. Антивирус не блокирует приложение
-2. Порт 8000 не занят другими приложениями
-3. Браузер поддерживает современные веб-стандарты
-
-## Сборка
-
-Этот установщик был автоматически собран с помощью GitHub Actions.
-Дата сборки: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-"@
-        
+        $readmeContent = "# Система управления аварийными сигналами`n"
+        $readmeContent += "`n## Запуск приложения`n"
+        $readmeContent += "1. Дважды кликните на файл `run_server.exe``n"
+        $readmeContent += "2. Дождитесь запуска сервера`n"
+        $readmeContent += "3. Браузер откроется автоматически по адресу http://127.0.0.1:8000`n"
+        $readmeContent += "`n## Остановка сервера`n"
+        $readmeContent += "Нажмите Ctrl+C в окне консоли или закройте окно.`n"
+        $readmeContent += "`n## Структура файлов`n"
+        $readmeContent += "- `run_server.exe` - главный исполняемый файл`n"
+        $readmeContent += "- `manage.py` - файл управления Django`n"
+        $readmeContent += "- `db.sqlite3` - база данных`n"
+        $readmeContent += "- `alarm_manager/` - настройки проекта`n"
+        $readmeContent += "- `alarms/` - приложение аварийных сигналов`n"
+        $readmeContent += "- `templates/` - HTML шаблоны`n"
+        $readmeContent += "- `static/` - статические файлы`n"
+        $readmeContent += "`n## Возможности`n"
+        $readmeContent += "- ✅ Создание и управление таблицами аварийных сигналов`n"
+        $readmeContent += "- ✅ Настройка аварийных сигналов с различными типами логики`n"
+        $readmeContent += "- ✅ Экспорт конфигурации в JSON файл`n"
+        $readmeContent += "- ✅ Современный и удобный интерфейс`n"
+        $readmeContent += "`n## Поддержка`n"
+        $readmeContent += "При возникновении проблем проверьте:`n"
+        $readmeContent += "1. Антивирус не блокирует приложение`n"
+        $readmeContent += "2. Порт 8000 не занят другими приложениями`n"
+        $readmeContent += "3. Браузер поддерживает современные веб-стандарты`n"
+        $readmeContent += "`n## Сборка`n"
+        $readmeContent += "Этот установщик был автоматически собран с помощью GitHub Actions.`n"
+        $readmeContent += "Дата сборки: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`n"
         if (Test-Path $exeDir) {
           $readmePath = Join-Path $exeDir "README.txt"
           $readmeContent | Out-File -FilePath $readmePath -Encoding UTF8
