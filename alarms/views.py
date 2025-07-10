@@ -143,10 +143,13 @@ class AlarmConfigListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с поддержкой сортировки по русским названиям"""
-        from django.db.models import Case, When, Value, CharField
+        """Получаем queryset с поддержкой сортировки и фильтрации по русским названиям"""
+        from django.db.models import Case, When, Value, CharField, Q
 
         queryset = AlarmConfig.objects.select_related("table")
+
+        # Применяем фильтрацию
+        queryset = self.apply_filters(queryset)
 
         # Получаем параметры сортировки
         sort_fields = []
@@ -252,6 +255,164 @@ class AlarmConfigListView(ListView):
 
         return queryset
 
+    def apply_filters(self, queryset):
+        """Применяет фильтры к queryset"""
+        from django.db.models import Q
+
+        # Получаем параметры фильтрации
+        filter_fields = []
+        filter_values = []
+        filter_operators = []
+
+        # Собираем все параметры фильтрации с индексами
+        i = 0
+        while True:
+            filter_field = self.request.GET.get(f"filter_field_{i}")
+            if not filter_field:
+                break
+            filter_fields.append(filter_field)
+            filter_value = self.request.GET.get(f"filter_value_{i}", "")
+            filter_values.append(filter_value)
+            filter_operator = self.request.GET.get(f"filter_operator_{i}", "contains")
+            filter_operators.append(filter_operator)
+            i += 1
+
+        # Применяем фильтры
+        for i, field in enumerate(filter_fields):
+            if i < len(filter_values) and filter_values[i].strip():
+                value = filter_values[i].strip()
+                operator = (
+                    filter_operators[i] if i < len(filter_operators) else "contains"
+                )
+
+                if field == "id":
+                    try:
+                        int_value = int(value)
+                        if operator == "exact":
+                            queryset = queryset.filter(id=int_value)
+                        elif operator == "gt":
+                            queryset = queryset.filter(id__gt=int_value)
+                        elif operator == "lt":
+                            queryset = queryset.filter(id__lt=int_value)
+                        elif operator == "gte":
+                            queryset = queryset.filter(id__gte=int_value)
+                        elif operator == "lte":
+                            queryset = queryset.filter(id__lte=int_value)
+                    except ValueError:
+                        # Если значение не является числом, возвращаем пустой queryset
+                        return queryset.none()
+
+                elif field == "alarm_class":
+                    # Преобразуем русские названия в английские значения
+                    alarm_class_mapping = {
+                        "ошибка": "error",
+                        "предупреждение": "warn",
+                        "информирование": "info",
+                        "error": "error",
+                        "warn": "warn",
+                        "info": "info",
+                    }
+                    search_value = value.lower()
+                    if search_value in alarm_class_mapping:
+                        db_value = alarm_class_mapping[search_value]
+                        if operator == "exact":
+                            queryset = queryset.filter(alarm_class=db_value)
+                        elif operator == "contains":
+                            queryset = queryset.filter(alarm_class=db_value)
+                    else:
+                        # Если не найдено точное соответствие
+                        if operator == "exact":
+                            # Для точного поиска возвращаем пустой queryset
+                            return queryset.none()
+                        elif operator == "contains":
+                            # Ищем по всем возможным значениям
+                            q_objects = Q()
+                            for rus_name, eng_value in alarm_class_mapping.items():
+                                if (
+                                    search_value in rus_name
+                                    or search_value in eng_value
+                                ):
+                                    q_objects |= Q(alarm_class=eng_value)
+                            if q_objects:
+                                queryset = queryset.filter(q_objects)
+                            else:
+                                # Если ничего не найдено, возвращаем пустой queryset
+                                return queryset.none()
+
+                elif field == "table":
+                    if operator == "exact":
+                        queryset = queryset.filter(table__name=value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(table__name__icontains=value)
+
+                elif field == "logic":
+                    # Преобразуем русские названия в английские значения
+                    logic_mapping = {
+                        "дискретное событие": "discrete",
+                        "аналоговое событие": "analog",
+                        "изменение события": "change",
+                        "discrete": "discrete",
+                        "analog": "analog",
+                        "change": "change",
+                    }
+                    search_value = value.lower()
+                    if search_value in logic_mapping:
+                        db_value = logic_mapping[search_value]
+                        if operator == "exact":
+                            queryset = queryset.filter(logic=db_value)
+                        elif operator == "contains":
+                            queryset = queryset.filter(logic=db_value)
+                    else:
+                        # Если не найдено точное соответствие
+                        if operator == "exact":
+                            # Для точного поиска возвращаем пустой queryset
+                            return queryset.none()
+                        elif operator == "contains":
+                            # Ищем по всем возможным значениям
+                            q_objects = Q()
+                            for rus_name, eng_value in logic_mapping.items():
+                                if (
+                                    search_value in rus_name
+                                    or search_value in eng_value
+                                ):
+                                    q_objects |= Q(logic=eng_value)
+                            if q_objects:
+                                queryset = queryset.filter(q_objects)
+                            else:
+                                # Если ничего не найдено, возвращаем пустой queryset
+                                return queryset.none()
+
+                elif field == "channel":
+                    if operator == "exact":
+                        queryset = queryset.filter(channel=value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(channel__icontains=value)
+
+                elif field == "msg":
+                    if operator == "exact":
+                        queryset = queryset.filter(msg=value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(msg__icontains=value)
+
+                elif field == "prior":
+                    try:
+                        int_value = int(value)
+                        if operator == "exact":
+                            queryset = queryset.filter(prior=int_value)
+                        elif operator == "gt":
+                            queryset = queryset.filter(prior__gt=int_value)
+                        elif operator == "lt":
+                            queryset = queryset.filter(prior__lt=int_value)
+                        elif operator == "gte":
+                            queryset = queryset.filter(prior__gte=int_value)
+                        elif operator == "lte":
+                            queryset = queryset.filter(prior__lte=int_value)
+                    except ValueError:
+                        # Если значение не является числом, возвращаем пустой queryset
+                        return queryset.none()
+
+        return queryset
+
     def get_context_data(self, **kwargs):
         """Добавляем режим отображения и параметры сортировки в контекст"""
         context = super().get_context_data(**kwargs)
@@ -284,6 +445,28 @@ class AlarmConfigListView(ListView):
 
         context["current_sort"] = self.request.GET.get("sort", "alarm_class")
         context["current_order"] = self.request.GET.get("order", "asc")
+
+        # Добавляем параметры фильтров в контекст для ссылок пагинации
+        filter_fields = []
+        filter_ops = []
+        filter_values = []
+
+        # Собираем все параметры фильтров с индексами
+        i = 0
+        while True:
+            filter_field = self.request.GET.get(f"filter_field_{i}")
+            if not filter_field:
+                break
+            filter_fields.append(filter_field)
+            filter_op = self.request.GET.get(f"filter_op_{i}", "exact")
+            filter_ops.append(filter_op)
+            filter_value = self.request.GET.get(f"filter_value_{i}", "")
+            filter_values.append(filter_value)
+            i += 1
+
+        context["filter_fields"] = filter_fields
+        context["filter_ops"] = filter_ops
+        context["filter_values"] = filter_values
 
         return context
 
