@@ -14,6 +14,60 @@
     </div>
 </div>
 
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleSortSettings()">
+        <h6 class="mb-0">
+            <i class="bi bi-sort-down"></i> Настройка сортировки (автоматическое применение)
+        </h6>
+        <i class="bi bi-chevron-down" id="sortToggleIcon"></i>
+    </div>
+    <div class="card-body" id="sortSettingsBody">
+        <form method="get" id="sortForm">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="row" id="sortFields">
+                        <div class="col-md-4 mb-2">
+                            <select name="sort_0" class="form-select form-select-sm sort-field">
+                                <option value="">Выберите поле</option>
+                                <option value="id" {% if 'id' in sort_fields %}selected{% endif %}>ID</option>
+                                <option value="name" {% if 'name' in sort_fields %}selected{% endif %}>Название</option>
+                                <option value="description" {% if 'description' in sort_fields %}selected{% endif %}>Описание</option>
+                                <option value="alarms_count" {% if 'alarms_count' in sort_fields %}selected{% endif %}>Количество аварий</option>
+                                <option value="created_at" {% if 'created_at' in sort_fields %}selected{% endif %}>Дата создания</option>
+                                <option value="updated_at" {% if 'updated_at' in sort_fields %}selected{% endif %}>Дата обновления</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-2">
+                            <select name="order_0" class="form-select form-select-sm sort-order">
+                                <option value="asc" {% if 'asc' in sort_orders %}selected{% endif %}>По возрастанию</option>
+                                <option value="desc" {% if 'desc' in sort_orders %}selected{% endif %}>По убыванию</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
+                                <i class="bi bi-plus"></i> Добавить
+                            </button>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
+                                <i class="bi bi-x"></i> Очистить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if sort_fields %}
+            <div class="mt-2">
+                <small class="text-muted">
+                    <strong>Текущая сортировка:</strong> <span id="currentSortDisplay">Настроена</span>
+                </small>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         {% if tables %}
@@ -21,11 +75,36 @@
                 <table class="table table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th>ID</th>
-                            <th>Название</th>
-                            <th>Описание</th>
-                            <th>Количество аварий</th>
-                            <th>Дата создания</th>
+                            <th>
+                                ID
+                                {% if 'id' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.id == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </th>
+                            <th>
+                                Название
+                                {% if 'name' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.name == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </th>
+                            <th>
+                                Описание
+                                {% if 'description' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.description == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </th>
+                            <th>
+                                Количество аварий
+                                {% if 'alarms_count' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.alarms_count == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </th>
+                            <th>
+                                Дата создания
+                                {% if 'created_at' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.created_at == 'asc' %}up{% else %}down{% endif %}"></i>
+                                {% endif %}
+                            </th>
                             <th>Действия</th>
                         </tr>
                     </thead>
@@ -44,7 +123,7 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-info">{{ table.alarms.count }}</span>
+                                <span class="badge bg-info">{{ table.alarms_count }}</span>
                             </td>
                             <td>{{ table.created_at|date:"d.m.Y H:i" }}</td>
                             <td>
@@ -72,6 +151,37 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Пагинация -->
+            {% if is_paginated %}
+            <nav aria-label="Навигация по страницам">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">&laquo; Первая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Предыдущая</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Следующая</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Последняя &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         {% else %}
             <div class="text-center text-muted py-5">
                 <i class="bi bi-table fs-1"></i>
@@ -84,4 +194,577 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+let sortFieldCounter = 1;
+let submitTimeout = null;
+
+function addSortField() {
+    const container = document.getElementById('sortFields');
+    
+    // Сохраняем текущие значения
+    const currentFields = container.querySelectorAll('.sort-field');
+    const currentOrders = container.querySelectorAll('.sort-order');
+    const savedValues = [];
+    
+    for (let i = 0; i < currentFields.length; i++) {
+        savedValues.push({
+            field: currentFields[i].value,
+            order: currentOrders[i].value
+        });
+    }
+    
+    // Очищаем контейнер
+    container.innerHTML = '';
+    
+    // Восстанавливаем сохраненные поля
+    for (let i = 0; i < savedValues.length; i++) {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'col-md-4 mb-2';
+        fieldDiv.innerHTML = `
+            <select name="sort_${i}" class="form-select form-select-sm sort-field">
+                <option value="">Выберите поле</option>
+                <option value="id" ${savedValues[i].field === 'id' ? 'selected' : ''}>ID</option>
+                <option value="name" ${savedValues[i].field === 'name' ? 'selected' : ''}>Название</option>
+                <option value="description" ${savedValues[i].field === 'description' ? 'selected' : ''}>Описание</option>
+                <option value="alarms_count" ${savedValues[i].field === 'alarms_count' ? 'selected' : ''}>Количество аварий</option>
+                <option value="created_at" ${savedValues[i].field === 'created_at' ? 'selected' : ''}>Дата создания</option>
+                <option value="updated_at" ${savedValues[i].field === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
+            </select>
+        `;
+        
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'col-md-3 mb-2';
+        orderDiv.innerHTML = `
+            <select name="order_${i}" class="form-select form-select-sm sort-order">
+                <option value="asc" ${savedValues[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
+                <option value="desc" ${savedValues[i].order === 'desc' ? 'selected' : ''}>По убыванию</option>
+            </select>
+        `;
+        
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'col-md-2 mb-2';
+        removeBtn.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
+                <i class="bi bi-trash"></i> Удалить
+            </button>
+        `;
+        
+        const spacer = document.createElement('div');
+        spacer.className = 'col-md-2 mb-2';
+        
+        container.appendChild(fieldDiv);
+        container.appendChild(orderDiv);
+        container.appendChild(removeBtn);
+        container.appendChild(spacer);
+    }
+    
+    // Добавляем новое поле
+    const newIndex = savedValues.length;
+    const newField = document.createElement('div');
+    newField.className = 'col-md-4 mb-2';
+    newField.innerHTML = `
+        <select name="sort_${newIndex}" class="form-select form-select-sm sort-field">
+            <option value="">Выберите поле</option>
+            <option value="id">ID</option>
+            <option value="name">Название</option>
+            <option value="description">Описание</option>
+            <option value="alarms_count">Количество аварий</option>
+            <option value="created_at">Дата создания</option>
+            <option value="updated_at">Дата обновления</option>
+        </select>
+    `;
+    
+    const newOrder = document.createElement('div');
+    newOrder.className = 'col-md-3 mb-2';
+    newOrder.innerHTML = `
+        <select name="order_${newIndex}" class="form-select form-select-sm sort-order">
+            <option value="asc">По возрастанию</option>
+            <option value="desc">По убыванию</option>
+        </select>
+    `;
+    
+    const newRemoveBtn = document.createElement('div');
+    newRemoveBtn.className = 'col-md-2 mb-2';
+    newRemoveBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${newIndex})">
+            <i class="bi bi-trash"></i> Удалить
+        </button>
+    `;
+    
+    const newSpacer = document.createElement('div');
+    newSpacer.className = 'col-md-2 mb-2';
+    
+    container.appendChild(newField);
+    container.appendChild(newOrder);
+    container.appendChild(newRemoveBtn);
+    container.appendChild(newSpacer);
+    
+    // Добавляем кнопки управления
+    const addBtn = document.createElement('div');
+    addBtn.className = 'col-md-2 mb-2';
+    addBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
+            <i class="bi bi-plus"></i> Добавить
+        </button>
+    `;
+    
+    const clearBtn = document.createElement('div');
+    clearBtn.className = 'col-md-2 mb-2';
+    clearBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
+            <i class="bi bi-x"></i> Очистить
+        </button>
+    `;
+    
+    container.appendChild(addBtn);
+    container.appendChild(clearBtn);
+    
+    sortFieldCounter = newIndex + 1;
+    updateSortDisplay();
+}
+
+function removeSortField(index) {
+    const container = document.getElementById('sortFields');
+    
+    // Сохраняем текущие значения
+    const currentFields = container.querySelectorAll('.sort-field');
+    const currentOrders = container.querySelectorAll('.sort-order');
+    const savedValues = [];
+    
+    for (let i = 0; i < currentFields.length; i++) {
+        if (i !== index) { // Пропускаем удаляемое поле
+            savedValues.push({
+                field: currentFields[i].value,
+                order: currentOrders[i].value
+            });
+        }
+    }
+    
+    // Очищаем контейнер
+    container.innerHTML = '';
+    
+    // Восстанавливаем сохраненные поля с новыми индексами
+    for (let i = 0; i < savedValues.length; i++) {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'col-md-4 mb-2';
+        fieldDiv.innerHTML = `
+            <select name="sort_${i}" class="form-select form-select-sm sort-field">
+                <option value="">Выберите поле</option>
+                <option value="id" ${savedValues[i].field === 'id' ? 'selected' : ''}>ID</option>
+                <option value="name" ${savedValues[i].field === 'name' ? 'selected' : ''}>Название</option>
+                <option value="description" ${savedValues[i].field === 'description' ? 'selected' : ''}>Описание</option>
+                <option value="alarms_count" ${savedValues[i].field === 'alarms_count' ? 'selected' : ''}>Количество аварий</option>
+                <option value="created_at" ${savedValues[i].field === 'created_at' ? 'selected' : ''}>Дата создания</option>
+                <option value="updated_at" ${savedValues[i].field === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
+            </select>
+        `;
+        
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'col-md-3 mb-2';
+        orderDiv.innerHTML = `
+            <select name="order_${i}" class="form-select form-select-sm sort-order">
+                <option value="asc" ${savedValues[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
+                <option value="desc" ${savedValues[i].order === 'desc' ? 'selected' : ''}>По убыванию</option>
+            </select>
+        `;
+        
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'col-md-2 mb-2';
+        removeBtn.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
+                <i class="bi bi-trash"></i> Удалить
+            </button>
+        `;
+        
+        const spacer = document.createElement('div');
+        spacer.className = 'col-md-2 mb-2';
+        
+        container.appendChild(fieldDiv);
+        container.appendChild(orderDiv);
+        container.appendChild(removeBtn);
+        container.appendChild(spacer);
+    }
+    
+    // Добавляем кнопки управления
+    const addBtn = document.createElement('div');
+    addBtn.className = 'col-md-2 mb-2';
+    addBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
+            <i class="bi bi-plus"></i> Добавить
+        </button>
+    `;
+    
+    const clearBtn = document.createElement('div');
+    clearBtn.className = 'col-md-2 mb-2';
+    clearBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
+            <i class="bi bi-x"></i> Очистить
+        </button>
+    `;
+    
+    container.appendChild(addBtn);
+    container.appendChild(clearBtn);
+    
+    sortFieldCounter = savedValues.length;
+    updateSortDisplay();
+}
+
+function clearSort() {
+    const container = document.getElementById('sortFields');
+    container.innerHTML = `
+        <div class="col-md-4 mb-2">
+            <select name="sort_0" class="form-select form-select-sm sort-field">
+                <option value="">Выберите поле</option>
+                <option value="id">ID</option>
+                <option value="name">Название</option>
+                <option value="description">Описание</option>
+                <option value="alarms_count">Количество аварий</option>
+                <option value="created_at">Дата создания</option>
+                <option value="updated_at">Дата обновления</option>
+            </select>
+        </div>
+        <div class="col-md-3 mb-2">
+            <select name="order_0" class="form-select form-select-sm sort-order">
+                <option value="asc">По возрастанию</option>
+                <option value="desc">По убыванию</option>
+            </select>
+        </div>
+        <div class="col-md-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
+                <i class="bi bi-plus"></i> Добавить
+            </button>
+        </div>
+        <div class="col-md-2 mb-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
+                <i class="bi bi-x"></i> Очистить
+            </button>
+        </div>
+    `;
+    sortFieldCounter = 1;
+    updateSortDisplay();
+    
+    // Очищаем сохраненные настройки сортировки из localStorage
+    localStorage.removeItem('tableSortFields');
+    localStorage.removeItem('tableSortOrders');
+    
+    // Сворачиваем настройки сортировки
+    const body = document.getElementById('sortSettingsBody');
+    const icon = document.getElementById('sortToggleIcon');
+    if (body && icon) {
+        body.style.display = 'none';
+        icon.className = 'bi bi-chevron-right';
+        localStorage.setItem('tableSortSettingsExpanded', 'false');
+    }
+}
+
+// Функция для отображения текущей сортировки
+function updateSortDisplay() {
+    const sortFields = document.querySelectorAll('.sort-field');
+    const sortOrders = document.querySelectorAll('.sort-order');
+    const display = document.getElementById('currentSortDisplay');
+    
+    if (!display) return;
+    
+    const fieldNames = {
+        'id': 'ID',
+        'name': 'Название',
+        'description': 'Описание',
+        'alarms_count': 'Количество аварий',
+        'created_at': 'Дата создания',
+        'updated_at': 'Дата обновления'
+    };
+    
+    const orderSymbols = {
+        'asc': '↑',
+        'desc': '↓'
+    };
+    
+    let sortText = '';
+    for (let i = 0; i < sortFields.length; i++) {
+        const field = sortFields[i].value;
+        const order = sortOrders[i] ? sortOrders[i].value : 'asc';
+        
+        if (field && fieldNames[field]) {
+            if (sortText) sortText += ', ';
+            sortText += `${fieldNames[field]} ${orderSymbols[order]}`;
+        }
+    }
+    
+    display.textContent = sortText || 'Не настроена';
+}
+
+// Обновляем отображение при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем поля сортировки из URL параметров
+    initializeSortFields();
+    updateSortDisplay();
+    
+    // Инициализация состояния спойлера
+    const body = document.getElementById('sortSettingsBody');
+    const icon = document.getElementById('sortToggleIcon');
+    
+    if (!body || !icon) {
+        console.error('Элементы спойлера не найдены!');
+        return;
+    }
+    
+    // Проверяем, есть ли активная сортировка
+    const urlParams = new URLSearchParams(window.location.search);
+    let hasActiveSort = false;
+    
+    for (let i = 0; i < 10; i++) { // Проверяем первые 10 параметров сортировки
+        if (urlParams.get(`sort_${i}`)) {
+            hasActiveSort = true;
+            break;
+        }
+    }
+    
+    // Восстанавливаем состояние из localStorage
+    const savedState = localStorage.getItem('tableSortSettingsExpanded');
+    
+    if (savedState === 'true') {
+        // Если пользователь ранее развернул настройки, показываем их
+        body.style.display = 'block';
+        icon.className = 'bi bi-chevron-down';
+    } else if (savedState === 'false') {
+        // Если пользователь ранее свернул настройки, скрываем их
+        body.style.display = 'none';
+        icon.className = 'bi bi-chevron-right';
+    } else {
+        // Если состояние не сохранено, используем логику по умолчанию
+        if (hasActiveSort) {
+            // Если есть активная сортировка, показываем настройки
+            body.style.display = 'block';
+            icon.className = 'bi bi-chevron-down';
+            localStorage.setItem('tableSortSettingsExpanded', 'true');
+        } else {
+            // Если нет активной сортировки, сворачиваем настройки
+            body.style.display = 'none';
+            icon.className = 'bi bi-chevron-right';
+            localStorage.setItem('tableSortSettingsExpanded', 'false');
+        }
+    }
+    
+    // Обновляем отображение при изменении полей сортировки
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('sort-field') || e.target.classList.contains('sort-order')) {
+            updateSortDisplay();
+            
+            // Автоматически отправляем форму при изменении полей сортировки с задержкой
+            clearTimeout(submitTimeout);
+            submitTimeout = setTimeout(function() {
+                const form = document.getElementById('sortForm');
+                if (form) {
+                    // Проверяем, что хотя бы одно поле выбрано
+                    const sortFields = document.querySelectorAll('.sort-field');
+                    let hasSelectedField = false;
+                    
+                    for (let field of sortFields) {
+                        if (field.value) {
+                            hasSelectedField = true;
+                            break;
+                        }
+                    }
+                    
+                    // Отправляем форму только если есть выбранные поля
+                    if (hasSelectedField) {
+                        // Сохраняем настройки сортировки в localStorage
+                        const sortFields = document.querySelectorAll('.sort-field');
+                        const sortOrders = document.querySelectorAll('.sort-order');
+                        const fields = [];
+                        const orders = [];
+                        
+                        sortFields.forEach((field, index) => {
+                            if (field.value) {
+                                fields.push(field.value);
+                                orders.push(sortOrders[index] ? sortOrders[index].value : 'asc');
+                            }
+                        });
+                        
+                        localStorage.setItem('tableSortFields', JSON.stringify(fields));
+                        localStorage.setItem('tableSortOrders', JSON.stringify(orders));
+                        
+                        // Если есть активная сортировка, разворачиваем настройки
+                        const body = document.getElementById('sortSettingsBody');
+                        const icon = document.getElementById('sortToggleIcon');
+                        if (body && icon) {
+                            body.style.display = 'block';
+                            icon.className = 'bi bi-chevron-down';
+                            localStorage.setItem('tableSortSettingsExpanded', 'true');
+                        }
+                        form.submit();
+                    }
+                }
+            }, 500); // Задержка 500мс
+        }
+    });
+});
+
+// Функция для инициализации полей сортировки из URL
+function initializeSortFields() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sortFields = [];
+    const sortOrders = [];
+    
+    // Собираем все параметры сортировки из URL
+    let i = 0;
+    while (true) {
+        const sortField = urlParams.get(`sort_${i}`);
+        const sortOrder = urlParams.get(`order_${i}`);
+        
+        if (!sortField) break;
+        
+        sortFields.push(sortField);
+        sortOrders.push(sortOrder || 'asc');
+        i++;
+    }
+    
+    // Если нет параметров сортировки в URL, проверяем localStorage
+    if (sortFields.length === 0) {
+        const savedFields = localStorage.getItem('tableSortFields');
+        const savedOrders = localStorage.getItem('tableSortOrders');
+        
+        if (savedFields && savedOrders) {
+            try {
+                const fields = JSON.parse(savedFields);
+                const orders = JSON.parse(savedOrders);
+                
+                if (fields.length > 0 && orders.length > 0) {
+                    // Перенаправляем на страницу с сохраненными параметрами сортировки
+                    const newUrl = new URL(window.location);
+                    fields.forEach((field, index) => {
+                        newUrl.searchParams.set(`sort_${index}`, field);
+                        newUrl.searchParams.set(`order_${index}`, orders[index] || 'asc');
+                    });
+                    window.location.href = newUrl.toString();
+                    return;
+                }
+            } catch (e) {
+                console.error('Ошибка при восстановлении настроек сортировки:', e);
+            }
+        }
+    }
+    
+    const container = document.getElementById('sortFields');
+    container.innerHTML = '';
+    
+    // Если есть параметры сортировки, восстанавливаем поля
+    if (sortFields.length > 0) {
+        for (let i = 0; i < sortFields.length; i++) {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'col-md-4 mb-2';
+            fieldDiv.innerHTML = `
+                <select name="sort_${i}" class="form-select form-select-sm sort-field">
+                    <option value="">Выберите поле</option>
+                    <option value="id" ${sortFields[i] === 'id' ? 'selected' : ''}>ID</option>
+                    <option value="name" ${sortFields[i] === 'name' ? 'selected' : ''}>Название</option>
+                    <option value="description" ${sortFields[i] === 'description' ? 'selected' : ''}>Описание</option>
+                    <option value="alarms_count" ${sortFields[i] === 'alarms_count' ? 'selected' : ''}>Количество аварий</option>
+                    <option value="created_at" ${sortFields[i] === 'created_at' ? 'selected' : ''}>Дата создания</option>
+                    <option value="updated_at" ${sortFields[i] === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
+                </select>
+            `;
+            
+            const orderDiv = document.createElement('div');
+            orderDiv.className = 'col-md-3 mb-2';
+            orderDiv.innerHTML = `
+                <select name="order_${i}" class="form-select form-select-sm sort-order">
+                    <option value="asc" ${sortOrders[i] === 'asc' ? 'selected' : ''}>По возрастанию</option>
+                    <option value="desc" ${sortOrders[i] === 'desc' ? 'selected' : ''}>По убыванию</option>
+                </select>
+            `;
+            
+            const removeBtn = document.createElement('div');
+            removeBtn.className = 'col-md-2 mb-2';
+            removeBtn.innerHTML = `
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
+                    <i class="bi bi-trash"></i> Удалить
+                </button>
+            `;
+            
+            const spacer = document.createElement('div');
+            spacer.className = 'col-md-2 mb-2';
+            
+            container.appendChild(fieldDiv);
+            container.appendChild(orderDiv);
+            container.appendChild(removeBtn);
+            container.appendChild(spacer);
+        }
+        
+        sortFieldCounter = sortFields.length;
+    } else {
+        // Если нет параметров сортировки, создаем одно пустое поле
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'col-md-4 mb-2';
+        fieldDiv.innerHTML = `
+            <select name="sort_0" class="form-select form-select-sm sort-field">
+                <option value="">Выберите поле</option>
+                <option value="id">ID</option>
+                <option value="name">Название</option>
+                <option value="description">Описание</option>
+                <option value="alarms_count">Количество аварий</option>
+                <option value="created_at">Дата создания</option>
+                <option value="updated_at">Дата обновления</option>
+            </select>
+        `;
+        
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'col-md-3 mb-2';
+        orderDiv.innerHTML = `
+            <select name="order_0" class="form-select form-select-sm sort-order">
+                <option value="asc">По возрастанию</option>
+                <option value="desc">По убыванию</option>
+            </select>
+        `;
+        
+        container.appendChild(fieldDiv);
+        container.appendChild(orderDiv);
+        
+        sortFieldCounter = 1;
+    }
+    
+    // Всегда добавляем кнопки управления
+    const addBtn = document.createElement('div');
+    addBtn.className = 'col-md-2 mb-2';
+    addBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
+            <i class="bi bi-plus"></i> Добавить
+        </button>
+    `;
+    
+    const clearBtn = document.createElement('div');
+    clearBtn.className = 'col-md-2 mb-2';
+    clearBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
+            <i class="bi bi-x"></i> Очистить
+        </button>
+    `;
+    
+    container.appendChild(addBtn);
+    container.appendChild(clearBtn);
+}
+
+// Функция для переключения видимости настроек сортировки
+function toggleSortSettings() {
+    const body = document.getElementById('sortSettingsBody');
+    const icon = document.getElementById('sortToggleIcon');
+    
+    if (!body || !icon) {
+        console.error('Элементы спойлера не найдены в toggleSortSettings!');
+        return;
+    }
+    
+    if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.className = 'bi bi-chevron-down';
+        localStorage.setItem('tableSortSettingsExpanded', 'true');
+    } else {
+        body.style.display = 'none';
+        icon.className = 'bi bi-chevron-right';
+        localStorage.setItem('tableSortSettingsExpanded', 'false');
+    }
+}
+</script>
+
 {% endblock %} 

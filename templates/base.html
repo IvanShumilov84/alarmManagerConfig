@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="ru" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,56 +15,212 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom Dark Theme CSS -->
+    <link href="{% static 'css/dark-theme.css' %}" rel="stylesheet">
     
     <style>
+        :root {
+            /* Светлая тема */
+            --sidebar-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --sidebar-hover: rgba(255, 255, 255, 0.1);
+            --sidebar-active: rgba(255, 255, 255, 0.2);
+            --sidebar-text: rgba(255, 255, 255, 0.8);
+            --sidebar-text-hover: white;
+            --main-bg: #f8f9fa;
+            --card-bg: white;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --btn-primary-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --btn-primary-hover: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            --text-color: #212529;
+            --border-color: #dee2e6;
+        }
+
+        [data-bs-theme="dark"] {
+            /* Тёмная тема */
+            --sidebar-bg: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            --sidebar-hover: rgba(255, 255, 255, 0.1);
+            --sidebar-active: rgba(255, 255, 255, 0.2);
+            --sidebar-text: rgba(255, 255, 255, 0.8);
+            --sidebar-text-hover: white;
+            --main-bg: #1a1a1a;
+            --card-bg: #2d2d2d;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            --btn-primary-bg: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            --btn-primary-hover: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+            --text-color: #e9ecef;
+            --border-color: #495057;
+        }
+
+        body {
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
         .sidebar {
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--sidebar-bg);
         }
+        
         .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
+            color: var(--sidebar-text);
             border-radius: 8px;
             margin: 2px 0;
             transition: all 0.3s ease;
         }
+        
         .sidebar .nav-link:hover {
-            color: white;
-            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--sidebar-text-hover);
+            background-color: var(--sidebar-hover);
         }
+        
         .sidebar .nav-link.active {
-            background-color: rgba(255, 255, 255, 0.2);
-            color: white;
+            background-color: var(--sidebar-active);
+            color: var(--sidebar-text-hover);
         }
+        
         .main-content {
-            background-color: #f8f9fa;
+            background-color: var(--main-bg);
             min-height: 100vh;
         }
+        
         .card {
             border: none;
             border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: var(--card-shadow);
+            background-color: var(--card-bg);
+            color: var(--text-color);
         }
+        
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--btn-primary-bg);
             border: none;
             border-radius: 8px;
         }
+        
         .btn-primary:hover {
-            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            background: var(--btn-primary-hover);
         }
+        
         .table {
             border-radius: 10px;
             overflow: hidden;
+            color: var(--text-color);
         }
+        
         .alert {
             border-radius: 10px;
             border: none;
+        }
+
+        /* Стили для кнопки переключения темы */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 999;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-toggle i {
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
+        /* Скрываем фиксированную кнопку на больших экранах, так как есть кнопка в сайдбаре */
+        @media (min-width: 768px) {
+            .theme-toggle {
+                display: none;
+            }
+        }
+
+        /* Адаптивное позиционирование для мобильных устройств */
+        @media (max-width: 767px) {
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 40px;
+                height: 40px;
+                display: flex;
+            }
+            
+            .theme-toggle i {
+                font-size: 1rem;
+            }
+        }
+
+        /* Стили для основного контента, чтобы избежать перекрытия */
+        .main-content {
+            background-color: var(--main-bg);
+            min-height: 100vh;
+            padding-top: 20px;
+        }
+
+        /* Дополнительный отступ для заголовков страниц */
+        .d-flex.justify-content-between.flex-wrap.flex-md-nowrap.align-items-center {
+            margin-top: 20px;
+        }
+
+        /* Дополнительные стили для тёмной темы */
+        [data-bs-theme="dark"] .form-control,
+        [data-bs-theme="dark"] .form-select {
+            background-color: #3a3a3a;
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-bs-theme="dark"] .form-control:focus,
+        [data-bs-theme="dark"] .form-select:focus {
+            background-color: #3a3a3a;
+            border-color: #3498db;
+            color: var(--text-color);
+        }
+
+        [data-bs-theme="dark"] .table {
+            background-color: var(--card-bg);
+        }
+
+        [data-bs-theme="dark"] .table-light {
+            background-color: #3a3a3a;
+        }
+
+        [data-bs-theme="dark"] .pagination .page-link {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        [data-bs-theme="dark"] .pagination .page-link:hover {
+            background-color: #3a3a3a;
+        }
+
+        [data-bs-theme="dark"] .pagination .page-item.active .page-link {
+            background-color: #3498db;
+            border-color: #3498db;
         }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- Кнопка переключения темы -->
+    <div class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">
+        <i class="bi bi-sun-fill" id="themeIcon"></i>
+    </div>
+
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
@@ -97,6 +253,16 @@
                             </a>
                         </li>
                     </ul>
+                    
+                    <!-- Кнопка переключения темы в сайдбаре -->
+                    <div class="mt-4 pt-3 border-top border-light">
+                        <div class="text-center">
+                            <button class="btn btn-outline-light btn-sm" onclick="toggleTheme()" title="Переключить тему">
+                                <i class="bi bi-sun-fill" id="sidebarThemeIcon"></i>
+                                <span class="ms-2" id="themeText">Тема</span>
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </nav>
 
@@ -122,6 +288,158 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // Функция для переключения темы
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            const sidebarThemeIcon = document.getElementById('sidebarThemeIcon');
+            const themeText = document.getElementById('themeText');
+            const currentTheme = html.getAttribute('data-bs-theme');
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            
+            // Добавляем анимацию перехода
+            html.style.transition = 'all 0.3s ease';
+            
+            let newTheme, newSavedTheme, notificationMessage, iconClass, themeLabel;
+            
+            // Циклическое переключение: светлая -> тёмная -> системная -> светлая
+            if (savedTheme === 'light') {
+                newSavedTheme = 'dark';
+                newTheme = 'dark';
+                iconClass = 'bi bi-moon-fill';
+                themeLabel = 'Тёмная';
+                notificationMessage = 'Тёмная тема включена';
+            } else if (savedTheme === 'dark') {
+                newSavedTheme = 'system';
+                // Определяем системную тему
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    newTheme = 'dark';
+                } else {
+                    newTheme = 'light';
+                }
+                iconClass = 'bi bi-laptop';
+                themeLabel = 'Системная';
+                notificationMessage = 'Системная тема включена';
+            } else {
+                // system -> light
+                newSavedTheme = 'light';
+                newTheme = 'light';
+                iconClass = 'bi bi-sun-fill';
+                themeLabel = 'Светлая';
+                notificationMessage = 'Светлая тема включена';
+            }
+            
+            html.setAttribute('data-bs-theme', newTheme);
+            localStorage.setItem('theme', newSavedTheme);
+            
+            // Обновляем обе иконки
+            if (themeIcon) themeIcon.className = iconClass;
+            if (sidebarThemeIcon) sidebarThemeIcon.className = iconClass;
+            if (themeText) themeText.textContent = themeLabel;
+            
+            // Показываем уведомление
+            showThemeNotification(notificationMessage);
+            
+            // Убираем анимацию после перехода
+            setTimeout(() => {
+                html.style.transition = '';
+            }, 300);
+        }
+
+        // Функция для показа уведомления о смене темы
+        function showThemeNotification(message) {
+            // Создаем элемент уведомления
+            const notification = document.createElement('div');
+            notification.className = 'theme-notification';
+            notification.textContent = message;
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: var(--card-bg);
+                color: var(--text-color);
+                padding: 8px 16px;
+                border-radius: 8px;
+                box-shadow: var(--card-shadow);
+                border: 1px solid var(--border-color);
+                z-index: 998;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+                font-size: 0.9rem;
+                max-width: 200px;
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Показываем уведомление
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Скрываем уведомление через 2 секунды
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 2000);
+        }
+
+        // Функция для инициализации темы при загрузке страницы
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'system';
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            const sidebarThemeIcon = document.getElementById('sidebarThemeIcon');
+            const themeText = document.getElementById('themeText');
+            
+            let currentTheme = savedTheme;
+            let iconClass, themeLabel;
+            
+            // Если выбрана системная тема, определяем её
+            if (savedTheme === 'system') {
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    currentTheme = 'dark';
+                } else {
+                    currentTheme = 'light';
+                }
+                iconClass = 'bi bi-laptop';
+                themeLabel = 'Системная';
+            } else if (savedTheme === 'dark') {
+                iconClass = 'bi bi-moon-fill';
+                themeLabel = 'Тёмная';
+            } else {
+                iconClass = 'bi bi-sun-fill';
+                themeLabel = 'Светлая';
+            }
+            
+            html.setAttribute('data-bs-theme', currentTheme);
+            
+            // Обновляем обе иконки
+            if (themeIcon) themeIcon.className = iconClass;
+            if (sidebarThemeIcon) sidebarThemeIcon.className = iconClass;
+            if (themeText) themeText.textContent = themeLabel;
+            
+            // Слушаем изменения системной темы
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                    if (localStorage.getItem('theme') === 'system') {
+                        const newTheme = e.matches ? 'dark' : 'light';
+                        html.setAttribute('data-bs-theme', newTheme);
+                        // Иконки остаются laptop для системной темы
+                    }
+                });
+            }
+        }
+
+        // Инициализируем тему при загрузке страницы
+        document.addEventListener('DOMContentLoaded', initializeTheme);
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
