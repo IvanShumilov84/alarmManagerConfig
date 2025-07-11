@@ -1,0 +1,1 @@
+pyinstaller --noconfirm --onefile --add-data "alarm_manager:alarm_manager" --add-data "alarms:alarms" --add-data "templates:templates" --add-data "static:static" run_server.py
