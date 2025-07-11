@@ -45,7 +45,7 @@
                     <i class="bi bi-plus"></i> Добавить фильтр
                 </button>
                 <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
-                    <i class="bi bi-check-circle"></i> Применить фильтры
+                    <i class="bi bi-check"></i> Применить фильтры
                 </button>
             </div>
         </div>
@@ -358,237 +358,145 @@
 </div>
 
 <script>
+// === СОРТИРОВКА (фикс багов UI) ===
 let sortFieldCounter = 1;
-let submitTimeout = null;
+
+function renderSortFields(savedValues = null) {
+    const container = document.getElementById('sortFields');
+    container.innerHTML = '';
+    let values = savedValues;
+    if (!values) {
+        // Восстанавливаем из localStorage или из DOM
+        const ls = localStorage.getItem('alarmsSortFields');
+        if (ls) {
+            try { values = JSON.parse(ls); } catch { values = []; }
+        } else {
+            values = [];
+            const currentFields = container.querySelectorAll('.sort-field');
+            const currentOrders = container.querySelectorAll('.sort-order');
+            for (let i = 0; i < currentFields.length; i++) {
+                values.push({
+                    field: currentFields[i].value,
+                    order: currentOrders[i].value
+                });
+            }
+        }
+    }
+    // Если нет ни одной строки, добавляем дефолтную
+    if (!values || values.length === 0) {
+        values = [{field: '', order: 'asc'}];
+    }
+    for (let i = 0; i < values.length; i++) {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'col-md-4 mb-2';
+        fieldDiv.innerHTML = `
+            <select name="sort_${i}" class="form-select form-select-sm sort-field">
+                <option value="">Выберите поле</option>
+                <option value="id" ${values[i].field === 'id' ? 'selected' : ''}>ID</option>
+                <option value="alarm_class" ${values[i].field === 'alarm_class' ? 'selected' : ''}>Класс</option>
+                <option value="table" ${values[i].field === 'table' ? 'selected' : ''}>Таблица</option>
+                <option value="logic" ${values[i].field === 'logic' ? 'selected' : ''}>Логика</option>
+                <option value="channel" ${values[i].field === 'channel' ? 'selected' : ''}>Канал</option>
+                <option value="msg" ${values[i].field === 'msg' ? 'selected' : ''}>Сообщение</option>
+                <option value="prior" ${values[i].field === 'prior' ? 'selected' : ''}>Приоритет</option>
+                <option value="created_at" ${values[i].field === 'created_at' ? 'selected' : ''}>Дата создания</option>
+                <option value="updated_at" ${values[i].field === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
+            </select>
+        `;
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'col-md-3 mb-2';
+        orderDiv.innerHTML = `
+            <select name="order_${i}" class="form-select form-select-sm sort-order">
+                <option value="asc" ${values[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
+                <option value="desc" ${values[i].order === 'desc' ? 'selected' : ''}>По убыванию</option>
+            </select>
+        `;
+        const removeBtn = document.createElement('div');
+        removeBtn.className = 'col-md-2 mb-2';
+        removeBtn.innerHTML = `
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
+                <i class="bi bi-trash"></i> Удалить
+            </button>
+        `;
+        const spacer = document.createElement('div');
+        spacer.className = 'col-md-2 mb-2';
+        container.appendChild(fieldDiv);
+        container.appendChild(orderDiv);
+        container.appendChild(removeBtn);
+        container.appendChild(spacer);
+    }
+    // Кнопки управления
+    const btnGroup = document.createElement('div');
+    btnGroup.className = 'd-flex mb-2';
+
+    const clearBtn = document.createElement('div');
+    clearBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="clearSortBtn">
+            <i class="bi bi-x"></i> Очистить
+        </button>
+    `;
+    const addBtn = document.createElement('div');
+    addBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-success me-2" id="addSortBtn">
+            <i class="bi bi-plus"></i> Добавить
+        </button>
+    `;
+    const applyBtn = document.createElement('div');
+    applyBtn.innerHTML = `
+        <button type="button" class="btn btn-sm btn-outline-primary" id="applySortBtn">
+            <i class="bi bi-check"></i> Применить сортировку
+        </button>
+    `;
+    btnGroup.appendChild(clearBtn);
+    btnGroup.appendChild(addBtn);
+    btnGroup.appendChild(applyBtn);
+    container.appendChild(btnGroup);
+    sortFieldCounter = values.length;
+    if (document.getElementById('currentSortDisplay')) {
+        updateSortDisplay();
+    }
+}
 
 function addSortField() {
+    // Получаем текущие значения
     const container = document.getElementById('sortFields');
-    
-    // Сохраняем текущие значения
     const currentFields = container.querySelectorAll('.sort-field');
     const currentOrders = container.querySelectorAll('.sort-order');
     const savedValues = [];
-    
     for (let i = 0; i < currentFields.length; i++) {
         savedValues.push({
             field: currentFields[i].value,
             order: currentOrders[i].value
         });
     }
-    
-    // Очищаем контейнер
-    container.innerHTML = '';
-    
-    // Восстанавливаем сохраненные поля
-    for (let i = 0; i < savedValues.length; i++) {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'col-md-4 mb-2';
-        fieldDiv.innerHTML = `
-            <select name="sort_${i}" class="form-select form-select-sm sort-field">
-                <option value="">Выберите поле</option>
-                <option value="id" ${savedValues[i].field === 'id' ? 'selected' : ''}>ID</option>
-                <option value="alarm_class" ${savedValues[i].field === 'alarm_class' ? 'selected' : ''}>Класс</option>
-                <option value="table" ${savedValues[i].field === 'table' ? 'selected' : ''}>Таблица</option>
-                <option value="logic" ${savedValues[i].field === 'logic' ? 'selected' : ''}>Логика</option>
-                <option value="channel" ${savedValues[i].field === 'channel' ? 'selected' : ''}>Канал</option>
-                <option value="msg" ${savedValues[i].field === 'msg' ? 'selected' : ''}>Сообщение</option>
-                <option value="prior" ${savedValues[i].field === 'prior' ? 'selected' : ''}>Приоритет</option>
-                <option value="created_at" ${savedValues[i].field === 'created_at' ? 'selected' : ''}>Дата создания</option>
-                <option value="updated_at" ${savedValues[i].field === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
-            </select>
-        `;
-        
-        const orderDiv = document.createElement('div');
-        orderDiv.className = 'col-md-3 mb-2';
-        orderDiv.innerHTML = `
-            <select name="order_${i}" class="form-select form-select-sm sort-order">
-                <option value="asc" ${savedValues[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
-                <option value="desc" ${savedValues[i].order === 'desc' ? 'selected' : ''}>По убыванию</option>
-            </select>
-        `;
-        
-        const removeBtn = document.createElement('div');
-        removeBtn.className = 'col-md-2 mb-2';
-        removeBtn.innerHTML = `
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
-                <i class="bi bi-trash"></i> Удалить
-            </button>
-        `;
-        
-        const spacer = document.createElement('div');
-        spacer.className = 'col-md-2 mb-2';
-        
-        container.appendChild(fieldDiv);
-        container.appendChild(orderDiv);
-        container.appendChild(removeBtn);
-        container.appendChild(spacer);
-    }
-    
-    // Добавляем новое поле
-    const newIndex = savedValues.length;
-    const newField = document.createElement('div');
-    newField.className = 'col-md-4 mb-2';
-    newField.innerHTML = `
-        <select name="sort_${newIndex}" class="form-select form-select-sm sort-field">
-            <option value="">Выберите поле</option>
-            <option value="id">ID</option>
-            <option value="alarm_class">Класс</option>
-            <option value="table">Таблица</option>
-            <option value="logic">Логика</option>
-            <option value="channel">Канал</option>
-            <option value="msg">Сообщение</option>
-            <option value="prior">Приоритет</option>
-            <option value="created_at">Дата создания</option>
-            <option value="updated_at">Дата обновления</option>
-        </select>
-    `;
-    
-    const newOrder = document.createElement('div');
-    newOrder.className = 'col-md-3 mb-2';
-    newOrder.innerHTML = `
-        <select name="order_${newIndex}" class="form-select form-select-sm sort-order">
-            <option value="asc">По возрастанию</option>
-            <option value="desc">По убыванию</option>
-        </select>
-    `;
-    
-    const newRemoveBtn = document.createElement('div');
-    newRemoveBtn.className = 'col-md-2 mb-2';
-    newRemoveBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${newIndex})">
-            <i class="bi bi-trash"></i> Удалить
-        </button>
-    `;
-    
-    const newSpacer = document.createElement('div');
-    newSpacer.className = 'col-md-2 mb-2';
-    
-    container.appendChild(newField);
-    container.appendChild(newOrder);
-    container.appendChild(newRemoveBtn);
-    container.appendChild(newSpacer);
-    
-    // Добавляем кнопки управления
-    const addBtn = document.createElement('div');
-    addBtn.className = 'col-md-2 mb-2';
-    addBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
-            <i class="bi bi-plus"></i> Добавить
-        </button>
-    `;
-    
-    const clearBtn = document.createElement('div');
-    clearBtn.className = 'col-md-2 mb-2';
-    clearBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
-            <i class="bi bi-x"></i> Очистить
-        </button>
-    `;
-    
-    container.appendChild(addBtn);
-    container.appendChild(clearBtn);
-    
-    sortFieldCounter = newIndex + 1;
-    // Проверяем, что элемент существует перед обновлением
-    if (document.getElementById('currentSortDisplay')) {
-        updateSortDisplay();
-    }
+    savedValues.push({field: '', order: 'asc'}); // Добавляем только одну новую строку
+    renderSortFields(savedValues);
 }
 
 function removeSortField(index) {
     const container = document.getElementById('sortFields');
-    
-    // Сохраняем текущие значения
     const currentFields = container.querySelectorAll('.sort-field');
     const currentOrders = container.querySelectorAll('.sort-order');
     const savedValues = [];
-    
     for (let i = 0; i < currentFields.length; i++) {
-        if (i !== index) { // Пропускаем удаляемое поле
+        if (i !== index) {
             savedValues.push({
                 field: currentFields[i].value,
                 order: currentOrders[i].value
             });
         }
     }
-    
-    // Очищаем контейнер
-    container.innerHTML = '';
-    
-    // Восстанавливаем сохраненные поля с новыми индексами
-    for (let i = 0; i < savedValues.length; i++) {
-        const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'col-md-4 mb-2';
-        fieldDiv.innerHTML = `
-            <select name="sort_${i}" class="form-select form-select-sm sort-field">
-                <option value="">Выберите поле</option>
-                <option value="id" ${savedValues[i].field === 'id' ? 'selected' : ''}>ID</option>
-                <option value="alarm_class" ${savedValues[i].field === 'alarm_class' ? 'selected' : ''}>Класс</option>
-                <option value="table" ${savedValues[i].field === 'table' ? 'selected' : ''}>Таблица</option>
-                <option value="logic" ${savedValues[i].field === 'logic' ? 'selected' : ''}>Логика</option>
-                <option value="channel" ${savedValues[i].field === 'channel' ? 'selected' : ''}>Канал</option>
-                <option value="msg" ${savedValues[i].field === 'msg' ? 'selected' : ''}>Сообщение</option>
-                <option value="prior" ${savedValues[i].field === 'prior' ? 'selected' : ''}>Приоритет</option>
-                <option value="created_at" ${savedValues[i].field === 'created_at' ? 'selected' : ''}>Дата создания</option>
-                <option value="updated_at" ${savedValues[i].field === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
-            </select>
-        `;
-        
-        const orderDiv = document.createElement('div');
-        orderDiv.className = 'col-md-3 mb-2';
-        orderDiv.innerHTML = `
-            <select name="order_${i}" class="form-select form-select-sm sort-order">
-                <option value="asc" ${savedValues[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
-                <option value="desc" ${savedValues[i].order === 'desc' ? 'selected' : ''}>По убыванию</option>
-            </select>
-        `;
-        
-        const removeBtn = document.createElement('div');
-        removeBtn.className = 'col-md-2 mb-2';
-        removeBtn.innerHTML = `
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
-                <i class="bi bi-trash"></i> Удалить
-            </button>
-        `;
-        
-        const spacer = document.createElement('div');
-        spacer.className = 'col-md-2 mb-2';
-        
-        container.appendChild(fieldDiv);
-        container.appendChild(orderDiv);
-        container.appendChild(removeBtn);
-        container.appendChild(spacer);
+    // Если всё удалили, оставляем одну дефолтную строку
+    if (savedValues.length === 0) {
+        savedValues.push({field: '', order: 'asc'});
     }
-    
-    // Добавляем кнопки управления
-    const addBtn = document.createElement('div');
-    addBtn.className = 'col-md-2 mb-2';
-    addBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSortField()">
-            <i class="bi bi-plus"></i> Добавить
-        </button>
-    `;
-    
-    const clearBtn = document.createElement('div');
-    clearBtn.className = 'col-md-2 mb-2';
-    clearBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
-            <i class="bi bi-x"></i> Очистить
-        </button>
-    `;
-    
-    container.appendChild(addBtn);
-    container.appendChild(clearBtn);
-    
-    sortFieldCounter = newIndex + 1;
-    updateSortDisplay();
+    renderSortFields(savedValues);
 }
 
 function clearSort() {
-    const container = document.getElementById('sortFields');
-    container.innerHTML = ''; // Очищаем все поля сортировки
-    sortFieldCounter = 0; // Сбрасываем счетчик
-    updateSortDisplay();
+    // После очистки всегда одна дефолтная строка
+    renderSortFields([{field: '', order: 'asc'}]);
+    localStorage.removeItem('alarmsSortFields');
 }
 
 function updateSortDisplay() {
@@ -596,26 +504,85 @@ function updateSortDisplay() {
     const currentFields = container.querySelectorAll('.sort-field');
     const currentOrders = container.querySelectorAll('.sort-order');
     const currentSortDisplay = document.getElementById('currentSortDisplay');
-    
-    if (!currentSortDisplay) {
-        return; // Элемент не существует, выходим
-    }
-    
-    if (currentFields.length === 0) {
-        currentSortDisplay.textContent = 'Настроена';
-        return;
-    }
-
+    if (!currentSortDisplay) return;
     let displayText = '';
     for (let i = 0; i < currentFields.length; i++) {
         const field = currentFields[i].value;
-        const order = currentOrders[i].value;
+        const order = currentOrders[i] ? currentOrders[i].value : 'asc';
         if (field) {
-            displayText += `${field} (${order}), `;
+            let fieldName = '';
+            switch (field) {
+                case 'id': fieldName = 'ID'; break;
+                case 'alarm_class': fieldName = 'Класс'; break;
+                case 'table': fieldName = 'Таблица'; break;
+                case 'logic': fieldName = 'Логика'; break;
+                case 'channel': fieldName = 'Канал'; break;
+                case 'msg': fieldName = 'Сообщение'; break;
+                case 'prior': fieldName = 'Приоритет'; break;
+                case 'created_at': fieldName = 'Дата создания'; break;
+                case 'updated_at': fieldName = 'Дата обновления'; break;
+                default: fieldName = field;
+            }
+            let orderSymbol = order === 'asc' ? '↑' : '↓';
+            displayText += `${fieldName} ${orderSymbol}, `;
         }
     }
-    currentSortDisplay.textContent = displayText.slice(0, -2); // Удаляем последнюю запятую
+    currentSortDisplay.textContent = displayText ? displayText.slice(0, -2) : 'Не выбрана';
 }
+
+// Восстановление сортировки при загрузке
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderSortFields();
+    // Кнопка Добавить
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id === 'addSortBtn') {
+            event.preventDefault();
+            addSortField();
+        }
+    });
+    // Кнопка Очистить
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id === 'clearSortBtn') {
+            event.preventDefault();
+            clearSort();
+        }
+    });
+    // Кнопка Применить сортировку
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id === 'applySortBtn') {
+            event.preventDefault();
+            // Собираем параметры сортировки
+            const sortFields = document.querySelectorAll('.sort-field');
+            const sortOrders = document.querySelectorAll('.sort-order');
+            const url = new URL(window.location.href);
+            // Удаляем старые sort_ и order_ параметры
+            for (const key of Array.from(url.searchParams.keys())) {
+                if (key.startsWith('sort_') || key.startsWith('order_')) {
+                    url.searchParams.delete(key);
+                }
+            }
+            // Добавляем новые
+            let sortCount = 0;
+            const sortToSave = [];
+            for (let i = 0; i < sortFields.length; i++) {
+                const field = sortFields[i].value;
+                const order = sortOrders[i] ? sortOrders[i].value : 'asc';
+                if (field) {
+                    url.searchParams.set(`sort_${sortCount}`, field);
+                    url.searchParams.set(`order_${sortCount}`, order);
+                    sortToSave.push({field, order});
+                    sortCount++;
+                }
+            }
+            // Сохраняем в localStorage
+            localStorage.setItem('alarmsSortFields', JSON.stringify(sortToSave));
+            // Переходим по новому URL
+            window.location.href = url.pathname + '?' + url.searchParams.toString();
+        }
+    });
+});
+// === КОНЕЦ СОРТИРОВКИ ===
 
 // Функции для фильтров (оставлены для полноты, но не используются в текущем коде)
 function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
@@ -964,17 +931,31 @@ function restoreFilters() {
 function toggleSortSettings() {
     const sortSettingsBody = document.getElementById('sortSettingsBody');
     const sortToggleIcon = document.getElementById('sortToggleIcon');
-    sortSettingsBody.style.display = sortSettingsBody.style.display === 'none' ? 'block' : 'none';
-    sortToggleIcon.classList.toggle('bi-chevron-down');
-    sortToggleIcon.classList.toggle('bi-chevron-up');
+    if (!sortSettingsBody || !sortToggleIcon) return;
+    if (sortSettingsBody.style.display === 'none' || sortSettingsBody.style.display === '') {
+        sortSettingsBody.style.display = 'block';
+        sortToggleIcon.className = 'bi bi-chevron-down';
+        localStorage.setItem('alarmsSortSettingsExpanded', 'true');
+    } else {
+        sortSettingsBody.style.display = 'none';
+        sortToggleIcon.className = 'bi bi-chevron-right';
+        localStorage.setItem('alarmsSortSettingsExpanded', 'false');
+    }
 }
 
 function toggleFilterSettings() {
     const filterSettingsBody = document.getElementById('filterSettingsBody');
     const filterToggleIcon = document.getElementById('filterToggleIcon');
-    filterSettingsBody.style.display = filterSettingsBody.style.display === 'none' ? 'block' : 'none';
-    filterToggleIcon.classList.toggle('bi-chevron-down');
-    filterToggleIcon.classList.toggle('bi-chevron-up');
+    if (!filterSettingsBody || !filterToggleIcon) return;
+    if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
+        filterSettingsBody.style.display = 'block';
+        filterToggleIcon.className = 'bi bi-chevron-down';
+        localStorage.setItem('alarmsFilterSettingsExpanded', 'true');
+    } else {
+        filterSettingsBody.style.display = 'none';
+        filterToggleIcon.className = 'bi bi-chevron-right';
+        localStorage.setItem('alarmsFilterSettingsExpanded', 'false');
+    }
 }
 
 // Функция для обновления страницы при изменении параметров сортировки или фильтров
@@ -1011,11 +992,39 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionStorage.removeItem('clearing_filters');
     
     // Инициализация сортировки
-    addSortField(); // Добавляем хотя бы одно поле сортировки по умолчанию
+    renderSortFields(); // Добавляем хотя бы одно поле сортировки по умолчанию
     updateSortDisplay();
 
     // Восстанавливаем фильтры из URL-параметров
     restoreFilters();
+
+    // Восстановление состояния спойлеров
+    const sortSettingsBody = document.getElementById('sortSettingsBody');
+    const sortToggleIcon = document.getElementById('sortToggleIcon');
+    if (localStorage.getItem('alarmsSortSettingsExpanded') === 'false') {
+        if (sortSettingsBody && sortToggleIcon) {
+            sortSettingsBody.style.display = 'none';
+            sortToggleIcon.className = 'bi bi-chevron-right';
+        }
+    } else {
+        if (sortSettingsBody && sortToggleIcon) {
+            sortSettingsBody.style.display = 'block';
+            sortToggleIcon.className = 'bi bi-chevron-down';
+        }
+    }
+    const filterSettingsBody = document.getElementById('filterSettingsBody');
+    const filterToggleIcon = document.getElementById('filterToggleIcon');
+    if (localStorage.getItem('alarmsFilterSettingsExpanded') === 'false') {
+        if (filterSettingsBody && filterToggleIcon) {
+            filterSettingsBody.style.display = 'none';
+            filterToggleIcon.className = 'bi bi-chevron-right';
+        }
+    } else {
+        if (filterSettingsBody && filterToggleIcon) {
+            filterSettingsBody.style.display = 'block';
+            filterToggleIcon.className = 'bi bi-chevron-down';
+        }
+    }
 
     // Добавляем параметры фильтрации ко всем ссылкам с классом .keep-filters (делегирование событий)
     document.addEventListener('click', function(event) {
@@ -1084,6 +1093,40 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Кнопка "Очистить все фильтры" нажата (через делегирование)');
             clearFilters();
             return false;
+        }
+    });
+
+    // Добавляем обработчик для кнопки "Применить сортировку"
+    document.addEventListener('click', function(event) {
+        if (event.target && event.target.id === 'applySortBtn') {
+            event.preventDefault();
+            // Собираем параметры сортировки
+            const sortFields = document.querySelectorAll('.sort-field');
+            const sortOrders = document.querySelectorAll('.sort-order');
+            const url = new URL(window.location.href);
+            // Удаляем старые sort_ и order_ параметры
+            for (const key of Array.from(url.searchParams.keys())) {
+                if (key.startsWith('sort_') || key.startsWith('order_')) {
+                    url.searchParams.delete(key);
+                }
+            }
+            // Добавляем новые
+            let sortCount = 0;
+            const sortToSave = [];
+            for (let i = 0; i < sortFields.length; i++) {
+                const field = sortFields[i].value;
+                const order = sortOrders[i] ? sortOrders[i].value : 'asc';
+                if (field) {
+                    url.searchParams.set(`sort_${sortCount}`, field);
+                    url.searchParams.set(`order_${sortCount}`, order);
+                    sortToSave.push({field, order});
+                    sortCount++;
+                }
+            }
+            // Сохраняем в localStorage
+            localStorage.setItem('alarmsSortFields', JSON.stringify(sortToSave));
+            // Переходим по новому URL
+            window.location.href = url.pathname + '?' + url.searchParams.toString();
         }
     });
 });
