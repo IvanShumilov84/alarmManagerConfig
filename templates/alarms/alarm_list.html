@@ -25,9 +25,12 @@
 <!-- ФИЛЬТРЫ -->
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleFilterSettings()">
-        <h6 class="mb-0">
-            <i class="bi bi-funnel"></i> Настройка фильтрации
-        </h6>
+        <div class="d-flex align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-funnel"></i> Настройка фильтрации
+            </h6>
+            <span id="filtersActiveNotice" class="badge bg-danger ms-2" style="display:none">Фильтрация активна</span>
+        </div>
         <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
     </div>
     <div class="card-body" id="filterSettingsBody">
@@ -55,9 +58,12 @@
 <!-- СОРТИРОВКА -->
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleSortSettings()">
-        <h6 class="mb-0">
-            <i class="bi bi-sort-down"></i> Настройка сортировки (автоматическое применение)
-        </h6>
+        <div class="d-flex align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-sort-down"></i> Настройка сортировки
+            </h6>
+            <span id="sortActiveNotice" class="badge bg-danger ms-2" style="display:none">Сортировка активна</span>
+        </div>
         <i class="bi bi-chevron-down" id="sortToggleIcon"></i>
     </div>
     <div class="card-body" id="sortSettingsBody">
@@ -471,6 +477,7 @@ function addSortField() {
     }
     savedValues.push({field: '', order: 'asc'}); // Добавляем только одну новую строку
     renderSortFields(savedValues);
+    updateActiveNotices();
 }
 
 function removeSortField(index) {
@@ -491,12 +498,14 @@ function removeSortField(index) {
         savedValues.push({field: '', order: 'asc'});
     }
     renderSortFields(savedValues);
+    updateActiveNotices();
 }
 
 function clearSort() {
     // После очистки всегда одна дефолтная строка
     renderSortFields([{field: '', order: 'asc'}]);
     localStorage.removeItem('alarmsSortFields');
+    updateActiveNotices();
 }
 
 function updateSortDisplay() {
@@ -638,6 +647,7 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
     `;
     filterFields.appendChild(row);
     console.log('Фильтр добавлен. Новое количество фильтров:', filterFields.querySelectorAll('.filter-row').length);
+    updateActiveNotices();
 }
 
 function applyFilters() {
@@ -731,6 +741,7 @@ function applyFilters() {
     
     console.log('Переходим на URL:', url.toString());
     window.location.href = url.toString();
+    updateActiveNotices();
 }
 
 function clearFilters() {
@@ -753,6 +764,7 @@ function clearFilters() {
     window.history.replaceState({}, '', url.pathname + url.search);
     // Обновляем таблицу аварий (перезагружаем страницу)
     window.location.reload();
+    updateActiveNotices();
 }
 
 
@@ -859,8 +871,7 @@ function restoreFilters() {
         const filterToggleIcon = document.getElementById('filterToggleIcon');
         if (filterSettingsBody && filterToggleIcon) {
             filterSettingsBody.style.display = 'block';
-            filterToggleIcon.classList.remove('bi-chevron-down');
-            filterToggleIcon.classList.add('bi-chevron-up');
+            filterToggleIcon.className = 'bi bi-chevron-down';
             console.log('Спойлер фильтров открыт');
         }
     }
@@ -925,6 +936,7 @@ function restoreFilters() {
             applyFilters();
         }, 100); // Небольшая задержка для завершения восстановления UI
     }
+    updateActiveNotices();
 }
 
 // Функции для сортировки
@@ -941,6 +953,16 @@ function toggleSortSettings() {
         sortToggleIcon.className = 'bi bi-chevron-right';
         localStorage.setItem('alarmsSortSettingsExpanded', 'false');
     }
+    const sortActiveNotice = document.getElementById('sortActiveNotice');
+    if (sortSettingsBody.style.display === 'none' || sortSettingsBody.style.display === '') {
+        if (sortActiveNotice) sortActiveNotice.style.display = 'none';
+    } else {
+        // Проверяем, есть ли активная сортировка
+        let active = false;
+        document.querySelectorAll('.sort-field').forEach(f => { if (f.value) active = true; });
+        if (sortActiveNotice) sortActiveNotice.style.display = active ? 'block' : 'none';
+    }
+    updateActiveNotices();
 }
 
 function toggleFilterSettings() {
@@ -956,6 +978,21 @@ function toggleFilterSettings() {
         filterToggleIcon.className = 'bi bi-chevron-right';
         localStorage.setItem('alarmsFilterSettingsExpanded', 'false');
     }
+    const filtersActiveNotice = document.getElementById('filtersActiveNotice');
+    if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
+        if (filtersActiveNotice) filtersActiveNotice.style.display = 'none';
+    } else {
+        // Проверяем, есть ли активные фильтры
+        let active = false;
+        document.querySelectorAll('.filter-row').forEach(row => {
+            const field = row.querySelector('.filter-field');
+            const op = row.querySelector('.filter-op');
+            const val = row.querySelector('.filter-value');
+            if (field && field.value && op && op.value && val && val.value) active = true;
+        });
+        if (filtersActiveNotice) filtersActiveNotice.style.display = active ? 'block' : 'none';
+    }
+    updateActiveNotices();
 }
 
 // Функция для обновления страницы при изменении параметров сортировки или фильтров
@@ -986,8 +1023,58 @@ function updatePage() {
     window.location.href = url;
 }
 
+function updateActiveNotices() {
+    // Сортировка
+    const sortActiveNotice = document.getElementById('sortActiveNotice');
+    let sortActive = false;
+    document.querySelectorAll('.sort-field').forEach(f => { if (f.value) sortActive = true; });
+    if (sortActiveNotice) {
+        sortActiveNotice.style.display = sortActive ? 'inline-block' : 'none';
+    }
+    // Фильтры
+    const filtersActiveNotice = document.getElementById('filtersActiveNotice');
+    let filtersActive = false;
+    document.querySelectorAll('.filter-row').forEach(row => {
+        const field = row.querySelector('.filter-field');
+        const op = row.querySelector('.filter-op');
+        const val = row.querySelector('.filter-value');
+        if (field && field.value && op && op.value && val && val.value) filtersActive = true;
+    });
+    if (filtersActiveNotice) {
+        filtersActiveNotice.style.display = filtersActive ? 'inline-block' : 'none';
+    }
+}
+
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Автоматическое применение сортировки при входе ---
+    const url = new URL(window.location.href);
+    let hasSortParams = false;
+    for (const key of url.searchParams.keys()) {
+        if (key.startsWith('sort_')) {
+            hasSortParams = true;
+            break;
+        }
+    }
+    if (!hasSortParams) {
+        const savedSort = localStorage.getItem('alarmsSortFields');
+        if (savedSort) {
+            try {
+                const sortArr = JSON.parse(savedSort);
+                if (Array.isArray(sortArr) && sortArr.length > 0 && sortArr.some(s => s.field)) {
+                    // Добавляем параметры сортировки в URL
+                    sortArr.forEach((s, i) => {
+                        if (s.field) {
+                            url.searchParams.set(`sort_${i}`, s.field);
+                            url.searchParams.set(`order_${i}`, s.order || 'asc');
+                        }
+                    });
+                    window.location.replace(url.pathname + '?' + url.searchParams.toString());
+                    return;
+                }
+            } catch (e) {}
+        }
+    }
     // Очищаем флаг очистки фильтров, если он был установлен
     sessionStorage.removeItem('clearing_filters');
     
@@ -1129,6 +1216,7 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = url.pathname + '?' + url.searchParams.toString();
         }
     });
+    updateActiveNotices();
 });
 </script>
 {% endblock %}
