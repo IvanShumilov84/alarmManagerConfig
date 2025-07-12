@@ -29,7 +29,15 @@
             <h6 class="mb-0">
                 <i class="bi bi-funnel"></i> Настройка фильтрации
             </h6>
-            <span id="filtersActiveNotice" class="badge bg-danger ms-2" style="display:none">Фильтрация активна</span>
+            <span id="filtersActiveNotice" class="badge bg-danger ms-2" style="display:none">
+                Фильтрация активна
+                {% if has_active_filters %}
+                    <span class="ms-1">({{ filtered_count }}/{{ total_count }})</span>
+                {% endif %}
+            </span>
+            <span class="badge bg-secondary ms-2">
+                Всего: {{ total_count }}
+            </span>
         </div>
         <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
     </div>
@@ -41,8 +49,8 @@
         </div>
         <div class="row mt-2">
             <div class="col-12">
-                <a href="#" class="btn btn-sm btn-outline-secondary me-2" id="clearFiltersBtn" onclick="event.preventDefault(); console.log('Кнопка нажата через onclick'); clearFilters(); return false;">
-                    <i class="bi bi-x"></i> Очистить все фильтры
+                <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); console.log('Кнопка нажата через onclick'); clearFilters(); return false;">
+                    <i class="bi bi-x"></i> Удалить все фильтры
                 </a>
                 <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
                     <i class="bi bi-plus"></i> Добавить фильтр
@@ -593,6 +601,95 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 // === КОНЕЦ СОРТИРОВКИ ===
 
+// Функция для принудительного обновления таблицы аварий
+function refreshAlarmsTable() {
+    console.log('=== ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ТАБЛИЦЫ ===');
+    
+    // Строим URL без параметров фильтрации
+    const url = new URL(window.location.href);
+    
+    // Удаляем все параметры фильтрации
+    for (const key of Array.from(url.searchParams.keys())) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+            console.log(`Удаляем параметр фильтрации: ${key}`);
+        }
+    }
+    
+    // Сохраняем display_mode если есть
+    const currentDisplayMode = url.searchParams.get('display_mode');
+    if (currentDisplayMode) {
+        url.searchParams.set('display_mode', currentDisplayMode);
+    }
+    
+    console.log('Обновляем таблицу по URL:', url.toString());
+    window.location.href = url.toString();
+}
+
+// Функция для удаления отдельного фильтра
+function removeFilter(button) {
+    const filterRow = button.closest('.filter-row');
+    if (!filterRow) return;
+    
+    console.log('=== УДАЛЕНИЕ ОТДЕЛЬНОГО ФИЛЬТРА ===');
+    
+    const filterFields = document.getElementById('filterFields');
+    const allRows = filterFields.querySelectorAll('.filter-row');
+    const rowIndex = Array.from(allRows).indexOf(filterRow);
+    
+    console.log('Индекс удаляемого фильтра:', rowIndex);
+    console.log('Всего фильтров:', allRows.length);
+    
+    // Удаляем строку фильтра из DOM
+    filterRow.remove();
+    
+    // Если это был последний фильтр, добавляем пустой дефолтный
+    if (filterFields.querySelectorAll('.filter-row').length === 0) {
+        console.log('Добавляем пустой дефолтный фильтр');
+        addFilterField();
+    }
+    
+    // Обновляем localStorage - собираем данные из оставшихся фильтров
+    const remainingFilters = [];
+    const remainingRows = filterFields.querySelectorAll('.filter-row');
+    
+    remainingRows.forEach((row, index) => {
+        const fieldSelect = row.querySelector('.filter-field');
+        const opSelect = row.querySelector('.filter-op');
+        const valueInput = row.querySelector('.filter-value');
+        
+        if (fieldSelect && opSelect && valueInput) {
+            const field = fieldSelect.value;
+            const op = opSelect.value;
+            const value = valueInput.value;
+            
+            // Проверяем, что фильтр заполнен
+            if (field && value && value.trim() !== '') {
+                remainingFilters.push({
+                    field: field,
+                    op: op,
+                    value: value.trim()
+                });
+                console.log(`Сохраняем оставшийся фильтр ${index}: ${field} ${op} ${value.trim()}`);
+            }
+        }
+    });
+    
+    // Обновляем localStorage
+    if (remainingFilters.length > 0) {
+        localStorage.setItem('alarms_filters', JSON.stringify(remainingFilters));
+        console.log('Обновлен localStorage, осталось фильтров:', remainingFilters.length);
+    } else {
+        localStorage.removeItem('alarms_filters');
+        console.log('localStorage очищен, фильтров не осталось');
+    }
+    
+    console.log('Фильтр удален, обновляем таблицу');
+    
+    // Принудительно обновляем таблицу
+    refreshAlarmsTable();
+}
+
 // Функции для фильтров (оставлены для полноты, но не используются в текущем коде)
 function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
     console.log('=== addFilterField вызвана ===');
@@ -640,7 +737,7 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
             <input type="text" name="filter_value_${idx}" class="form-control form-control-sm filter-value" value="${valueValue}" placeholder="Значение">
         </div>
         <div class="col-md-1 mb-1 d-flex align-items-center">
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.filter-row').remove()" title="Удалить фильтр">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFilter(this)" title="Удалить фильтр">
                 <i class="bi bi-trash"></i>
             </button>
         </div>
@@ -723,6 +820,7 @@ function applyFilters() {
     // Добавляем новые параметры фильтрации
     let hasFilters = false;
     const filtersData = [];
+    let filterIndex = 0; // Используем отдельный индекс для активных фильтров
     
     for (let i = 0; i < filterFields.length; i++) {
         const field = filterFields[i].value;
@@ -753,11 +851,11 @@ function applyFilters() {
         
         // Проверяем, что поле и значение заполнены
         if (field && value && value.trim() !== '') {
-            url.searchParams.set(`filter_field_${i}`, field);
-            url.searchParams.set(`filter_op_${i}`, op);
-            url.searchParams.set(`filter_value_${i}`, value.trim());
+            url.searchParams.set(`filter_field_${filterIndex}`, field);
+            url.searchParams.set(`filter_op_${filterIndex}`, op);
+            url.searchParams.set(`filter_value_${filterIndex}`, value.trim());
             hasFilters = true;
-            console.log(`Добавляем фильтр ${i}: ${field} ${op} ${value.trim()}`);
+            console.log(`Добавляем фильтр ${filterIndex}: ${field} ${op} ${value.trim()}`);
             
             // Сохраняем фильтр для localStorage
             filtersData.push({
@@ -765,6 +863,8 @@ function applyFilters() {
                 op: op,
                 value: value.trim()
             });
+            
+            filterIndex++; // Увеличиваем индекс только для активных фильтров
         } else {
             console.log(`Пропускаем фильтр ${i}: поле=${field}, значение=${value}`);
         }
@@ -786,22 +886,18 @@ function applyFilters() {
         console.log(`Сохраняем display_mode: ${currentDisplayMode}`);
     }
     
-    console.log('Итоговый URL:', url.toString());
+    // Всегда переходим на URL, даже если нет фильтров (для обновления таблицы)
+    console.log('Переходим на URL:', url.toString());
     console.log('Есть ли фильтры:', hasFilters);
     
-    if (!hasFilters) {
-        console.warn('ВНИМАНИЕ: Ни одного фильтра не найдено в форме!');
-        // Не перезагружаем страницу, если нет фильтров
-        return;
-    }
-    
-    console.log('Переходим на URL:', url.toString());
+    // Принудительно обновляем страницу для обновления таблицы аварий
+    console.log('Обновляем страницу для применения изменений фильтров');
     window.location.href = url.toString();
     updateActiveNotices();
 }
 
 function clearFilters() {
-    console.log('=== ОЧИСТКА ФИЛЬТРОВ ===');
+    console.log('=== УДАЛЕНИЕ ВСЕХ ФИЛЬТРОВ ===');
     // Очищаем все фильтры в UI
     const filterFieldsContainer = document.getElementById('filterFields');
     if (filterFieldsContainer) {
@@ -810,17 +906,11 @@ function clearFilters() {
     }
     // Удаляем фильтры из localStorage
     localStorage.removeItem('alarms_filters');
-    // Удаляем параметры фильтрации из URL (без перезагрузки)
-    const url = new URL(window.location.href);
-    for (const key of Array.from(url.searchParams.keys())) {
-        if (key.startsWith('filter_')) {
-            url.searchParams.delete(key);
-        }
-    }
-    window.history.replaceState({}, '', url.pathname + url.search);
-    // Обновляем таблицу аварий (перезагружаем страницу)
-    window.location.reload();
-    updateActiveNotices();
+    
+    console.log('Все фильтры удалены, обновляем таблицу');
+    
+    // Принудительно обновляем таблицу
+    refreshAlarmsTable();
 }
 
 
@@ -947,7 +1037,7 @@ function restoreFilters() {
             clearFiltersBtn.onclick = function(event) {
                 event.preventDefault();
                 event.stopPropagation();
-                console.log('Кнопка "Очистить все фильтры" нажата (onclick)');
+                console.log('Кнопка "Удалить все фильтры" нажата (onclick)');
                 clearFilters();
                 return false;
             };
@@ -957,7 +1047,7 @@ function restoreFilters() {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
-                console.log('Кнопка "Очистить все фильтры" нажата (mousedown)');
+                console.log('Кнопка "Удалить все фильтры" нажата (mousedown)');
                 clearFilters();
                 return false;
             }, true);
@@ -967,7 +1057,7 @@ function restoreFilters() {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
-                console.log('Кнопка "Очистить все фильтры" отпущена (mouseup)');
+                console.log('Кнопка "Удалить все фильтры" отпущена (mouseup)');
                 return false;
             }, true);
             
@@ -976,7 +1066,7 @@ function restoreFilters() {
                 event.preventDefault();
                 event.stopPropagation();
                 event.stopImmediatePropagation();
-                console.log('Кнопка "Очистить все фильтры" нажата (addEventListener click)');
+                console.log('Кнопка "Удалить все фильтры" нажата (addEventListener click)');
                 clearFilters();
                 return false;
             }, true);
@@ -1372,7 +1462,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (event.target.closest('#clearFiltersBtn')) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('Кнопка "Очистить все фильтры" нажата (через делегирование)');
+            console.log('Кнопка "Удалить все фильтры" нажата (через делегирование)');
             clearFilters();
             return false;
         }
