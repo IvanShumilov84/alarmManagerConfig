@@ -735,12 +735,14 @@ class AlarmConfigListView(ListView):
         context["filter_ops"] = filter_ops
         context["filter_values"] = filter_values
 
-        # Добавляем счетчик отфильтрованных аварий
-        context["filtered_count"] = context["alarms"].count()
-
         # Получаем общее количество аварий (без фильтров)
         total_queryset = AlarmConfig.objects.filter(deleted_at__isnull=True)
         context["total_count"] = total_queryset.count()
+
+        # Получаем отфильтрованный queryset для подсчета
+        filtered_queryset = AlarmConfig.objects.filter(deleted_at__isnull=True)
+        filtered_queryset = self.apply_filters(filtered_queryset)
+        context["filtered_count"] = filtered_queryset.count()
 
         # Проверяем, есть ли активные фильтры
         has_active_filters = any(

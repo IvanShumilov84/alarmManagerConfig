@@ -29,11 +29,9 @@
             <h6 class="mb-0">
                 <i class="bi bi-funnel"></i> Настройка фильтрации
             </h6>
-            <span id="filtersActiveNotice" class="badge bg-danger ms-2" style="display:none">
+            <span id="filtersActiveNotice" class="badge bg-danger ms-2" {% if not has_active_filters %}style="display:none"{% endif %}>
                 Фильтрация активна
-                {% if has_active_filters %}
-                    <span class="ms-1">({{ filtered_count }}/{{ total_count }})</span>
-                {% endif %}
+                <span class="ms-1">({{ filtered_count }}/{{ total_count }})</span>
             </span>
             <span class="badge bg-secondary ms-2">
                 Всего: {{ total_count }}
@@ -104,8 +102,8 @@
                     </button>
                 </div>
                 <div class="col-md-2 mb-2">
-                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="clearSort()">
-                        <i class="bi bi-x"></i> Очистить
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearSort()" title="Удалить сортировку">
+                        <i class="bi bi-trash"></i>
                     </button>
                 </div>
             </div>
@@ -360,12 +358,26 @@
             {% endif %}
         {% else %}
             <div class="text-center text-muted py-5">
-                <i class="bi bi-inbox fs-1"></i>
-                <h4>Аварийные сигналы не найдены</h4>
-                <p>Создайте первый аварийный сигнал для начала работы</p>
-                <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Создать первый сигнал
-                </a>
+                {% if has_active_filters %}
+                    <i class="bi bi-search fs-1"></i>
+                    <h4>По вашему запросу ничего не найдено</h4>
+                    <p>Попробуйте изменить критерии фильтрации или очистить фильтры</p>
+                    <div class="mt-3">
+                        <a href="#" class="btn btn-outline-secondary me-2" onclick="event.preventDefault(); clearFilters(); return false;">
+                            <i class="bi bi-x-circle"></i> Очистить фильтры
+                        </a>
+                        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Добавить сигнал
+                        </a>
+                    </div>
+                {% else %}
+                    <i class="bi bi-inbox fs-1"></i>
+                    <h4>Аварийные сигналы не найдены</h4>
+                    <p>Создайте первый аварийный сигнал для начала работы</p>
+                    <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Создать первый сигнал
+                    </a>
+                {% endif %}
             </div>
         {% endif %}
     </div>
@@ -428,8 +440,8 @@ function renderSortFields(savedValues = null) {
         const removeBtn = document.createElement('div');
         removeBtn.className = 'col-md-2 mb-2';
         removeBtn.innerHTML = `
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})">
-                <i class="bi bi-trash"></i> Удалить
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})" title="Удалить сортировку">
+                <i class="bi bi-trash"></i>
             </button>
         `;
         const spacer = document.createElement('div');
@@ -1180,14 +1192,22 @@ function updateActiveNotices() {
     // Фильтры
     const filtersActiveNotice = document.getElementById('filtersActiveNotice');
     let filtersActive = false;
+    
+    // Проверяем фильтры в URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
+    
+    // Проверяем фильтры в UI
     document.querySelectorAll('.filter-row').forEach(row => {
         const field = row.querySelector('.filter-field');
         const op = row.querySelector('.filter-op');
         const val = row.querySelector('.filter-value');
         if (field && field.value && op && op.value && val && val.value) filtersActive = true;
     });
+    
+    // Показываем бейдж, если есть фильтры в URL или в UI
     if (filtersActiveNotice) {
-        filtersActiveNotice.style.display = filtersActive ? 'inline-block' : 'none';
+        filtersActiveNotice.style.display = (filtersActive || hasUrlFilters) ? 'inline-block' : 'none';
     }
 }
 
