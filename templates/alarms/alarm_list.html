@@ -615,7 +615,7 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
     row.className = 'row mb-2 filter-row';
     row.innerHTML = `
         <div class="col-md-4 mb-1">
-            <select name="filter_field_${idx}" class="form-select form-select-sm filter-field">
+            <select name="filter_field_${idx}" class="form-select form-select-sm filter-field" onchange="updateFilterOperators(${idx})">
                 <option value="">Выберите поле</option>
                 <option value="id" ${fieldValue === 'id' ? 'selected' : ''}>ID</option>
                 <option value="alarm_class" ${fieldValue === 'alarm_class' ? 'selected' : ''}>Класс</option>
@@ -629,7 +629,7 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
             </select>
         </div>
         <div class="col-md-3 mb-1">
-            <select name="filter_op_${idx}" class="form-select form-select-sm filter-op">
+            <select name="filter_op_${idx}" class="form-select form-select-sm filter-op" onchange="updateFilterValueType(${idx})">
                 <option value="exact" ${operatorValue === 'exact' ? 'selected' : ''}>Точно</option>
                 <option value="contains" ${operatorValue === 'contains' ? 'selected' : ''}>Содержит</option>
                 <option value="startswith" ${operatorValue === 'startswith' ? 'selected' : ''}>Начинается с</option>
@@ -647,6 +647,42 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
     `;
     filterFields.appendChild(row);
     console.log('Фильтр добавлен. Новое количество фильтров:', filterFields.querySelectorAll('.filter-row').length);
+    
+    // Если поле уже выбрано, обновляем операторы
+    if (fieldValue) {
+        updateFilterOperators(idx);
+        // Если оператор тоже задан, устанавливаем его
+        if (operatorValue) {
+            const opSelect = row.querySelector('.filter-op');
+            if (opSelect) {
+                for (let i = 0; i < opSelect.options.length; i++) {
+                    if (opSelect.options[i].value === operatorValue) {
+                        opSelect.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Если есть значение, устанавливаем его
+        if (valueValue) {
+            if (operatorValue === 'range' && (fieldValue === 'created_at' || fieldValue === 'updated_at')) {
+                // Для диапазона дат разбираем значение
+                const parts = valueValue.split(',');
+                if (parts.length === 2) {
+                    const startInput = row.querySelector(`input[name="filter_value_${idx}_start"]`);
+                    const endInput = row.querySelector(`input[name="filter_value_${idx}_end"]`);
+                    if (startInput) startInput.value = parts[0];
+                    if (endInput) endInput.value = parts[1];
+                }
+            } else {
+                // Для обычных полей устанавливаем значение
+                const valueInput = row.querySelector('.filter-value');
+                if (valueInput) valueInput.value = valueValue;
+            }
+        }
+    }
+    
     updateActiveNotices();
 }
 
@@ -691,7 +727,27 @@ function applyFilters() {
     for (let i = 0; i < filterFields.length; i++) {
         const field = filterFields[i].value;
         const op = filterOps[i] ? filterOps[i].value : 'exact';
-        const value = filterValues[i] ? filterValues[i].value : '';
+        
+        // Получаем значение в зависимости от типа оператора
+        let value = '';
+        if (op === 'range' && (field === 'created_at' || field === 'updated_at')) {
+            // Для диапазона дат получаем значения из двух полей
+            const startValue = filterForm.querySelector(`input[name="filter_value_${i}_start"]`);
+            const endValue = filterForm.querySelector(`input[name="filter_value_${i}_end"]`);
+            const start = startValue ? startValue.value : '';
+            const end = endValue ? endValue.value : '';
+            
+            if (start && end) {
+                value = `${start},${end}`;
+            } else if (start || end) {
+                // Если заполнено только одно поле, используем его как точное значение
+                value = start || end;
+            }
+        } else {
+            // Для остальных случаев получаем значение из обычного поля
+            const valueInput = filterValues[i];
+            value = valueInput ? valueInput.value : '';
+        }
         
         console.log(`Фильтр ${i}: поле=${field}, оператор=${op}, значение=${value}`);
         
@@ -1042,6 +1098,145 @@ function updateActiveNotices() {
     });
     if (filtersActiveNotice) {
         filtersActiveNotice.style.display = filtersActive ? 'inline-block' : 'none';
+    }
+}
+
+// Функция для обновления операторов фильтра в зависимости от выбранного поля
+function updateFilterOperators(idx) {
+    const filterRow = document.querySelectorAll('.filter-row')[idx];
+    if (!filterRow) return;
+    
+    const fieldSelect = filterRow.querySelector('.filter-field');
+    const opSelect = filterRow.querySelector('.filter-op');
+    const valueInput = filterRow.querySelector('.filter-value');
+    
+    if (!fieldSelect || !opSelect || !valueInput) return;
+    
+    const selectedField = fieldSelect.value;
+    
+    // Очищаем текущие операторы
+    opSelect.innerHTML = '';
+    
+    // Определяем операторы в зависимости от типа поля
+    if (selectedField === 'created_at' || selectedField === 'updated_at') {
+        // Для дат используем операторы сравнения
+        const dateOperators = [
+            {value: 'exact', text: 'Равно'},
+            {value: 'gt', text: 'Больше'},
+            {value: 'lt', text: 'Меньше'},
+            {value: 'gte', text: 'Больше или равно'},
+            {value: 'lte', text: 'Меньше или равно'},
+            {value: 'range', text: 'Диапазон'}
+        ];
+        
+        dateOperators.forEach(op => {
+            const option = document.createElement('option');
+            option.value = op.value;
+            option.textContent = op.text;
+            opSelect.appendChild(option);
+        });
+        
+        // Устанавливаем тип поля ввода как date
+        valueInput.type = 'date';
+        valueInput.placeholder = 'ГГГГ-ММ-ДД';
+        
+    } else if (selectedField === 'prior') {
+        // Для приоритета используем числовые операторы
+        const numericOperators = [
+            {value: 'exact', text: 'Равно'},
+            {value: 'gt', text: 'Больше'},
+            {value: 'lt', text: 'Меньше'},
+            {value: 'gte', text: 'Больше или равно'},
+            {value: 'lte', text: 'Меньше или равно'},
+            {value: 'contains', text: 'Содержит'},
+            {value: 'startswith', text: 'Начинается с'},
+            {value: 'endswith', text: 'Заканчивается на'}
+        ];
+        
+        numericOperators.forEach(op => {
+            const option = document.createElement('option');
+            option.value = op.value;
+            option.textContent = op.text;
+            opSelect.appendChild(option);
+        });
+        
+        // Устанавливаем тип поля ввода как number
+        valueInput.type = 'number';
+        valueInput.placeholder = 'Число';
+        
+    } else {
+        // Для остальных полей используем строковые операторы
+        const stringOperators = [
+            {value: 'exact', text: 'Точно'},
+            {value: 'contains', text: 'Содержит'},
+            {value: 'startswith', text: 'Начинается с'},
+            {value: 'endswith', text: 'Заканчивается на'}
+        ];
+        
+        stringOperators.forEach(op => {
+            const option = document.createElement('option');
+            option.value = op.value;
+            option.textContent = op.text;
+            opSelect.appendChild(option);
+        });
+        
+        // Устанавливаем тип поля ввода как text
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Значение';
+    }
+    
+    // Устанавливаем первый оператор по умолчанию
+    if (opSelect.options.length > 0) {
+        opSelect.selectedIndex = 0;
+    }
+}
+
+// Функция для обновления типа поля ввода при изменении оператора
+function updateFilterValueType(idx) {
+    const filterRow = document.querySelectorAll('.filter-row')[idx];
+    if (!filterRow) return;
+    
+    const fieldSelect = filterRow.querySelector('.filter-field');
+    const opSelect = filterRow.querySelector('.filter-op');
+    const valueInput = filterRow.querySelector('.filter-value');
+    
+    if (!fieldSelect || !opSelect || !valueInput) return;
+    
+    const selectedField = fieldSelect.value;
+    const selectedOp = opSelect.value;
+    
+    if (selectedField === 'created_at' || selectedField === 'updated_at') {
+        if (selectedOp === 'range') {
+            // Для диапазона дат создаем специальный виджет
+            const valueContainer = valueInput.parentElement;
+            valueContainer.innerHTML = `
+                <div class="row g-1">
+                    <div class="col-6">
+                        <input type="date" name="filter_value_${idx}_start" class="form-control form-control-sm filter-value-start" placeholder="От">
+                    </div>
+                    <div class="col-6">
+                        <input type="date" name="filter_value_${idx}_end" class="form-control form-control-sm filter-value-end" placeholder="До">
+                    </div>
+                </div>
+            `;
+        } else {
+            // Для остальных операторов дат используем обычное поле даты
+            const valueContainer = valueInput.parentElement;
+            valueContainer.innerHTML = `
+                <input type="date" name="filter_value_${idx}" class="form-control form-control-sm filter-value" placeholder="ГГГГ-ММ-ДД">
+            `;
+        }
+    } else if (selectedField === 'prior') {
+        if (['gt', 'lt', 'gte', 'lte', 'exact'].includes(selectedOp)) {
+            valueInput.type = 'number';
+            valueInput.placeholder = 'Число';
+        } else {
+            valueInput.type = 'text';
+            valueInput.placeholder = 'Значение';
+        }
+    } else {
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Значение';
     }
 }
 

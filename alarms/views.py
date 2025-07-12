@@ -3,11 +3,13 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
 from django.urls import reverse_lazy
 import json
 from .models import AlarmConfig, AlarmTable
 from .forms import AlarmConfigForm, AlarmTableForm
+from django.db.models import Q
+from django.http import HttpResponseRedirect
 
 
 class AlarmTableListView(ListView):
@@ -19,10 +21,12 @@ class AlarmTableListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с поддержкой множественной сортировки"""
+        """Получаем queryset с подсчетом аварий для каждой таблицы"""
         from django.db.models import Count
 
-        queryset = AlarmTable.objects.annotate(alarms_count=Count("alarms"))
+        queryset = AlarmTable.objects.filter(deleted_at__isnull=True).annotate(
+            alarms_count=Count("alarms")
+        )
 
         # Получаем параметры сортировки
         sort_fields = []
@@ -126,12 +130,20 @@ class AlarmTableUpdateView(UpdateView):
     success_url = reverse_lazy("alarms:table_list")
 
 
-class AlarmTableDeleteView(DeleteView):
+class AlarmTableDeleteView(View):
     """Представление для удаления таблицы аварий"""
 
-    model = AlarmTable
-    template_name = "alarms/table_confirm_delete.html"
-    success_url = reverse_lazy("alarms:table_list")
+    def get(self, request, pk):
+        """Показываем форму подтверждения удаления"""
+        table = get_object_or_404(AlarmTable, pk=pk)
+        return render(request, "alarms/table_confirm_delete.html", {"object": table})
+
+    def post(self, request, pk):
+        """Мягкое удаление - устанавливает deleted_at вместо физического удаления"""
+        table = get_object_or_404(AlarmTable, pk=pk)
+        table.soft_delete()
+        messages.success(request, "Таблица аварий успешно удалена!")
+        return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
 
 
 class AlarmConfigListView(ListView):
@@ -144,7 +156,7 @@ class AlarmConfigListView(ListView):
 
     def get_queryset(self):
         """Получаем queryset с поддержкой сортировки и фильтрации по русским названиям"""
-        from django.db.models import Case, When, Value, CharField, Q
+        from django.db.models import Case, When, Value, CharField
 
         queryset = AlarmConfig.objects.select_related("table")
 
@@ -258,8 +270,12 @@ class AlarmConfigListView(ListView):
     def apply_filters(self, queryset):
         """Применяет фильтры к queryset"""
         from django.db.models import Q
+        from .models import AlarmTable
 
-        # Получаем параметры фильтрации
+        # По умолчанию показываем только не удалённые
+        queryset = queryset.filter(deleted_at__isnull=True)
+
+        # Получаем параметры фильтрации из GET запроса
         filter_fields = []
         filter_values = []
         filter_operators = []
@@ -273,7 +289,8 @@ class AlarmConfigListView(ListView):
             filter_fields.append(filter_field)
             filter_value = self.request.GET.get(f"filter_value_{i}", "")
             filter_values.append(filter_value)
-            filter_operator = self.request.GET.get(f"filter_operator_{i}", "contains")
+            # Используем filter_op_ вместо filter_operator_ для соответствия фронтенду
+            filter_operator = self.request.GET.get(f"filter_op_{i}", "contains")
             filter_operators.append(filter_operator)
             i += 1
 
@@ -290,6 +307,24 @@ class AlarmConfigListView(ListView):
                         int_value = int(value)
                         if operator == "exact":
                             queryset = queryset.filter(id=int_value)
+                        elif operator == "contains":
+                            # Конвертируем ID в строку и ищем подстроку
+                            q_objects = Q()
+                            # Ищем ID, содержащие введенное значение как подстроку
+                            q_objects |= Q(id__icontains=int_value)
+                            queryset = queryset.filter(q_objects)
+                        elif operator == "startswith":
+                            # Конвертируем ID в строку и ищем начало
+                            q_objects = Q()
+                            # Ищем ID, начинающиеся с введенного значения
+                            q_objects |= Q(id__istartswith=int_value)
+                            queryset = queryset.filter(q_objects)
+                        elif operator == "endswith":
+                            # Конвертируем ID в строку и ищем конец
+                            q_objects = Q()
+                            # Ищем ID, заканчивающиеся на введенное значение
+                            q_objects |= Q(id__iendswith=int_value)
+                            queryset = queryset.filter(q_objects)
                         elif operator == "gt":
                             queryset = queryset.filter(id__gt=int_value)
                         elif operator == "lt":
@@ -313,18 +348,22 @@ class AlarmConfigListView(ListView):
                         "info": "info",
                     }
                     search_value = value.lower()
-                    if search_value in alarm_class_mapping:
-                        db_value = alarm_class_mapping[search_value]
-                        if operator == "exact":
+
+                    # Для точного поиска ищем точное совпадение
+                    if operator == "exact":
+                        if search_value in alarm_class_mapping:
+                            db_value = alarm_class_mapping[search_value]
                             queryset = queryset.filter(alarm_class=db_value)
-                        elif operator == "contains":
-                            queryset = queryset.filter(alarm_class=db_value)
-                    else:
-                        # Если не найдено точное соответствие
-                        if operator == "exact":
-                            # Для точного поиска возвращаем пустой queryset
+                        else:
+                            # Если нет точного совпадения, возвращаем пустой queryset
                             return queryset.none()
-                        elif operator == "contains":
+                    elif operator == "contains":
+                        # Для поиска "содержит" ищем частичные совпадения
+                        if search_value in alarm_class_mapping:
+                            # Если найдено точное совпадение, используем его
+                            db_value = alarm_class_mapping[search_value]
+                            queryset = queryset.filter(alarm_class=db_value)
+                        else:
                             # Ищем по всем возможным значениям
                             q_objects = Q()
                             for rus_name, eng_value in alarm_class_mapping.items():
@@ -338,12 +377,85 @@ class AlarmConfigListView(ListView):
                             else:
                                 # Если ничего не найдено, возвращаем пустой queryset
                                 return queryset.none()
+                    elif operator == "startswith":
+                        # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
+                        q_objects = Q()
+                        for rus_name, eng_value in alarm_class_mapping.items():
+                            if rus_name.startswith(
+                                search_value
+                            ) or eng_value.startswith(search_value):
+                                q_objects |= Q(alarm_class=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
+                    elif operator == "endswith":
+                        # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
+                        q_objects = Q()
+                        for rus_name, eng_value in alarm_class_mapping.items():
+                            if rus_name.endswith(search_value) or eng_value.endswith(
+                                search_value
+                            ):
+                                q_objects |= Q(alarm_class=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
 
                 elif field == "table":
+                    value = value.strip()
                     if operator == "exact":
-                        queryset = queryset.filter(table__name=value)
+                        # Регистронезависимый поиск для кириллицы и латиницы
+                        value_lower = value.lower()
+                        table_ids = [
+                            t.id
+                            for t in AlarmTable.objects.filter(deleted_at__isnull=True)
+                            if t.name and t.name.lower() == value_lower
+                        ]
+                        queryset = queryset.filter(table_id__in=table_ids)
                     elif operator == "contains":
-                        queryset = queryset.filter(table__name__icontains=value)
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(table__name__contains=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(table__name__contains=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(table__name__contains=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(table__name__contains=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "startswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(table__name__startswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(table__name__startswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(table__name__startswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(table__name__startswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "endswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(table__name__endswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(table__name__endswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(table__name__endswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(table__name__endswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
 
                 elif field == "logic":
                     # Преобразуем русские названия в английские значения
@@ -356,18 +468,22 @@ class AlarmConfigListView(ListView):
                         "change": "change",
                     }
                     search_value = value.lower()
-                    if search_value in logic_mapping:
-                        db_value = logic_mapping[search_value]
-                        if operator == "exact":
+
+                    # Для точного поиска ищем точное совпадение
+                    if operator == "exact":
+                        if search_value in logic_mapping:
+                            db_value = logic_mapping[search_value]
                             queryset = queryset.filter(logic=db_value)
-                        elif operator == "contains":
-                            queryset = queryset.filter(logic=db_value)
-                    else:
-                        # Если не найдено точное соответствие
-                        if operator == "exact":
-                            # Для точного поиска возвращаем пустой queryset
+                        else:
+                            # Если нет точного совпадения, возвращаем пустой queryset
                             return queryset.none()
-                        elif operator == "contains":
+                    elif operator == "contains":
+                        # Для поиска "содержит" ищем частичные совпадения
+                        if search_value in logic_mapping:
+                            # Если найдено точное совпадение, используем его
+                            db_value = logic_mapping[search_value]
+                            queryset = queryset.filter(logic=db_value)
+                        else:
                             # Ищем по всем возможным значениям
                             q_objects = Q()
                             for rus_name, eng_value in logic_mapping.items():
@@ -381,24 +497,157 @@ class AlarmConfigListView(ListView):
                             else:
                                 # Если ничего не найдено, возвращаем пустой queryset
                                 return queryset.none()
+                    elif operator == "startswith":
+                        # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
+                        q_objects = Q()
+                        for rus_name, eng_value in logic_mapping.items():
+                            if rus_name.startswith(
+                                search_value
+                            ) or eng_value.startswith(search_value):
+                                q_objects |= Q(logic=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
+                    elif operator == "endswith":
+                        # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
+                        q_objects = Q()
+                        for rus_name, eng_value in logic_mapping.items():
+                            if rus_name.endswith(search_value) or eng_value.endswith(
+                                search_value
+                            ):
+                                q_objects |= Q(logic=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
 
                 elif field == "channel":
+                    value = value.strip()
                     if operator == "exact":
-                        queryset = queryset.filter(channel=value)
+                        queryset = queryset.filter(channel__iexact=value)
                     elif operator == "contains":
-                        queryset = queryset.filter(channel__icontains=value)
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(channel__contains=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(channel__contains=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(channel__contains=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(channel__contains=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "startswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(channel__startswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(channel__startswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(channel__startswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(channel__startswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "endswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(channel__endswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(channel__endswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(channel__endswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(channel__endswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
 
                 elif field == "msg":
+                    value = value.strip()
                     if operator == "exact":
-                        queryset = queryset.filter(msg=value)
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(msg=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(msg=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(msg=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(msg=value.lower())
+
+                        queryset = queryset.filter(q_objects)
                     elif operator == "contains":
-                        queryset = queryset.filter(msg__icontains=value)
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(msg__contains=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(msg__contains=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(msg__contains=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(msg__contains=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "startswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(msg__startswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(msg__startswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(msg__startswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(msg__startswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
+                    elif operator == "endswith":
+                        # Регистронезависимый поиск для кириллицы
+                        q_objects = Q()
+                        # Ищем точное совпадение
+                        q_objects |= Q(msg__endswith=value)
+                        # Ищем с заглавной буквы
+                        if value and len(value) > 0:
+                            q_objects |= Q(msg__endswith=value.capitalize())
+                        # Ищем с верхним регистром
+                        q_objects |= Q(msg__endswith=value.upper())
+                        # Ищем с нижним регистром
+                        q_objects |= Q(msg__endswith=value.lower())
+
+                        queryset = queryset.filter(q_objects)
 
                 elif field == "prior":
+                    from django.db.models.functions import Cast
+                    from django.db.models import CharField
+
                     try:
                         int_value = int(value)
                         if operator == "exact":
                             queryset = queryset.filter(prior=int_value)
+                        elif operator in ("contains", "startswith", "endswith"):
+                            queryset = queryset.annotate(
+                                prior_str=Cast("prior", CharField())
+                            )
+                            if operator == "contains":
+                                queryset = queryset.filter(prior_str__contains=value)
+                            elif operator == "startswith":
+                                queryset = queryset.filter(prior_str__startswith=value)
+                            elif operator == "endswith":
+                                queryset = queryset.filter(prior_str__endswith=value)
                         elif operator == "gt":
                             queryset = queryset.filter(prior__gt=int_value)
                         elif operator == "lt":
@@ -408,8 +657,26 @@ class AlarmConfigListView(ListView):
                         elif operator == "lte":
                             queryset = queryset.filter(prior__lte=int_value)
                     except ValueError:
-                        # Если значение не является числом, возвращаем пустой queryset
                         return queryset.none()
+
+                elif field in ("created_at", "updated_at", "deleted_at"):
+                    # value должен быть в формате 'YYYY-MM-DD'
+                    if operator == "exact":
+                        queryset = queryset.filter(**{f"{field}__date": value})
+                    elif operator == "lt":
+                        queryset = queryset.filter(**{f"{field}__date__lt": value})
+                    elif operator == "gt":
+                        queryset = queryset.filter(**{f"{field}__date__gt": value})
+                    elif operator == "gte":
+                        queryset = queryset.filter(**{f"{field}__date__gte": value})
+                    elif operator == "lte":
+                        queryset = queryset.filter(**{f"{field}__date__lte": value})
+                    elif operator == "range":
+                        # value должен быть 'YYYY-MM-DD,YYYY-MM-DD'
+                        start, end = value.split(",")
+                        queryset = queryset.filter(
+                            **{f"{field}__date__range": (start, end)}
+                        )
 
         return queryset
 
@@ -485,7 +752,7 @@ class AlarmTableDetailView(ListView):
         from django.db.models.functions import Lower
 
         self.table = get_object_or_404(AlarmTable, pk=self.kwargs["table_id"])
-        queryset = AlarmConfig.objects.filter(table=self.table)
+        queryset = AlarmConfig.objects.filter(table=self.table, deleted_at__isnull=True)
 
         # Создаем аннотации для сортировки по русским названиям
         queryset = queryset.annotate(
@@ -549,35 +816,43 @@ class AlarmConfigUpdateView(UpdateView):
         return super().form_valid(form)
 
 
-class AlarmConfigDeleteView(DeleteView):
+class AlarmConfigDeleteView(View):
     """Представление для удаления конфигурации аварии"""
 
-    model = AlarmConfig
-    template_name = "alarms/alarm_confirm_delete.html"
-    success_url = reverse_lazy("alarms:alarm_list")
+    def get(self, request, pk):
+        """Показываем форму подтверждения удаления"""
+        alarm = get_object_or_404(AlarmConfig, pk=pk)
+        return render(request, "alarms/alarm_confirm_delete.html", {"object": alarm})
 
-    def delete(self, request, *args, **kwargs):
+    def post(self, request, pk):
+        """Мягкое удаление - устанавливает deleted_at вместо физического удаления"""
+        alarm = get_object_or_404(AlarmConfig, pk=pk)
+        alarm.soft_delete()
         messages.success(request, "Аварийный сигнал успешно удален!")
-        return super().delete(request, *args, **kwargs)
+        return HttpResponseRedirect(reverse_lazy("alarms:alarm_list"))
 
 
 def dashboard(request):
     """Главная страница приложения"""
     from django.db.models import Case, When, Value, CharField
 
-    tables_count = AlarmTable.objects.count()
-    alarms_count = AlarmConfig.objects.count()
+    tables_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
+    alarms_count = AlarmConfig.objects.filter(deleted_at__isnull=True).count()
 
     # Получаем последние аварии с групповой сортировкой
-    recent_alarms = AlarmConfig.objects.annotate(
-        alarm_class_display=Case(
-            When(alarm_class="error", then=Value("Ошибка")),
-            When(alarm_class="warn", then=Value("Предупреждение")),
-            When(alarm_class="info", then=Value("Информирование")),
-            default=Value(""),
-            output_field=CharField(),
+    recent_alarms = (
+        AlarmConfig.objects.filter(deleted_at__isnull=True)
+        .annotate(
+            alarm_class_display=Case(
+                When(alarm_class="error", then=Value("Ошибка")),
+                When(alarm_class="warn", then=Value("Предупреждение")),
+                When(alarm_class="info", then=Value("Информирование")),
+                default=Value(""),
+                output_field=CharField(),
+            )
         )
-    ).order_by("-created_at", "alarm_class_display", "prior")[:5]
+        .order_by("-created_at", "alarm_class_display", "prior")[:5]
+    )
 
     context = {
         "tables_count": tables_count,
@@ -595,21 +870,25 @@ def export_json(request):
             # Получаем все конфигурации аварий с сортировкой по русским названиям
             from django.db.models import Case, When, Value, CharField
 
-            alarms = AlarmConfig.objects.annotate(
-                alarm_class_display=Case(
-                    When(alarm_class="error", then=Value("Ошибка")),
-                    When(alarm_class="warn", then=Value("Предупреждение")),
-                    When(alarm_class="info", then=Value("Информирование")),
-                    default=Value(""),
-                    output_field=CharField(),
+            alarms = (
+                AlarmConfig.objects.filter(deleted_at__isnull=True)
+                .annotate(
+                    alarm_class_display=Case(
+                        When(alarm_class="error", then=Value("Ошибка")),
+                        When(alarm_class="warn", then=Value("Предупреждение")),
+                        When(alarm_class="info", then=Value("Информирование")),
+                        default=Value(""),
+                        output_field=CharField(),
+                    )
                 )
-            ).order_by("alarm_class_display", "prior", "table__name")
+                .order_by("alarm_class_display", "prior", "table__name")
+            )
 
             # Формируем структуру данных для экспорта
             export_data = {"alarm_tables": [], "alarm_configs": []}
 
             # Добавляем таблицы аварий
-            tables = AlarmTable.objects.all()
+            tables = AlarmTable.objects.filter(deleted_at__isnull=True)
             for table in tables:
                 export_data["alarm_tables"].append(
                     {

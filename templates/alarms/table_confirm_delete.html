@@ -44,16 +44,16 @@
                 </div>
                 
                 {% if object.alarms.count > 0 %}
-                    <div class="alert alert-danger">
+                    <div class="alert alert-warning">
                         <i class="bi bi-exclamation-triangle"></i>
                         <strong>Внимание!</strong> В этой таблице содержится {{ object.alarms.count }} аварийных сигналов. 
-                        При удалении таблицы все связанные сигналы также будут удалены!
+                        При удалении таблицы все связанные сигналы останутся в базе данных.
                     </div>
                 {% endif %}
                 
                 <p class="text-danger">
                     <i class="bi bi-exclamation-triangle"></i>
-                    <strong>Внимание!</strong> Это действие нельзя отменить.
+                    <strong>Внимание!</strong> Запись будет помечена как удалённая, но останется в базе данных.
                 </p>
                 
                 <form method="post">
