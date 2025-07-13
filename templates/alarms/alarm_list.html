@@ -395,7 +395,15 @@ function renderSortFields(savedValues = null) {
         // Восстанавливаем из localStorage или из DOM
         const ls = localStorage.getItem('alarmsSortFields');
         if (ls) {
-            try { values = JSON.parse(ls); } catch { values = []; }
+            try { 
+                values = JSON.parse(ls); 
+                // Проверяем, что есть хотя бы одна настройка с выбранным полем
+                if (!Array.isArray(values) || values.length === 0 || !values.some(s => s.field && s.field.trim() !== '')) {
+                    values = [];
+                }
+            } catch { 
+                values = []; 
+            }
         } else {
             values = [];
             const currentFields = container.querySelectorAll('.sort-field');
@@ -513,9 +521,11 @@ function removeSortField(index) {
             });
         }
     }
-    // Если всё удалили, оставляем одну дефолтную строку
+    // Если всё удалили, оставляем одну дефолтную строку и очищаем localStorage
     if (savedValues.length === 0) {
         savedValues.push({field: '', order: 'asc'});
+        // Очищаем localStorage, чтобы настройки не восстанавливались
+        localStorage.removeItem('alarmsSortFields');
     }
     renderSortFields(savedValues);
     updateActiveNotices();
@@ -1366,10 +1376,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedSort) {
             try {
                 const sortArr = JSON.parse(savedSort);
-                if (Array.isArray(sortArr) && sortArr.length > 0 && sortArr.some(s => s.field)) {
+                // Проверяем, что есть хотя бы одна настройка с выбранным полем
+                if (Array.isArray(sortArr) && sortArr.length > 0 && sortArr.some(s => s.field && s.field.trim() !== '')) {
                     // Добавляем параметры сортировки в URL
                     sortArr.forEach((s, i) => {
-                        if (s.field) {
+                        if (s.field && s.field.trim() !== '') {
                             url.searchParams.set(`sort_${i}`, s.field);
                             url.searchParams.set(`order_${i}`, s.order || 'asc');
                         }
