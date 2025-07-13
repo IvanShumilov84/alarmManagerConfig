@@ -6,6 +6,9 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы
+        <span class="badge bg-secondary ms-2">
+            Всего: {{ total_count }}
+        </span>
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2" role="group">
@@ -31,10 +34,7 @@
             </h6>
             <span id="filtersActiveNotice" class="badge bg-danger ms-2" {% if not has_active_filters %}style="display:none"{% endif %}>
                 Фильтрация активна
-                <span class="ms-1">({{ filtered_count }}/{{ total_count }})</span>
-            </span>
-            <span class="badge bg-secondary ms-2">
-                Всего: {{ total_count }}
+                <span class="ms-1">(каналов отфильтровано {{ filtered_count }}/{{ total_count }})</span>
             </span>
         </div>
         <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
