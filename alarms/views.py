@@ -180,7 +180,7 @@ class AlarmConfigListView(ListView):
 
         # Если нет параметров сортировки, используем значения по умолчанию
         if not sort_fields:
-            sort_fields = ["alarm_class"]
+            sort_fields = ["id"]
             sort_orders = ["asc"]
 
         # Создаем аннотации для сортировки по русским названиям
@@ -262,8 +262,8 @@ class AlarmConfigListView(ListView):
         if order_fields:
             queryset = queryset.order_by(*order_fields)
         else:
-            # По умолчанию сортируем по русским названиям класса и приоритету
-            queryset = queryset.order_by("alarm_class_display", "prior")
+            # По умолчанию сортируем по ID
+            queryset = queryset.order_by("id")
 
         return queryset
 
