@@ -521,21 +521,45 @@ function removeSortField(index) {
             });
         }
     }
-    // Если всё удалили, оставляем одну дефолтную строку и очищаем localStorage
+    // Если всё удалили, применяем сортировку по ID
     if (savedValues.length === 0) {
-        savedValues.push({field: '', order: 'asc'});
-        // Очищаем localStorage, чтобы настройки не восстанавливались
+        // Очищаем localStorage
         localStorage.removeItem('alarmsSortFields');
+        // Применяем сортировку по ID
+        const url = new URL(window.location.href);
+        // Удаляем старые sort_ и order_ параметры
+        for (const key of Array.from(url.searchParams.keys())) {
+            if (key.startsWith('sort_') || key.startsWith('order_')) {
+                url.searchParams.delete(key);
+            }
+        }
+        // Добавляем сортировку по ID
+        url.searchParams.set('sort_0', 'id');
+        url.searchParams.set('order_0', 'asc');
+        // Переходим по новому URL
+        window.location.href = url.pathname + '?' + url.searchParams.toString();
+        return;
     }
     renderSortFields(savedValues);
     updateActiveNotices();
 }
 
 function clearSort() {
-    // После очистки всегда одна дефолтная строка
-    renderSortFields([{field: '', order: 'asc'}]);
+    // Очищаем localStorage
     localStorage.removeItem('alarmsSortFields');
-    updateActiveNotices();
+    // Применяем сортировку по ID по умолчанию
+    const url = new URL(window.location.href);
+    // Удаляем старые sort_ и order_ параметры
+    for (const key of Array.from(url.searchParams.keys())) {
+        if (key.startsWith('sort_') || key.startsWith('order_')) {
+            url.searchParams.delete(key);
+        }
+    }
+    // Добавляем сортировку по ID
+    url.searchParams.set('sort_0', 'id');
+    url.searchParams.set('order_0', 'asc');
+    // Переходим по новому URL
+    window.location.href = url.pathname + '?' + url.searchParams.toString();
 }
 
 function updateSortDisplay() {
