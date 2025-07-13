@@ -45,18 +45,16 @@
                 <!-- JS вставит фильтры -->
             </div>
         </div>
-        <div class="row mt-2">
-            <div class="col-12">
-                <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); console.log('Кнопка нажата через onclick'); clearFilters(); return false;">
-                    <i class="bi bi-x"></i> Удалить все фильтры
-                </a>
-                <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
-                    <i class="bi bi-plus"></i> Добавить фильтр
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
-                    <i class="bi bi-check"></i> Применить фильтры
-                </button>
-            </div>
+        <div class="d-flex mb-2">
+            <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); console.log('Кнопка нажата через onclick'); clearFilters(); return false;">
+                <i class="bi bi-x"></i> Удалить все фильтры
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
+                <i class="bi bi-plus"></i> Добавить фильтр
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
+                <i class="bi bi-check"></i> Применить фильтры
+            </button>
         </div>
     </div>
 </div>
@@ -422,7 +420,7 @@ function renderSortFields(savedValues = null) {
     }
     for (let i = 0; i < values.length; i++) {
         const fieldDiv = document.createElement('div');
-        fieldDiv.className = 'col-md-4 mb-2';
+        fieldDiv.className = 'col-md-3 mb-2';
         fieldDiv.innerHTML = `
             <select name="sort_${i}" class="form-select form-select-sm sort-field">
                 <option value="">Выберите поле</option>
@@ -446,14 +444,14 @@ function renderSortFields(savedValues = null) {
             </select>
         `;
         const removeBtn = document.createElement('div');
-        removeBtn.className = 'col-md-2 mb-2';
+        removeBtn.className = 'col-md-3 mb-2';
         removeBtn.innerHTML = `
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(${i})" title="Удалить сортировку">
                 <i class="bi bi-trash"></i>
             </button>
         `;
         const spacer = document.createElement('div');
-        spacer.className = 'col-md-2 mb-2';
+        spacer.className = 'col-md-3 mb-2';
         container.appendChild(fieldDiv);
         container.appendChild(orderDiv);
         container.appendChild(removeBtn);
@@ -465,8 +463,8 @@ function renderSortFields(savedValues = null) {
 
     const clearBtn = document.createElement('div');
     clearBtn.innerHTML = `
-        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="clearSortBtn">
-            <i class="bi bi-x"></i> Очистить
+        <button type="button" class="btn btn-sm btn-outline-danger me-2" id="clearSortBtn">
+            <i class="bi bi-x"></i> Очистить всю сортировку
         </button>
     `;
     const addBtn = document.createElement('div');
@@ -757,7 +755,7 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
     const row = document.createElement('div');
     row.className = 'row mb-2 filter-row';
     row.innerHTML = `
-        <div class="col-md-4 mb-1">
+        <div class="col-md-3 mb-1">
             <select name="filter_field_${idx}" class="form-select form-select-sm filter-field" onchange="updateFilterOperators(${idx})">
                 <option value="">Выберите поле</option>
                 <option value="id" ${fieldValue === 'id' ? 'selected' : ''}>ID</option>
@@ -779,10 +777,10 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
                 <option value="endswith" ${operatorValue === 'endswith' ? 'selected' : ''}>Заканчивается на</option>
             </select>
         </div>
-        <div class="col-md-4 mb-1">
+        <div class="col-md-3 mb-1">
             <input type="text" name="filter_value_${idx}" class="form-control form-control-sm filter-value" value="${valueValue}" placeholder="Значение">
         </div>
-        <div class="col-md-1 mb-1 d-flex align-items-center">
+        <div class="col-md-3 mb-1 d-flex align-items-center">
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFilter(this)" title="Удалить фильтр">
                 <i class="bi bi-trash"></i>
             </button>
