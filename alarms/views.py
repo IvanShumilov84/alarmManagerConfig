@@ -1,14 +1,12 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView, View
+from django.views.generic import ListView, CreateView, UpdateView, View
 from django.urls import reverse_lazy
 import json
 from .models import AlarmConfig, AlarmTable
 from .forms import AlarmConfigForm, AlarmTableForm
-from django.db.models import Q
 from django.http import HttpResponseRedirect
 
 
@@ -21,95 +19,276 @@ class AlarmTableListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с подсчетом аварий для каждой таблицы"""
+        """Получаем queryset с подсчетом аварий для каждой таблицы и применяем фильтры"""
         from django.db.models import Count
 
         queryset = AlarmTable.objects.filter(deleted_at__isnull=True).annotate(
             alarms_count=Count("alarms")
         )
 
-        # Получаем параметры сортировки
-        sort_fields = []
-        sort_orders = []
+        # Применяем фильтрацию
+        queryset = self.apply_filters(queryset)
 
-        # Собираем все параметры сортировки с индексами
-        i = 0
-        while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
-                break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
-            i += 1
-
-        # Если нет параметров сортировки, используем значения по умолчанию
-        if not sort_fields:
-            sort_fields = ["name"]
-            sort_orders = ["asc"]
-
-        # Список разрешенных полей для сортировки
-        allowed_fields = {
-            "id": "id",
-            "name": "name",
-            "description": "description",
-            "alarms_count": "alarms_count",
-            "created_at": "created_at",
-            "updated_at": "updated_at",
-        }
-
-        # Создаем список полей для сортировки
-        order_fields = []
-
-        # Обрабатываем каждое поле сортировки
-        for i, sort_field in enumerate(sort_fields):
-            if sort_field in allowed_fields:
-                field_name = allowed_fields[sort_field]
-                # Получаем порядок для этого поля (по умолчанию asc)
-                order = sort_orders[i] if i < len(sort_orders) else "asc"
-                if order == "desc":
-                    field_name = f"-{field_name}"
-                order_fields.append(field_name)
-
-        # Применяем сортировку
-        if order_fields:
-            queryset = queryset.order_by(*order_fields)
-        else:
-            # По умолчанию сортируем по названию
-            queryset = queryset.order_by("name")
-
-        return queryset
+        return queryset.order_by("id")
 
     def get_context_data(self, **kwargs):
-        """Добавляем параметры сортировки в контекст"""
+        """Добавляем базовые параметры в контекст"""
         context = super().get_context_data(**kwargs)
 
-        # Получаем параметры сортировки
-        sort_fields = []
-        sort_orders = []
+        # Добавляем счетчики для отображения в бейджах
+        total_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
 
-        # Собираем все параметры сортировки с индексами
+        # Проверяем наличие активных фильтров
+        has_active_filters = False
         i = 0
         while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
+            filter_field = self.request.GET.get(f"filter_field_{i}")
+            if not filter_field:
                 break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
+            filter_value = self.request.GET.get(f"filter_value_{i}", "")
+            if filter_value.strip():
+                has_active_filters = True
+                break
             i += 1
 
-        # Для обратной совместимости
-        context["sort_fields"] = [field for field in sort_fields if field]
-        context["sort_orders"] = sort_orders[: len(context["sort_fields"])]
+        # Если есть активные фильтры, подсчитываем отфильтрованные записи
+        if has_active_filters:
+            # Получаем queryset без пагинации для подсчета всех отфильтрованных записей
+            from django.db.models import Count
 
-        # Создаем словарь для отображения стрелок в заголовках таблицы
-        context["sort_indicators"] = {}
-        for i, field in enumerate(sort_fields):
-            if field and i < len(sort_orders):
-                context["sort_indicators"][field] = sort_orders[i]
+            filtered_queryset = AlarmTable.objects.filter(
+                deleted_at__isnull=True
+            ).annotate(alarms_count=Count("alarms"))
+            filtered_queryset = self.apply_filters(filtered_queryset)
+            filtered_count = filtered_queryset.count()
+        else:
+            filtered_count = total_count
+
+        context["total_count"] = total_count
+        context["filtered_count"] = filtered_count
 
         return context
+
+    def apply_filters(self, queryset):
+        """Применяет фильтры к queryset"""
+
+        # Получаем параметры фильтрации из GET запроса
+        filter_fields = []
+        filter_values = []
+        filter_operators = []
+
+        # Собираем все параметры фильтрации с индексами
+        i = 0
+        while True:
+            filter_field = self.request.GET.get(f"filter_field_{i}")
+            if not filter_field:
+                break
+            filter_fields.append(filter_field)
+            filter_value = self.request.GET.get(f"filter_value_{i}", "")
+            filter_values.append(filter_value)
+            filter_operator = self.request.GET.get(f"filter_op_{i}", "contains")
+            filter_operators.append(filter_operator)
+            i += 1
+
+        # Применяем фильтры
+        for i, field in enumerate(filter_fields):
+            if i < len(filter_values) and filter_values[i].strip():
+                value = filter_values[i].strip()
+                operator = (
+                    filter_operators[i] if i < len(filter_operators) else "contains"
+                )
+
+                if field == "id":
+                    try:
+                        int_value = int(value)
+                        if operator == "exact":
+                            queryset = queryset.filter(id=int_value)
+                        elif operator == "contains":
+                            queryset = queryset.filter(id__icontains=int_value)
+                        elif operator == "startswith":
+                            queryset = queryset.filter(id__istartswith=int_value)
+                        elif operator == "endswith":
+                            queryset = queryset.filter(id__iendswith=int_value)
+                        elif operator == "gt":
+                            queryset = queryset.filter(id__gt=int_value)
+                        elif operator == "lt":
+                            queryset = queryset.filter(id__lt=int_value)
+                        elif operator == "gte":
+                            queryset = queryset.filter(id__gte=int_value)
+                        elif operator == "lte":
+                            queryset = queryset.filter(id__lte=int_value)
+                    except ValueError:
+                        return queryset.none()
+
+                elif field == "name":
+                    if operator == "exact":
+                        queryset = queryset.filter(name__iexact=value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(name__iregex=value)
+                    elif operator == "startswith":
+                        queryset = queryset.filter(name__iregex=f"^{value}")
+                    elif operator == "endswith":
+                        queryset = queryset.filter(name__iregex=f"{value}$")
+
+                elif field == "description":
+                    if operator == "exact":
+                        queryset = queryset.filter(description__iexact=value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(description__iregex=value)
+                    elif operator == "startswith":
+                        queryset = queryset.filter(description__iregex=f"^{value}")
+                    elif operator == "endswith":
+                        queryset = queryset.filter(description__iregex=f"{value}$")
+
+                elif field == "alarms_count":
+                    try:
+                        int_value = int(value)
+                        if operator == "exact":
+                            queryset = queryset.filter(alarms_count=int_value)
+                        elif operator == "gt":
+                            queryset = queryset.filter(alarms_count__gt=int_value)
+                        elif operator == "lt":
+                            queryset = queryset.filter(alarms_count__lt=int_value)
+                        elif operator == "gte":
+                            queryset = queryset.filter(alarms_count__gte=int_value)
+                        elif operator == "lte":
+                            queryset = queryset.filter(alarms_count__lte=int_value)
+                    except ValueError:
+                        return queryset.none()
+
+                elif field == "created_at":
+                    # Пропускаем фильтрацию если значение пустое
+                    if not value:
+                        continue
+
+                    if operator == "exact":
+                        # Для точного совпадения используем диапазон на весь день
+                        from datetime import datetime
+
+                        try:
+                            date_obj = datetime.strptime(value, "%Y-%m-%d")
+                            next_day = date_obj.replace(day=date_obj.day + 1)
+                            queryset = queryset.filter(
+                                created_at__gte=date_obj, created_at__lt=next_day
+                            )
+                        except ValueError:
+                            # Если не удалось распарсить дату, пропускаем фильтр
+                            pass
+                    elif operator in ["gt", "lt", "gte", "lte"]:
+                        # Для операторов сравнения преобразуем строку в datetime
+                        from datetime import datetime, timedelta
+
+                        try:
+                            date_obj = datetime.strptime(value, "%Y-%m-%d")
+                            if operator == "gt":
+                                # Для "больше" используем конец дня, чтобы исключить записи с указанной датой
+                                end_of_day = date_obj.replace(
+                                    hour=23, minute=59, second=59, microsecond=999999
+                                )
+                                queryset = queryset.filter(created_at__gt=end_of_day)
+                            elif operator == "lt":
+                                queryset = queryset.filter(created_at__lt=date_obj)
+                            elif operator == "gte":
+                                queryset = queryset.filter(created_at__gte=date_obj)
+                            elif operator == "lte":
+                                # Для "меньше или равно" используем конец дня
+                                end_of_day = date_obj.replace(
+                                    hour=23, minute=59, second=59, microsecond=999999
+                                )
+                                queryset = queryset.filter(created_at__lte=end_of_day)
+                        except ValueError:
+                            # Если не удалось распарсить дату, пропускаем фильтр
+                            pass
+                    elif operator == "range":
+                        # Для диапазона дат ожидаем два значения: start и end
+                        start_value = self.request.GET.get(f"filter_value_{i}_start")
+                        end_value = self.request.GET.get(f"filter_value_{i}_end")
+                        if start_value:
+                            queryset = queryset.filter(created_at__gte=start_value)
+                        if end_value:
+                            # Для end_value добавляем один день, чтобы включить весь день
+                            from datetime import datetime, timedelta
+
+                            try:
+                                end_date = datetime.strptime(end_value, "%Y-%m-%d")
+                                end_date = end_date + timedelta(days=1)
+                                queryset = queryset.filter(created_at__lt=end_date)
+                            except ValueError:
+                                queryset = queryset.filter(created_at__lte=end_value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(created_at__icontains=value)
+                    elif operator == "startswith":
+                        queryset = queryset.filter(created_at__istartswith=value)
+                    elif operator == "endswith":
+                        queryset = queryset.filter(created_at__iendswith=value)
+
+                elif field == "updated_at":
+                    # Пропускаем фильтрацию если значение пустое
+                    if not value:
+                        continue
+
+                    if operator == "exact":
+                        # Для точного совпадения используем диапазон на весь день
+                        from datetime import datetime
+
+                        try:
+                            date_obj = datetime.strptime(value, "%Y-%m-%d")
+                            next_day = date_obj.replace(day=date_obj.day + 1)
+                            queryset = queryset.filter(
+                                updated_at__gte=date_obj, updated_at__lt=next_day
+                            )
+                        except ValueError:
+                            # Если не удалось распарсить дату, пропускаем фильтр
+                            pass
+                    elif operator in ["gt", "lt", "gte", "lte"]:
+                        # Для операторов сравнения преобразуем строку в datetime
+                        from datetime import datetime, timedelta
+
+                        try:
+                            date_obj = datetime.strptime(value, "%Y-%m-%d")
+                            if operator == "gt":
+                                # Для "больше" используем конец дня, чтобы исключить записи с указанной датой
+                                end_of_day = date_obj.replace(
+                                    hour=23, minute=59, second=59, microsecond=999999
+                                )
+                                queryset = queryset.filter(updated_at__gt=end_of_day)
+                            elif operator == "lt":
+                                queryset = queryset.filter(updated_at__lt=date_obj)
+                            elif operator == "gte":
+                                queryset = queryset.filter(updated_at__gte=date_obj)
+                            elif operator == "lte":
+                                # Для "меньше или равно" используем конец дня
+                                end_of_day = date_obj.replace(
+                                    hour=23, minute=59, second=59, microsecond=999999
+                                )
+                                queryset = queryset.filter(updated_at__lte=end_of_day)
+                        except ValueError:
+                            # Если не удалось распарсить дату, пропускаем фильтр
+                            pass
+                    elif operator == "range":
+                        # Для диапазона дат ожидаем два значения: start и end
+                        start_value = self.request.GET.get(f"filter_value_{i}_start")
+                        end_value = self.request.GET.get(f"filter_value_{i}_end")
+                        if start_value:
+                            queryset = queryset.filter(updated_at__gte=start_value)
+                        if end_value:
+                            # Для end_value добавляем один день, чтобы включить весь день
+                            from datetime import datetime, timedelta
+
+                            try:
+                                end_date = datetime.strptime(end_value, "%Y-%m-%d")
+                                end_date = end_date + timedelta(days=1)
+                                queryset = queryset.filter(updated_at__lt=end_date)
+                            except ValueError:
+                                queryset = queryset.filter(updated_at__lte=end_value)
+                    elif operator == "contains":
+                        queryset = queryset.filter(updated_at__icontains=value)
+                    elif operator == "startswith":
+                        queryset = queryset.filter(updated_at__istartswith=value)
+                    elif operator == "endswith":
+                        queryset = queryset.filter(updated_at__iendswith=value)
+
+        return queryset
 
 
 class AlarmTableCreateView(CreateView):
@@ -296,387 +475,383 @@ class AlarmConfigListView(ListView):
 
         # Применяем фильтры
         for i, field in enumerate(filter_fields):
-            if i < len(filter_values) and filter_values[i].strip():
-                value = filter_values[i].strip()
-                operator = (
-                    filter_operators[i] if i < len(filter_operators) else "contains"
-                )
+            value = filter_values[i].strip() if i < len(filter_values) else ""
+            operator = filter_operators[i] if i < len(filter_operators) else "contains"
 
-                if field == "id":
-                    try:
-                        int_value = int(value)
-                        if operator == "exact":
-                            queryset = queryset.filter(id=int_value)
-                        elif operator == "contains":
-                            # Конвертируем ID в строку и ищем подстроку
-                            q_objects = Q()
-                            # Ищем ID, содержащие введенное значение как подстроку
-                            q_objects |= Q(id__icontains=int_value)
-                            queryset = queryset.filter(q_objects)
-                        elif operator == "startswith":
-                            # Конвертируем ID в строку и ищем начало
-                            q_objects = Q()
-                            # Ищем ID, начинающиеся с введенного значения
-                            q_objects |= Q(id__istartswith=int_value)
-                            queryset = queryset.filter(q_objects)
-                        elif operator == "endswith":
-                            # Конвертируем ID в строку и ищем конец
-                            q_objects = Q()
-                            # Ищем ID, заканчивающиеся на введенное значение
-                            q_objects |= Q(id__iendswith=int_value)
-                            queryset = queryset.filter(q_objects)
-                        elif operator == "gt":
-                            queryset = queryset.filter(id__gt=int_value)
-                        elif operator == "lt":
-                            queryset = queryset.filter(id__lt=int_value)
-                        elif operator == "gte":
-                            queryset = queryset.filter(id__gte=int_value)
-                        elif operator == "lte":
-                            queryset = queryset.filter(id__lte=int_value)
-                    except ValueError:
-                        # Если значение не является числом, возвращаем пустой queryset
-                        return queryset.none()
+            # Для полей дат применяем фильтр даже с пустым значением
+            is_date_field = field in ["created_at", "updated_at"]
+            if not is_date_field and not value:
+                continue  # Пропускаем не-дата поля с пустыми значениями
 
-                elif field == "alarm_class":
-                    # Преобразуем русские названия в английские значения
-                    alarm_class_mapping = {
-                        "ошибка": "error",
-                        "предупреждение": "warn",
-                        "информирование": "info",
-                        "error": "error",
-                        "warn": "warn",
-                        "info": "info",
-                    }
-                    search_value = value.lower()
-
-                    # Для точного поиска ищем точное совпадение
+            if field == "id":
+                try:
+                    int_value = int(value)
                     if operator == "exact":
-                        if search_value in alarm_class_mapping:
-                            db_value = alarm_class_mapping[search_value]
-                            queryset = queryset.filter(alarm_class=db_value)
-                        else:
-                            # Если нет точного совпадения, возвращаем пустой queryset
-                            return queryset.none()
+                        queryset = queryset.filter(id=int_value)
                     elif operator == "contains":
-                        # Для поиска "содержит" ищем частичные совпадения
-                        if search_value in alarm_class_mapping:
-                            # Если найдено точное совпадение, используем его
-                            db_value = alarm_class_mapping[search_value]
-                            queryset = queryset.filter(alarm_class=db_value)
-                        else:
-                            # Ищем по всем возможным значениям
-                            q_objects = Q()
-                            for rus_name, eng_value in alarm_class_mapping.items():
-                                if (
-                                    search_value in rus_name
-                                    or search_value in eng_value
-                                ):
-                                    q_objects |= Q(alarm_class=eng_value)
-                            if q_objects:
-                                queryset = queryset.filter(q_objects)
-                            else:
-                                # Если ничего не найдено, возвращаем пустой queryset
-                                return queryset.none()
-                    elif operator == "startswith":
-                        # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
+                        # Конвертируем ID в строку и ищем подстроку
                         q_objects = Q()
-                        for rus_name, eng_value in alarm_class_mapping.items():
-                            if rus_name.startswith(
-                                search_value
-                            ) or eng_value.startswith(search_value):
-                                q_objects |= Q(alarm_class=eng_value)
-                        if q_objects:
-                            queryset = queryset.filter(q_objects)
-                        else:
-                            # Если ничего не найдено, возвращаем пустой queryset
-                            return queryset.none()
-                    elif operator == "endswith":
-                        # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
-                        q_objects = Q()
-                        for rus_name, eng_value in alarm_class_mapping.items():
-                            if rus_name.endswith(search_value) or eng_value.endswith(
-                                search_value
-                            ):
-                                q_objects |= Q(alarm_class=eng_value)
-                        if q_objects:
-                            queryset = queryset.filter(q_objects)
-                        else:
-                            # Если ничего не найдено, возвращаем пустой queryset
-                            return queryset.none()
-
-                elif field == "table":
-                    value = value.strip()
-                    if operator == "exact":
-                        # Регистронезависимый поиск для кириллицы и латиницы
-                        value_lower = value.lower()
-                        table_ids = [
-                            t.id
-                            for t in AlarmTable.objects.filter(deleted_at__isnull=True)
-                            if t.name and t.name.lower() == value_lower
-                        ]
-                        queryset = queryset.filter(table_id__in=table_ids)
-                    elif operator == "contains":
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(table__name__contains=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(table__name__contains=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(table__name__contains=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(table__name__contains=value.lower())
-
+                        # Ищем ID, содержащие введенное значение как подстроку
+                        q_objects |= Q(id__icontains=int_value)
                         queryset = queryset.filter(q_objects)
                     elif operator == "startswith":
-                        # Регистронезависимый поиск для кириллицы
+                        # Конвертируем ID в строку и ищем начало
                         q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(table__name__startswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(table__name__startswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(table__name__startswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(table__name__startswith=value.lower())
-
+                        # Ищем ID, начинающиеся с введенного значения
+                        q_objects |= Q(id__istartswith=int_value)
                         queryset = queryset.filter(q_objects)
                     elif operator == "endswith":
-                        # Регистронезависимый поиск для кириллицы
+                        # Конвертируем ID в строку и ищем конец
                         q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(table__name__endswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(table__name__endswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(table__name__endswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(table__name__endswith=value.lower())
-
+                        # Ищем ID, заканчивающиеся на введенное значение
+                        q_objects |= Q(id__iendswith=int_value)
                         queryset = queryset.filter(q_objects)
-
-                elif field == "logic":
-                    # Преобразуем русские названия в английские значения
-                    logic_mapping = {
-                        "дискретное событие": "discrete",
-                        "аналоговое событие": "analog",
-                        "изменение события": "change",
-                        "discrete": "discrete",
-                        "analog": "analog",
-                        "change": "change",
-                    }
-                    search_value = value.lower()
-
-                    # Для точного поиска ищем точное совпадение
-                    if operator == "exact":
-                        if search_value in logic_mapping:
-                            db_value = logic_mapping[search_value]
-                            queryset = queryset.filter(logic=db_value)
-                        else:
-                            # Если нет точного совпадения, возвращаем пустой queryset
-                            return queryset.none()
-                    elif operator == "contains":
-                        # Для поиска "содержит" ищем частичные совпадения
-                        if search_value in logic_mapping:
-                            # Если найдено точное совпадение, используем его
-                            db_value = logic_mapping[search_value]
-                            queryset = queryset.filter(logic=db_value)
-                        else:
-                            # Ищем по всем возможным значениям
-                            q_objects = Q()
-                            for rus_name, eng_value in logic_mapping.items():
-                                if (
-                                    search_value in rus_name
-                                    or search_value in eng_value
-                                ):
-                                    q_objects |= Q(logic=eng_value)
-                            if q_objects:
-                                queryset = queryset.filter(q_objects)
-                            else:
-                                # Если ничего не найдено, возвращаем пустой queryset
-                                return queryset.none()
-                    elif operator == "startswith":
-                        # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
-                        q_objects = Q()
-                        for rus_name, eng_value in logic_mapping.items():
-                            if rus_name.startswith(
-                                search_value
-                            ) or eng_value.startswith(search_value):
-                                q_objects |= Q(logic=eng_value)
-                        if q_objects:
-                            queryset = queryset.filter(q_objects)
-                        else:
-                            # Если ничего не найдено, возвращаем пустой queryset
-                            return queryset.none()
-                    elif operator == "endswith":
-                        # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
-                        q_objects = Q()
-                        for rus_name, eng_value in logic_mapping.items():
-                            if rus_name.endswith(search_value) or eng_value.endswith(
-                                search_value
-                            ):
-                                q_objects |= Q(logic=eng_value)
-                        if q_objects:
-                            queryset = queryset.filter(q_objects)
-                        else:
-                            # Если ничего не найдено, возвращаем пустой queryset
-                            return queryset.none()
-
-                elif field == "channel":
-                    value = value.strip()
-                    if operator == "exact":
-                        queryset = queryset.filter(channel__iexact=value)
-                    elif operator == "contains":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(channel__contains=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(channel__contains=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(channel__contains=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(channel__contains=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-                    elif operator == "startswith":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(channel__startswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(channel__startswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(channel__startswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(channel__startswith=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-                    elif operator == "endswith":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(channel__endswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(channel__endswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(channel__endswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(channel__endswith=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-
-                elif field == "msg":
-                    value = value.strip()
-                    if operator == "exact":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(msg=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(msg=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(msg=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(msg=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-                    elif operator == "contains":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(msg__contains=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(msg__contains=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(msg__contains=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(msg__contains=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-                    elif operator == "startswith":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(msg__startswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(msg__startswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(msg__startswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(msg__startswith=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-                    elif operator == "endswith":
-                        # Регистронезависимый поиск для кириллицы
-                        q_objects = Q()
-                        # Ищем точное совпадение
-                        q_objects |= Q(msg__endswith=value)
-                        # Ищем с заглавной буквы
-                        if value and len(value) > 0:
-                            q_objects |= Q(msg__endswith=value.capitalize())
-                        # Ищем с верхним регистром
-                        q_objects |= Q(msg__endswith=value.upper())
-                        # Ищем с нижним регистром
-                        q_objects |= Q(msg__endswith=value.lower())
-
-                        queryset = queryset.filter(q_objects)
-
-                elif field == "prior":
-                    from django.db.models.functions import Cast
-                    from django.db.models import CharField
-
-                    try:
-                        int_value = int(value)
-                        if operator == "exact":
-                            queryset = queryset.filter(prior=int_value)
-                        elif operator in ("contains", "startswith", "endswith"):
-                            queryset = queryset.annotate(
-                                prior_str=Cast("prior", CharField())
-                            )
-                            if operator == "contains":
-                                queryset = queryset.filter(prior_str__contains=value)
-                            elif operator == "startswith":
-                                queryset = queryset.filter(prior_str__startswith=value)
-                            elif operator == "endswith":
-                                queryset = queryset.filter(prior_str__endswith=value)
-                        elif operator == "gt":
-                            queryset = queryset.filter(prior__gt=int_value)
-                        elif operator == "lt":
-                            queryset = queryset.filter(prior__lt=int_value)
-                        elif operator == "gte":
-                            queryset = queryset.filter(prior__gte=int_value)
-                        elif operator == "lte":
-                            queryset = queryset.filter(prior__lte=int_value)
-                    except ValueError:
-                        return queryset.none()
-
-                elif field in ("created_at", "updated_at", "deleted_at"):
-                    # value должен быть в формате 'YYYY-MM-DD'
-                    if operator == "exact":
-                        queryset = queryset.filter(**{f"{field}__date": value})
-                    elif operator == "lt":
-                        queryset = queryset.filter(**{f"{field}__date__lt": value})
                     elif operator == "gt":
-                        queryset = queryset.filter(**{f"{field}__date__gt": value})
+                        queryset = queryset.filter(id__gt=int_value)
+                    elif operator == "lt":
+                        queryset = queryset.filter(id__lt=int_value)
                     elif operator == "gte":
-                        queryset = queryset.filter(**{f"{field}__date__gte": value})
+                        queryset = queryset.filter(id__gte=int_value)
                     elif operator == "lte":
-                        queryset = queryset.filter(**{f"{field}__date__lte": value})
-                    elif operator == "range":
-                        # value должен быть 'YYYY-MM-DD,YYYY-MM-DD'
-                        start, end = value.split(",")
-                        queryset = queryset.filter(
-                            **{f"{field}__date__range": (start, end)}
+                        queryset = queryset.filter(id__lte=int_value)
+                except ValueError:
+                    # Если значение не является числом, возвращаем пустой queryset
+                    return queryset.none()
+
+            elif field == "alarm_class":
+                # Преобразуем русские названия в английские значения
+                alarm_class_mapping = {
+                    "ошибка": "error",
+                    "предупреждение": "warn",
+                    "информирование": "info",
+                    "error": "error",
+                    "warn": "warn",
+                    "info": "info",
+                }
+                search_value = value.lower()
+
+                # Для точного поиска ищем точное совпадение
+                if operator == "exact":
+                    if search_value in alarm_class_mapping:
+                        db_value = alarm_class_mapping[search_value]
+                        queryset = queryset.filter(alarm_class=db_value)
+                    else:
+                        # Если нет точного совпадения, возвращаем пустой queryset
+                        return queryset.none()
+                elif operator == "contains":
+                    # Для поиска "содержит" ищем частичные совпадения
+                    if search_value in alarm_class_mapping:
+                        # Если найдено точное совпадение, используем его
+                        db_value = alarm_class_mapping[search_value]
+                        queryset = queryset.filter(alarm_class=db_value)
+                    else:
+                        # Ищем по всем возможным значениям
+                        q_objects = Q()
+                        for rus_name, eng_value in alarm_class_mapping.items():
+                            if search_value in rus_name or search_value in eng_value:
+                                q_objects |= Q(alarm_class=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
+                elif operator == "startswith":
+                    # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
+                    q_objects = Q()
+                    for rus_name, eng_value in alarm_class_mapping.items():
+                        if rus_name.startswith(search_value) or eng_value.startswith(
+                            search_value
+                        ):
+                            q_objects |= Q(alarm_class=eng_value)
+                    if q_objects:
+                        queryset = queryset.filter(q_objects)
+                    else:
+                        # Если ничего не найдено, возвращаем пустой queryset
+                        return queryset.none()
+                elif operator == "endswith":
+                    # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
+                    q_objects = Q()
+                    for rus_name, eng_value in alarm_class_mapping.items():
+                        if rus_name.endswith(search_value) or eng_value.endswith(
+                            search_value
+                        ):
+                            q_objects |= Q(alarm_class=eng_value)
+                    if q_objects:
+                        queryset = queryset.filter(q_objects)
+                    else:
+                        # Если ничего не найдено, возвращаем пустой queryset
+                        return queryset.none()
+
+            elif field == "table":
+                value = value.strip()
+                if operator == "exact":
+                    # Регистронезависимый поиск для кириллицы и латиницы
+                    value_lower = value.lower()
+                    table_ids = [
+                        t.id
+                        for t in AlarmTable.objects.filter(deleted_at__isnull=True)
+                        if t.name and t.name.lower() == value_lower
+                    ]
+                    queryset = queryset.filter(table_id__in=table_ids)
+                elif operator == "contains":
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(table__name__contains=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(table__name__contains=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(table__name__contains=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(table__name__contains=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "startswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(table__name__startswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(table__name__startswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(table__name__startswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(table__name__startswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "endswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(table__name__endswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(table__name__endswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(table__name__endswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(table__name__endswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+
+            elif field == "logic":
+                # Преобразуем русские названия в английские значения
+                logic_mapping = {
+                    "дискретное событие": "discrete",
+                    "аналоговое событие": "analog",
+                    "изменение события": "change",
+                    "discrete": "discrete",
+                    "analog": "analog",
+                    "change": "change",
+                }
+                search_value = value.lower()
+
+                # Для точного поиска ищем точное совпадение
+                if operator == "exact":
+                    if search_value in logic_mapping:
+                        db_value = logic_mapping[search_value]
+                        queryset = queryset.filter(logic=db_value)
+                    else:
+                        # Если нет точного совпадения, возвращаем пустой queryset
+                        return queryset.none()
+                elif operator == "contains":
+                    # Для поиска "содержит" ищем частичные совпадения
+                    if search_value in logic_mapping:
+                        # Если найдено точное совпадение, используем его
+                        db_value = logic_mapping[search_value]
+                        queryset = queryset.filter(logic=db_value)
+                    else:
+                        # Ищем по всем возможным значениям
+                        q_objects = Q()
+                        for rus_name, eng_value in logic_mapping.items():
+                            if search_value in rus_name or search_value in eng_value:
+                                q_objects |= Q(logic=eng_value)
+                        if q_objects:
+                            queryset = queryset.filter(q_objects)
+                        else:
+                            # Если ничего не найдено, возвращаем пустой queryset
+                            return queryset.none()
+                elif operator == "startswith":
+                    # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
+                    q_objects = Q()
+                    for rus_name, eng_value in logic_mapping.items():
+                        if rus_name.startswith(search_value) or eng_value.startswith(
+                            search_value
+                        ):
+                            q_objects |= Q(logic=eng_value)
+                    if q_objects:
+                        queryset = queryset.filter(q_objects)
+                    else:
+                        # Если ничего не найдено, возвращаем пустой queryset
+                        return queryset.none()
+                elif operator == "endswith":
+                    # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
+                    q_objects = Q()
+                    for rus_name, eng_value in logic_mapping.items():
+                        if rus_name.endswith(search_value) or eng_value.endswith(
+                            search_value
+                        ):
+                            q_objects |= Q(logic=eng_value)
+                    if q_objects:
+                        queryset = queryset.filter(q_objects)
+                    else:
+                        # Если ничего не найдено, возвращаем пустой queryset
+                        return queryset.none()
+
+            elif field == "channel":
+                value = value.strip()
+                if operator == "exact":
+                    queryset = queryset.filter(channel__iexact=value)
+                elif operator == "contains":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(channel__contains=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(channel__contains=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(channel__contains=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(channel__contains=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "startswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(channel__startswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(channel__startswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(channel__startswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(channel__startswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "endswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(channel__endswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(channel__endswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(channel__endswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(channel__endswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+
+            elif field == "msg":
+                value = value.strip()
+                if operator == "exact":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(msg=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(msg=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(msg=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(msg=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "contains":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(msg__contains=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(msg__contains=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(msg__contains=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(msg__contains=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "startswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(msg__startswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(msg__startswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(msg__startswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(msg__startswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+                elif operator == "endswith":
+                    # Регистронезависимый поиск для кириллицы
+                    q_objects = Q()
+                    # Ищем точное совпадение
+                    q_objects |= Q(msg__endswith=value)
+                    # Ищем с заглавной буквы
+                    if value and len(value) > 0:
+                        q_objects |= Q(msg__endswith=value.capitalize())
+                    # Ищем с верхним регистром
+                    q_objects |= Q(msg__endswith=value.upper())
+                    # Ищем с нижним регистром
+                    q_objects |= Q(msg__endswith=value.lower())
+
+                    queryset = queryset.filter(q_objects)
+
+            elif field == "prior":
+                from django.db.models.functions import Cast
+                from django.db.models import CharField
+
+                try:
+                    int_value = int(value)
+                    if operator == "exact":
+                        queryset = queryset.filter(prior=int_value)
+                    elif operator in ("contains", "startswith", "endswith"):
+                        queryset = queryset.annotate(
+                            prior_str=Cast("prior", CharField())
                         )
+                        if operator == "contains":
+                            queryset = queryset.filter(prior_str__contains=value)
+                        elif operator == "startswith":
+                            queryset = queryset.filter(prior_str__startswith=value)
+                        elif operator == "endswith":
+                            queryset = queryset.filter(prior_str__endswith=value)
+                    elif operator == "gt":
+                        queryset = queryset.filter(prior__gt=int_value)
+                    elif operator == "lt":
+                        queryset = queryset.filter(prior__lt=int_value)
+                    elif operator == "gte":
+                        queryset = queryset.filter(prior__gte=int_value)
+                    elif operator == "lte":
+                        queryset = queryset.filter(prior__lte=int_value)
+                except ValueError:
+                    return queryset.none()
+
+            elif field in ("created_at", "updated_at", "deleted_at"):
+                # value должен быть в формате 'YYYY-MM-DD'
+                if operator == "exact":
+                    queryset = queryset.filter(**{f"{field}__date": value})
+                elif operator == "lt":
+                    queryset = queryset.filter(**{f"{field}__date__lt": value})
+                elif operator == "gt":
+                    queryset = queryset.filter(**{f"{field}__date__gt": value})
+                elif operator == "gte":
+                    queryset = queryset.filter(**{f"{field}__date__gte": value})
+                elif operator == "lte":
+                    queryset = queryset.filter(**{f"{field}__date__lte": value})
+                elif operator == "range":
+                    # value должен быть 'YYYY-MM-DD,YYYY-MM-DD'
+                    start, end = value.split(",")
+                    queryset = queryset.filter(
+                        **{f"{field}__date__range": (start, end)}
+                    )
 
         return queryset
 
