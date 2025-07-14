@@ -38,19 +38,10 @@ class AlarmTableListView(ListView):
         # Добавляем счетчики для отображения в бейджах
         total_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
 
-        # Проверяем наличие активных фильтров
-        has_active_filters = False
-        i = 0
-        while True:
-            filter_field = self.request.GET.get(f"filter_field_{i}")
-            if not filter_field:
-                break
-            filter_value = self.request.GET.get(f"filter_value_{i}", "")
-            if filter_value.strip():
-                has_active_filters = True
-                break
-            i += 1
-
+        # Новый способ определения наличия активных фильтров
+        has_active_filters = any(
+            key.startswith("filter_field_") for key in self.request.GET.keys()
+        )
         # Если есть активные фильтры, подсчитываем отфильтрованные записи
         if has_active_filters:
             # Получаем queryset без пагинации для подсчета всех отфильтрованных записей
@@ -66,6 +57,7 @@ class AlarmTableListView(ListView):
 
         context["total_count"] = total_count
         context["filtered_count"] = filtered_count
+        context["has_active_filters"] = has_active_filters
 
         return context
 
