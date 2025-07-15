@@ -1,0 +1,28 @@
+<!-- Универсальный include для сортировки. Ожидает параметры: sort_fields, storage_key, display_mode. -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleSortSettings()">
+        <div class="d-flex align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-sort-down"></i> Настройка сортировки
+            </h6>
+            <span id="sortActiveNotice" class="badge bg-danger ms-2" style="display:none">Сортировка активна</span>
+        </div>
+        <i class="bi bi-chevron-down" id="sortToggleIcon"></i>
+    </div>
+    <div class="card-body" id="sortSettingsBody">
+        <form method="get" id="sortForm">
+            <input type="hidden" name="display_mode" value="{{ display_mode }}">
+            <div class="row" id="sortFields"
+                 data-sort-fields='{{ sort_fields|safe }}'
+                 data-storage-key="{{ storage_key }}">
+                <!-- JS вставит поля сортировки -->
+            </div>
+            
+            <div class="mt-2">
+                <small class="text-muted">
+                    <strong>Текущая сортировка:</strong> <span id="currentSortDisplay">Настроена</span>
+                </small>
+            </div>
+        </form>
+    </div>
+</div> 

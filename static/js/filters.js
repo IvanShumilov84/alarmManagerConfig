@@ -27,32 +27,16 @@ function applyFilters() {
         const field = fieldSelect.value;
         const op = opSelect.value;
         let value = '';
-        const startValue = row.querySelector('.filter-value-start');
-        const endValue = row.querySelector('.filter-value-end');
-        if (startValue && endValue && op === 'range') {
-            const start = startValue.value.trim();
-            const end = endValue.value.trim();
-            value = `${start}|${end}`;
-        } else {
-            const valueInput = row.querySelector('.filter-value');
-            if (valueInput) {
-                value = valueInput.value.trim();
-            }
+        const valueInput = row.querySelector('.filter-value');
+        if (valueInput) {
+            value = valueInput.value.trim();
         }
-        const isDateField = field === 'created_at' || field === 'updated_at';
         // Фильтруем только валидные фильтры
         if (!field || !op) return;
-        if (!isDateField && !value) return;
+        if (!value) return;
         filterParams.push(`filter_field_${filterIndex}=${encodeURIComponent(field)}`);
         filterParams.push(`filter_op_${filterIndex}=${encodeURIComponent(op)}`);
-        if (op === 'range' && value.includes('|')) {
-            const [start, end] = value.split('|');
-            filterParams.push(`filter_value_${filterIndex}_start=${encodeURIComponent(start || '')}`);
-            filterParams.push(`filter_value_${filterIndex}_end=${encodeURIComponent(end || '')}`);
-            filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(start || '')}`);
-        } else {
-            filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(value)}`);
-        }
+        filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(value)}`);
         hasFilters = true;
         filtersData.push({
             field: field,
@@ -61,10 +45,8 @@ function applyFilters() {
         });
         filterIndex++;
     });
-
-    // Определяем ключ localStorage в зависимости от страницы
-    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
-
+    // Определяем ключ localStorage
+    const storageKey = 'alarms_filters';
     if (hasFilters) {
         localStorage.setItem(storageKey, JSON.stringify(filtersData));
     } else {
@@ -87,98 +69,26 @@ function clearFilters() {
         filterFieldsContainer.innerHTML = '';
         addFilterField();
     }
-
-    // Определяем ключи localStorage и sessionStorage в зависимости от страницы
-    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
-    const clearingKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'clearing_alarms_filters' : 'clearing_tables_filters';
-
-    localStorage.removeItem(storageKey);
-    sessionStorage.setItem(clearingKey, 'true');
-
+    localStorage.removeItem('alarms_filters');
     // Строим URL без параметров фильтрации
     const url = new URL(window.location.href);
-
-    // Удаляем все параметры фильтрации
     for (const key of Array.from(url.searchParams.keys())) {
         if (key.startsWith('filter_')) {
             url.searchParams.delete(key);
         }
     }
-
-    // Переходим по очищенному URL
     window.location.href = url.toString();
 }
 
 function restoreFilters() {
-    // Определяем ключи в зависимости от страницы
-    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
-    const clearingKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'clearing_alarms_filters' : 'clearing_tables_filters';
-
-    sessionStorage.removeItem(clearingKey);
-
+    const storageKey = 'alarms_filters';
     const savedFilters = localStorage.getItem(storageKey);
-
     let filtersData = [];
-    let shouldApplyFilters = false;
     if (savedFilters) {
         try {
             filtersData = JSON.parse(savedFilters);
-            const urlParams = new URLSearchParams(window.location.search);
-            const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_'));
-            if (filtersData.length > 0 && !hasUrlFilters) {
-                shouldApplyFilters = true;
-            }
         } catch (e) {
-            console.error('Ошибка при парсинге фильтров из localStorage:', e);
             localStorage.removeItem(storageKey);
-        }
-    }
-    const isClearing = sessionStorage.getItem(clearingKey);
-    if (filtersData.length === 0 && !isClearing) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const filterFields = [];
-        const filterOps = [];
-        const filterValues = [];
-        const filterValuesStart = [];
-        const filterValuesEnd = [];
-        for (const [key, value] of urlParams.entries()) {
-            if (key.startsWith('filter_field_')) {
-                const index = key.replace('filter_field_', '');
-                filterFields[index] = value;
-            } else if (key.startsWith('filter_op_')) {
-                const index = key.replace('filter_op_', '');
-                filterOps[index] = value;
-            } else if (key.startsWith('filter_value_') && !key.includes('_start') && !key.includes('_end')) {
-                const index = key.replace('filter_value_', '');
-                filterValues[index] = value;
-            } else if (key.startsWith('filter_value_') && key.includes('_start')) {
-                const index = key.replace('filter_value_', '').replace('_start', '');
-                filterValuesStart[index] = value;
-            } else if (key.startsWith('filter_value_') && key.includes('_end')) {
-                const index = key.replace('filter_value_', '').replace('_end', '');
-                filterValuesEnd[index] = value;
-            }
-        }
-        const maxIndex = Math.max(filterFields.length, filterOps.length, filterValues.length);
-        for (let i = 0; i < maxIndex; i++) {
-            const field = filterFields[i] || '';
-            const op = filterOps[i] || '';
-            let value = filterValues[i] || '';
-            if (op === 'range' && (filterValuesStart[i] || filterValuesEnd[i])) {
-                const start = filterValuesStart[i] || '';
-                const end = filterValuesEnd[i] || '';
-                value = `${start}|${end}`;
-            }
-            if (field || op || value) {
-                filtersData.push({
-                    field: field,
-                    op: op,
-                    value: value
-                });
-            }
-        }
-        if (filtersData.length > 0) {
-            localStorage.setItem(storageKey, JSON.stringify(filtersData));
         }
     }
     const filterFieldsContainer = document.getElementById('filterFields');
@@ -187,42 +97,12 @@ function restoreFilters() {
         return;
     }
     filterFieldsContainer.innerHTML = '';
-    const updatedFiltersData = [];
     for (let i = 0; i < filtersData.length; i++) {
         const filter = filtersData[i];
         addFilterField(i, filter.field, filter.op, filter.value);
-
-        // Сохраняем данные для localStorage без изменений
-        if (filter.field && filter.value) {
-            updatedFiltersData.push({
-                field: filter.field,
-                op: filter.op,
-                value: filter.value
-            });
-        }
-    }
-
-    // Обновляем localStorage с исправленными данными
-    if (updatedFiltersData.length > 0) {
-        localStorage.setItem(storageKey, JSON.stringify(updatedFiltersData));
-    } else {
-        localStorage.removeItem(storageKey);
-    }
-    if (filtersData.length > 0) {
-        const filterSettingsBody = document.getElementById('filterSettingsBody');
-        const filterToggleIcon = document.getElementById('filterToggleIcon');
-        if (filterSettingsBody && filterToggleIcon) {
-            filterSettingsBody.style.display = 'block';
-            filterToggleIcon.className = 'bi bi-chevron-down';
-        }
     }
     if (filtersData.length === 0) {
         addFilterField();
-    }
-    if (shouldApplyFilters && filtersData.length > 0) {
-        setTimeout(() => {
-            applyFilters();
-        }, 100);
     }
     updateActiveNotices();
 }
@@ -473,19 +353,10 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
 }
 
 function updateActiveNotices() {
-    // Сортировка
-    const sortActiveNotice = document.getElementById('sortActiveNotice');
-    let sortActive = false;
-    document.querySelectorAll('.sort-field').forEach(f => { if (f.value) sortActive = true; });
-    if (sortActiveNotice) {
-        sortActiveNotice.style.display = sortActive ? 'inline-block' : 'none';
-    }
     // Фильтры
     const filtersActiveNotice = document.getElementById('filtersActiveNotice');
-    // Проверяем фильтры в URL
     const urlParams = new URLSearchParams(window.location.search);
     const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
-    // Показываем бейдж только если есть фильтры в URL
     if (filtersActiveNotice) {
         filtersActiveNotice.style.display = hasUrlFilters ? 'inline-block' : 'none';
     }
@@ -498,11 +369,11 @@ function toggleFilterSettings() {
     if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
         filterSettingsBody.style.display = 'block';
         filterToggleIcon.className = 'bi bi-chevron-down';
-        localStorage.setItem('tablesFilterSettingsExpanded', 'true');
+        localStorage.setItem('alarmsFilterSettingsExpanded', 'true');
     } else {
         filterSettingsBody.style.display = 'none';
         filterToggleIcon.className = 'bi bi-chevron-right';
-        localStorage.setItem('tablesFilterSettingsExpanded', 'false');
+        localStorage.setItem('alarmsFilterSettingsExpanded', 'false');
     }
     const filtersActiveNotice = document.getElementById('filtersActiveNotice');
     if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
@@ -560,4 +431,46 @@ function removeFilter(button) {
             return;
         }
     }
-} 
+}
+
+// === Обработчики событий фильтрации ===
+document.addEventListener('DOMContentLoaded', () => {
+    // Восстанавливаем фильтры из localStorage
+    restoreFilters();
+    // Делегирование для .keep-filters
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('a.keep-filters')) {
+            event.preventDefault();
+            const link = event.target.closest('a.keep-filters');
+            const url = new URL(link.href, window.location.origin);
+            const currentParams = new URLSearchParams(window.location.search);
+            for (const [key, value] of currentParams.entries()) {
+                if (key.startsWith('filter_')) {
+                    url.searchParams.set(key, value);
+                }
+            }
+            if (currentParams.has('display_mode')) {
+                url.searchParams.set('display_mode', currentParams.get('display_mode'));
+            }
+            if (url.toString() !== link.href) {
+                window.location.href = url.toString();
+            } else {
+                window.location.href = link.href;
+            }
+        }
+    });
+    // Enter в .filter-value
+    document.addEventListener('keypress', function (event) {
+        if (event.target.classList.contains('filter-value') && event.key === 'Enter') {
+            event.preventDefault();
+            applyFilters();
+        }
+    });
+    // Кнопка "Применить фильтры"
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function () {
+            applyFilters();
+        });
+    }
+}); 

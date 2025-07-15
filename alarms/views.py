@@ -200,19 +200,25 @@ class AlarmConfigListView(FilterMixin, ListView):
 
         # Создаем список полей для сортировки
         order_fields = []
+        used_fields = set()  # Множество уже использованных полей
+
+        # Сначала добавляем все основные поля сортировки пользователя
         for i, field in enumerate(sort_fields):
             if field in allowed_fields:
                 db_field = allowed_fields[field]
                 order = sort_orders[i] if i < len(sort_orders) else "asc"
-                order_fields.append(f"{'-' if order == 'desc' else ''}{db_field}")
+                order_field = f"{'-' if order == 'desc' else ''}{db_field}"
+                order_fields.append(order_field)
+                used_fields.add(db_field)  # Добавляем поле без знака минус
 
-                # Добавляем вторичные поля для групповой сортировки
-                if field in secondary_sort_fields:
-                    for secondary_field in secondary_sort_fields[field]:
-                        if secondary_field not in [
-                            f.replace("-", "") for f in order_fields
-                        ]:
-                            order_fields.append(secondary_field)
+        # Затем добавляем вторичные поля, но только если они не совпадают
+        for i, field in enumerate(sort_fields):
+            if field in allowed_fields and field in secondary_sort_fields:
+                for secondary_field in secondary_sort_fields[field]:
+                    # Добавляем вторичное поле только если оно не совпадает
+                    if secondary_field not in used_fields:
+                        order_fields.append(secondary_field)
+                        used_fields.add(secondary_field)
 
         # Применяем сортировку
         if order_fields:
