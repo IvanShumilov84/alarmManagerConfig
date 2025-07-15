@@ -1,0 +1,33 @@
+<!-- ФИЛЬТРЫ -->
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleFilterSettings()">
+        <div class="d-flex align-items-center">
+            <h6 class="mb-0">
+                <i class="bi bi-funnel"></i> Настройка фильтрации
+            </h6>
+            <span id="filtersActiveNotice" class="badge bg-danger ms-2" style="display:none">
+                Фильтрация активна
+                <span class="ms-1">(отфильтрованных каналов: {{ filtered_count }}/{{ total_count }})</span>
+            </span>
+        </div>
+        <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
+    </div>
+    <div class="card-body" id="filterSettingsBody">
+        <div id="filterForm">
+            <div class="row" id="filterFields">
+                <!-- JS вставит фильтры -->
+            </div>
+        </div>
+        <div class="d-flex mb-2">
+            <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); clearFilters(); return false;">
+                <i class="bi bi-x"></i> Удалить все фильтры
+            </a>
+            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
+                <i class="bi bi-plus"></i> Добавить фильтр
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
+                <i class="bi bi-check"></i> Применить фильтры
+            </button>
+        </div>
+    </div>
+</div> 

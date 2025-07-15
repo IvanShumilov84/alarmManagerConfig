@@ -7,66 +7,77 @@ function applyFilters() {
         return;
     }
     const url = new URL(window.location.href);
-    for (const key of url.searchParams.keys()) {
-        if (key.startsWith('filter_')) {
-            url.searchParams.delete(key);
+    // Сохраняем все не-фильтровые параметры
+    const baseParams = [];
+    for (const [key, value] of url.searchParams.entries()) {
+        if (!key.startsWith('filter_')) {
+            baseParams.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
         }
     }
-    const filterFields = filterForm.querySelectorAll('.filter-field');
-    const filterOps = filterForm.querySelectorAll('.filter-op');
+    // Собираем только реально существующие строки фильтров и формируем индексы подряд
+    const filterRows = document.querySelectorAll('.filter-row');
     let hasFilters = false;
     const filtersData = [];
     let filterIndex = 0;
-    for (let i = 0; i < filterFields.length; i++) {
-        const field = filterFields[i].value;
-        const op = filterOps[i] ? filterOps[i].value : 'exact';
+    const filterParams = [];
+    filterRows.forEach(row => {
+        const fieldSelect = row.querySelector('.filter-field');
+        const opSelect = row.querySelector('.filter-op');
+        if (!fieldSelect || !opSelect) return;
+        const field = fieldSelect.value;
+        const op = opSelect.value;
         let value = '';
-        const filterRow = filterFields[i].closest('.filter-row');
-        if (filterRow) {
-            const startValue = filterRow.querySelector('.filter-value-start');
-            const endValue = filterRow.querySelector('.filter-value-end');
-            if (startValue && endValue && op === 'range') {
-                const start = startValue.value.trim();
-                const end = endValue.value.trim();
-                value = `${start}|${end}`;
-            } else {
-                const valueInput = filterRow.querySelector('.filter-value');
-                if (valueInput) {
-                    value = valueInput.value.trim();
-                }
+        const startValue = row.querySelector('.filter-value-start');
+        const endValue = row.querySelector('.filter-value-end');
+        if (startValue && endValue && op === 'range') {
+            const start = startValue.value.trim();
+            const end = endValue.value.trim();
+            value = `${start}|${end}`;
+        } else {
+            const valueInput = row.querySelector('.filter-value');
+            if (valueInput) {
+                value = valueInput.value.trim();
             }
         }
         const isDateField = field === 'created_at' || field === 'updated_at';
-        const isValidFilter = field && (
-            (isDateField) ||
-            (value && value !== '')
-        );
-        if (isValidFilter) {
-            url.searchParams.set(`filter_field_${filterIndex}`, field);
-            url.searchParams.set(`filter_op_${filterIndex}`, op);
-            if (op === 'range' && value.includes('|')) {
-                const [start, end] = value.split('|');
-                url.searchParams.set(`filter_value_${filterIndex}_start`, start || '');
-                url.searchParams.set(`filter_value_${filterIndex}_end`, end || '');
-                url.searchParams.set(`filter_value_${filterIndex}`, start || '');
-            } else {
-                url.searchParams.set(`filter_value_${filterIndex}`, value);
-            }
-            hasFilters = true;
-            filtersData.push({
-                field: field,
-                op: op,
-                value: value
-            });
-            filterIndex++;
+        // Фильтруем только валидные фильтры
+        if (!field || !op) return;
+        if (!isDateField && !value) return;
+        filterParams.push(`filter_field_${filterIndex}=${encodeURIComponent(field)}`);
+        filterParams.push(`filter_op_${filterIndex}=${encodeURIComponent(op)}`);
+        if (op === 'range' && value.includes('|')) {
+            const [start, end] = value.split('|');
+            filterParams.push(`filter_value_${filterIndex}_start=${encodeURIComponent(start || '')}`);
+            filterParams.push(`filter_value_${filterIndex}_end=${encodeURIComponent(end || '')}`);
+            filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(start || '')}`);
+        } else {
+            filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(value)}`);
         }
-    }
+        hasFilters = true;
+        filtersData.push({
+            field: field,
+            op: op,
+            value: value
+        });
+        filterIndex++;
+    });
+
+    // Определяем ключ localStorage в зависимости от страницы
+    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
+
     if (hasFilters) {
-        localStorage.setItem('tables_filters', JSON.stringify(filtersData));
+        localStorage.setItem(storageKey, JSON.stringify(filtersData));
     } else {
-        localStorage.removeItem('tables_filters');
+        localStorage.removeItem(storageKey);
     }
-    window.location.href = url.toString();
+    // Собираем итоговый query string
+    let queryString = '';
+    if (baseParams.length > 0 || filterParams.length > 0) {
+        queryString = '?' + [...baseParams, ...filterParams].join('&');
+    }
+    // Формируем итоговый URL
+    const finalUrl = url.origin + url.pathname + queryString;
+    window.location.href = finalUrl;
     updateActiveNotices();
 }
 
@@ -76,14 +87,37 @@ function clearFilters() {
         filterFieldsContainer.innerHTML = '';
         addFilterField();
     }
-    localStorage.removeItem('tables_filters');
-    sessionStorage.setItem('clearing_tables_filters', 'true');
-    refreshTablesTable();
+
+    // Определяем ключи localStorage и sessionStorage в зависимости от страницы
+    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
+    const clearingKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'clearing_alarms_filters' : 'clearing_tables_filters';
+
+    localStorage.removeItem(storageKey);
+    sessionStorage.setItem(clearingKey, 'true');
+
+    // Строим URL без параметров фильтрации
+    const url = new URL(window.location.href);
+
+    // Удаляем все параметры фильтрации
+    for (const key of Array.from(url.searchParams.keys())) {
+        if (key.startsWith('filter_')) {
+            url.searchParams.delete(key);
+        }
+    }
+
+    // Переходим по очищенному URL
+    window.location.href = url.toString();
 }
 
 function restoreFilters() {
-    sessionStorage.removeItem('clearing_tables_filters');
-    const savedFilters = localStorage.getItem('tables_filters');
+    // Определяем ключи в зависимости от страницы
+    const storageKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'alarms_filters' : 'tables_filters';
+    const clearingKey = getCurrentFilterFields() === FILTER_FIELDS.alarms ? 'clearing_alarms_filters' : 'clearing_tables_filters';
+
+    sessionStorage.removeItem(clearingKey);
+
+    const savedFilters = localStorage.getItem(storageKey);
+
     let filtersData = [];
     let shouldApplyFilters = false;
     if (savedFilters) {
@@ -96,10 +130,10 @@ function restoreFilters() {
             }
         } catch (e) {
             console.error('Ошибка при парсинге фильтров из localStorage:', e);
-            localStorage.removeItem('tables_filters');
+            localStorage.removeItem(storageKey);
         }
     }
-    const isClearing = sessionStorage.getItem('clearing_tables_filters');
+    const isClearing = sessionStorage.getItem(clearingKey);
     if (filtersData.length === 0 && !isClearing) {
         const urlParams = new URLSearchParams(window.location.search);
         const filterFields = [];
@@ -144,7 +178,7 @@ function restoreFilters() {
             }
         }
         if (filtersData.length > 0) {
-            localStorage.setItem('tables_filters', JSON.stringify(filtersData));
+            localStorage.setItem(storageKey, JSON.stringify(filtersData));
         }
     }
     const filterFieldsContainer = document.getElementById('filterFields');
@@ -153,9 +187,26 @@ function restoreFilters() {
         return;
     }
     filterFieldsContainer.innerHTML = '';
+    const updatedFiltersData = [];
     for (let i = 0; i < filtersData.length; i++) {
         const filter = filtersData[i];
         addFilterField(i, filter.field, filter.op, filter.value);
+
+        // Сохраняем данные для localStorage без изменений
+        if (filter.field && filter.value) {
+            updatedFiltersData.push({
+                field: filter.field,
+                op: filter.op,
+                value: filter.value
+            });
+        }
+    }
+
+    // Обновляем localStorage с исправленными данными
+    if (updatedFiltersData.length > 0) {
+        localStorage.setItem(storageKey, JSON.stringify(updatedFiltersData));
+    } else {
+        localStorage.removeItem(storageKey);
     }
     if (filtersData.length > 0) {
         const filterSettingsBody = document.getElementById('filterSettingsBody');
@@ -176,7 +227,7 @@ function restoreFilters() {
     updateActiveNotices();
 }
 
-function updateFilterOperators(index) {
+function updateFilterOperators(index, skipRangeRestore = false) {
     const row = document.querySelectorAll('.filter-row')[index];
     if (!row) return;
     const fieldSelect = row.querySelector('.filter-field');
@@ -203,7 +254,12 @@ function updateFilterOperators(index) {
             <option value="range">Диапазон</option>
         `;
         if (currentOp && ['exact', 'gt', 'lt', 'gte', 'lte', 'range'].includes(currentOp)) {
-            opSelect.value = currentOp;
+            // Если skipRangeRestore = true и оператор был оператором сравнения, не восстанавливаем его
+            if (skipRangeRestore && ['gt', 'lt', 'gte', 'lte', 'range'].includes(currentOp)) {
+                opSelect.value = 'exact';
+            } else {
+                opSelect.value = currentOp;
+            }
             setTimeout(() => updateFilterValueType(index), 0);
         }
         const valueInput = row.querySelector('.filter-value');
@@ -218,7 +274,13 @@ function updateFilterOperators(index) {
             <option value="startswith">Начинается с</option>
             <option value="endswith">Заканчивается на</option>
         `;
+        // Восстанавливаем выбранный оператор для всех полей
+        if (currentOp && ['exact', 'contains', 'startswith', 'endswith'].includes(currentOp)) {
+            opSelect.value = currentOp;
+        }
     }
+    // ГАРАНТИРОВАННО обновляем виджет значения при смене поля
+    updateFilterValueType(index);
 }
 
 function updateFilterValueType(index) {
@@ -233,11 +295,9 @@ function updateFilterValueType(index) {
     }
     const selectedField = fieldSelect.value;
     const selectedOp = opSelect.value;
+    const valueContainer = row.querySelector('.col-md-3:nth-child(3)');
+    if (!valueContainer) return;
     if (selectedField === 'created_at' || selectedField === 'updated_at') {
-        const valueContainer = row.querySelector('.col-md-3:nth-child(3)');
-        if (!valueContainer) {
-            return;
-        }
         let currentValue = '';
         const startValue = row.querySelector('.filter-value-start');
         const endValue = row.querySelector('.filter-value-end');
@@ -278,32 +338,60 @@ function updateFilterValueType(index) {
             `;
             const newValueInput = valueContainer.querySelector('.filter-value');
             if (newValueInput) {
-                if (currentValue && currentValue.includes('|')) {
-                    const [start] = currentValue.split('|');
-                    newValueInput.value = start || '';
-                } else if (currentValue) {
+                // Если переключаемся с range на другой оператор, не восстанавливаем значение
+                if (currentValue && currentValue.includes('|') && selectedOp !== 'range') {
+                    // Очищаем значение при переключении с диапазона
+                    newValueInput.value = '';
+                } else if (currentValue && !currentValue.includes('|')) {
                     newValueInput.value = currentValue;
                 }
             }
         }
     } else if (selectedField === 'id' || selectedField === 'alarms_count') {
-        const valueInput = row.querySelector('.filter-value');
-        if (valueInput) {
-            if (['gt', 'lt', 'gte', 'lte', 'exact'].includes(selectedOp)) {
-                valueInput.type = 'number';
-                valueInput.placeholder = 'Число';
-            } else {
-                valueInput.type = 'text';
-                valueInput.placeholder = 'Значение';
-            }
+        // Пересоздаём input для числовых/текстовых полей
+        valueContainer.innerHTML = `<input type="number" name="filter_value_${index}" class="form-control form-control-sm filter-value" placeholder="Число">`;
+        // Если оператор не числовой, делаем текстовое поле
+        if (!['gt', 'lt', 'gte', 'lte', 'exact'].includes(selectedOp)) {
+            valueContainer.innerHTML = `<input type="text" name="filter_value_${index}" class="form-control form-control-sm filter-value" placeholder="Значение">`;
         }
     } else {
-        const valueInput = row.querySelector('.filter-value');
-        if (valueInput) {
-            valueInput.type = 'text';
-            valueInput.placeholder = 'Значение';
-        }
+        // Пересоздаём input для обычных текстовых полей
+        valueContainer.innerHTML = `<input type="text" name="filter_value_${index}" class="form-control form-control-sm filter-value" placeholder="Значение">`;
     }
+}
+
+// Наборы полей для фильтрации
+const FILTER_FIELDS = {
+    tables: [
+        { value: 'id', label: 'ID' },
+        { value: 'name', label: 'Название' },
+        { value: 'description', label: 'Описание' },
+        { value: 'alarms_count', label: 'Количество аварий' },
+        { value: 'created_at', label: 'Дата создания' },
+        { value: 'updated_at', label: 'Дата обновления' },
+    ],
+    alarms: [
+        { value: 'id', label: 'ID' },
+        { value: 'alarm_class', label: 'Класс' },
+        { value: 'table', label: 'Таблица' },
+        { value: 'logic', label: 'Логика' },
+        { value: 'channel', label: 'Канал' },
+        { value: 'msg', label: 'Сообщение' },
+        { value: 'prior', label: 'Приоритет' },
+        { value: 'created_at', label: 'Дата создания' },
+        { value: 'updated_at', label: 'Дата обновления' },
+    ]
+};
+
+function getCurrentFilterFields() {
+    const path = window.location.pathname;
+    if (path.includes('/alarms/')) {
+        return FILTER_FIELDS.alarms;
+    } else if (path.includes('/tables/')) {
+        return FILTER_FIELDS.tables;
+    }
+    // По умолчанию — поля для tables
+    return FILTER_FIELDS.tables;
 }
 
 function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
@@ -314,18 +402,17 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
     }
     const currentCount = filterFields.querySelectorAll('.filter-row').length;
     const idx = index !== null ? index : currentCount;
+    const fields = getCurrentFilterFields();
+    let optionsHtml = '<option value="">Выберите поле</option>';
+    for (const f of fields) {
+        optionsHtml += `<option value="${f.value}" ${fieldValue === f.value ? 'selected' : ''}>${f.label}</option>`;
+    }
     const row = document.createElement('div');
     row.className = 'row mb-2 filter-row';
     row.innerHTML = `
         <div class="col-md-3 mb-1">
             <select name="filter_field_${idx}" class="form-select form-select-sm filter-field" onchange="updateFilterOperators(${idx})">
-                <option value="">Выберите поле</option>
-                <option value="id" ${fieldValue === 'id' ? 'selected' : ''}>ID</option>
-                <option value="name" ${fieldValue === 'name' ? 'selected' : ''}>Название</option>
-                <option value="description" ${fieldValue === 'description' ? 'selected' : ''}>Описание</option>
-                <option value="alarms_count" ${fieldValue === 'alarms_count' ? 'selected' : ''}>Количество аварий</option>
-                <option value="created_at" ${fieldValue === 'created_at' ? 'selected' : ''}>Дата создания</option>
-                <option value="updated_at" ${fieldValue === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
+                ${optionsHtml}
             </select>
         </div>
         <div class="col-md-3 mb-1">
@@ -357,56 +444,50 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
         if (operatorValue) {
             const opSelect = row.querySelector('.filter-op');
             if (opSelect) {
-                for (let i = 0; i < opSelect.options.length; i++) {
-                    if (opSelect.options[i].value === operatorValue) {
-                        opSelect.selectedIndex = i;
-                        break;
-                    }
-                }
+                // Устанавливаем оператор после обновления списка операторов
+                opSelect.value = operatorValue;
             }
         }
-        // Если есть значение, устанавливаем его
+        setTimeout(() => updateFilterValueType(idx), 0);
+        // Явно выставляем значение после обновления виджета
         if (valueValue) {
             if (operatorValue === 'range' && (fieldValue === 'created_at' || fieldValue === 'updated_at')) {
-                // Для диапазона дат разбираем значение
                 const parts = valueValue.split('|');
                 if (parts.length === 2) {
                     setTimeout(() => {
-                        const startInput = row.querySelector(`input[name=\"filter_value_${idx}_start\"]`);
-                        const endInput = row.querySelector(`input[name=\"filter_value_${idx}_end\"]`);
+                        const startInput = row.querySelector(`input[name="filter_value_${idx}_start"]`);
+                        const endInput = row.querySelector(`input[name="filter_value_${idx}_end"]`);
                         if (startInput) startInput.value = parts[0];
                         if (endInput) endInput.value = parts[1];
                     }, 0);
                 }
             } else {
-                const valueInput = row.querySelector('.filter-value');
-                if (valueInput) valueInput.value = valueValue;
+                setTimeout(() => {
+                    const valueInput = row.querySelector('.filter-value');
+                    if (valueInput) valueInput.value = valueValue;
+                }, 0);
             }
         }
-        setTimeout(() => updateFilterValueType(idx), 0);
     }
     updateActiveNotices();
 }
 
 function updateActiveNotices() {
+    // Сортировка
     const sortActiveNotice = document.getElementById('sortActiveNotice');
     let sortActive = false;
     document.querySelectorAll('.sort-field').forEach(f => { if (f.value) sortActive = true; });
     if (sortActiveNotice) {
         sortActiveNotice.style.display = sortActive ? 'inline-block' : 'none';
     }
+    // Фильтры
     const filtersActiveNotice = document.getElementById('filtersActiveNotice');
-    let filtersActive = false;
+    // Проверяем фильтры в URL
     const urlParams = new URLSearchParams(window.location.search);
     const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
-    document.querySelectorAll('.filter-row').forEach(row => {
-        const field = row.querySelector('.filter-field');
-        const op = row.querySelector('.filter-op');
-        const val = row.querySelector('.filter-value');
-        if (field && field.value && op && op.value && val && val.value) filtersActive = true;
-    });
+    // Показываем бейдж только если есть фильтры в URL
     if (filtersActiveNotice) {
-        filtersActiveNotice.style.display = (filtersActive || hasUrlFilters) ? 'inline-block' : 'none';
+        filtersActiveNotice.style.display = hasUrlFilters ? 'inline-block' : 'none';
     }
 }
 
@@ -443,6 +524,40 @@ function removeFilter(button) {
     const row = button.closest('.filter-row');
     if (row) {
         row.remove();
-        updateActiveNotices();
+        // Проверяем, остались ли еще строки фильтров
+        const filterFields = document.getElementById('filterFields');
+        const remainingRows = filterFields.querySelectorAll('.filter-row');
+
+        // Если не осталось ни одной строки, полностью сбрасываем фильтры
+        if (remainingRows.length === 0) {
+            clearFilters();
+            return;
+        } else {
+            // После удаления фильтра пересоздаём все строки фильтров для корректных индексов
+            const filtersData = [];
+            remainingRows.forEach((row) => {
+                const fieldSelect = row.querySelector('.filter-field');
+                const opSelect = row.querySelector('.filter-op');
+                const valueInput = row.querySelector('.filter-value');
+                if (fieldSelect && fieldSelect.value && opSelect && opSelect.value) {
+                    const field = fieldSelect.value;
+                    const op = opSelect.value;
+                    let value = '';
+                    if (valueInput) {
+                        value = valueInput.value.trim();
+                    }
+                    filtersData.push({ field, op, value });
+                }
+            });
+            // Очищаем контейнер и пересоздаём строки фильтров с правильными индексами
+            filterFields.innerHTML = '';
+            filtersData.forEach((f, i) => {
+                addFilterField(i, f.field, f.op, f.value);
+            });
+            updateActiveNotices();
+            // После пересоздания DOM сразу вызываем applyFilters для применения фильтрации
+            setTimeout(applyFilters, 0);
+            return;
+        }
     }
 } 

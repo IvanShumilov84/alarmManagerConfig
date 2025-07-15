@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Аварийные сигналы - Система управления аварийными сигналами{% endblock %}
 
@@ -26,38 +27,7 @@
 </div>
 
 <!-- ФИЛЬТРЫ -->
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleFilterSettings()">
-        <div class="d-flex align-items-center">
-            <h6 class="mb-0">
-                <i class="bi bi-funnel"></i> Настройка фильтрации
-            </h6>
-            <span id="filtersActiveNotice" class="badge bg-danger ms-2" {% if not has_active_filters %}style="display:none"{% endif %}>
-                Фильтрация активна
-                <span class="ms-1">(каналов отфильтровано {{ filtered_count }}/{{ total_count }})</span>
-            </span>
-        </div>
-        <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
-    </div>
-    <div class="card-body" id="filterSettingsBody">
-        <div id="filterForm">
-            <div class="row" id="filterFields">
-                <!-- JS вставит фильтры -->
-            </div>
-        </div>
-        <div class="d-flex mb-2">
-            <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); console.log('Кнопка нажата через onclick'); clearFilters(); return false;">
-                <i class="bi bi-x"></i> Удалить все фильтры
-            </a>
-            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
-                <i class="bi bi-plus"></i> Добавить фильтр
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
-                <i class="bi bi-check"></i> Применить фильтры
-            </button>
-        </div>
-    </div>
-</div>
+{% include 'alarms/includes/filter_form.html' %}
 
 <!-- СОРТИРОВКА -->
 <div class="card mb-3">
@@ -253,70 +223,34 @@
                                         <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
                                     </div>
                                 </div>
-                                {% if alarm.channel %}
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Канал:</strong></div>
-                                    <div class="col-8"><code>{{ alarm.channel }}</code></div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.limit_type %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Тип лимита:</strong></div>
-                                    <div class="col-8">{{ alarm.get_limit_type_display }}</div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.low or alarm.high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Лимиты:</strong></div>
                                     <div class="col-8">
-                                        {% if alarm.low %}<div>Низкий: {{ alarm.low }}</div>{% endif %}
-                                        {% if alarm.high %}<div>Высокий: {{ alarm.high }}</div>{% endif %}
+                                        {% if alarm.channel %}
+                                            <code>{{ alarm.channel }}</code>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
                                     </div>
                                 </div>
-                                {% endif %}
-                                {% if alarm.discrete_val %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Дискретное значение:</strong></div>
-                                    <div class="col-8">{{ alarm.discrete_val }}</div>
-                                </div>
-                                {% endif %}
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Сообщение:</strong></div>
                                     <div class="col-8">{{ alarm.msg }}</div>
                                 </div>
-                                {% if alarm.hyst_low or alarm.hyst_high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Гистерезис:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.hyst_low %}<div>Низкий: {{ alarm.hyst_low }}</div>{% endif %}
-                                        {% if alarm.hyst_high %}<div>Высокий: {{ alarm.hyst_high }}</div>{% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.ch_low or alarm.ch_high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Каналы гистерезиса:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.ch_low %}<div>Низкий: {{ alarm.ch_low }}</div>{% endif %}
-                                        {% if alarm.ch_high %}<div>Высокий: {{ alarm.ch_high }}</div>{% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.confirm_method %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Подтверждение:</strong></div>
-                                    <div class="col-8">{{ alarm.get_confirm_method_display }}</div>
-                                </div>
-                                {% endif %}
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Приоритет:</strong></div>
                                     <div class="col-8">
                                         <span class="badge bg-secondary">{{ alarm.prior }}</span>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="card-footer text-muted">
-                                <small>Создан: {{ alarm.created_at|date:"d.m.Y H:i" }}</small>
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Создан:</strong></div>
+                                    <div class="col-8">{{ alarm.created_at|date:"d.m.Y H:i" }}</div>
+                                </div>
+                                <div class="row mb-2">
+                                    <div class="col-4"><strong>Обновлен:</strong></div>
+                                    <div class="col-8">{{ alarm.updated_at|date:"d.m.Y H:i" }}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -330,10 +264,14 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link keep-filters" href="?page=1&display_mode={{ display_mode }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">&laquo; Первая</a>
+                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                                <i class="bi bi-chevron-double-left"></i>
+                            </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link keep-filters" href="?page={{ page_obj.previous_page_number }}&display_mode={{ display_mode }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">Предыдущая</a>
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
                         </li>
                     {% endif %}
                     
@@ -345,31 +283,25 @@
                     
                     {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link keep-filters" href="?page={{ page_obj.next_page_number }}&display_mode={{ display_mode }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">Следующая</a>
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link keep-filters" href="?page={{ page_obj.paginator.num_pages }}&display_mode={{ display_mode }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">Последняя &raquo;</a>
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                                <i class="bi bi-chevron-double-right"></i>
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
             </nav>
             {% endif %}
         {% else %}
-            <div class="text-center text-muted py-5">
+            <div class="text-center py-5">
                 {% if has_active_filters %}
-                    <i class="bi bi-search fs-1"></i>
-                    <h4>По вашему запросу ничего не найдено</h4>
-                    <p>Попробуйте изменить критерии фильтрации или очистить фильтры</p>
-                    <div class="mt-3">
-                        <a href="#" class="btn btn-outline-secondary me-2" onclick="event.preventDefault(); clearFilters(); return false;">
-                            <i class="bi bi-x-circle"></i> Очистить фильтры
-                        </a>
-                        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Добавить сигнал
-                        </a>
-                    </div>
+                    {% include 'alarms/includes/empty_filtered.html' %}
                 {% else %}
-                    <i class="bi bi-inbox fs-1"></i>
+                    <i class="bi bi-exclamation-triangle fs-1"></i>
                     <h4>Аварийные сигналы не найдены</h4>
                     <p>Создайте первый аварийный сигнал для начала работы</p>
                     <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
@@ -382,13 +314,14 @@
 </div>
 
 <script>
-// === СОРТИРОВКА (фикс багов UI) ===
+// === СОРТИРОВКА ===
 let sortFieldCounter = 1;
 
 function renderSortFields(savedValues = null) {
     const container = document.getElementById('sortFields');
     container.innerHTML = '';
     let values = savedValues;
+    
     if (!values) {
         // Восстанавливаем из localStorage или из DOM
         const ls = localStorage.getItem('alarmsSortFields');
@@ -584,552 +517,13 @@ function updateSortDisplay() {
                 case 'updated_at': fieldName = 'Дата обновления'; break;
                 default: fieldName = field;
             }
-            let orderSymbol = order === 'asc' ? '↑' : '↓';
-            displayText += `${fieldName} ${orderSymbol}, `;
+            if (displayText) displayText += ', ';
+            displayText += `${fieldName} (${order === 'asc' ? '↑' : '↓'})`;
         }
     }
-    currentSortDisplay.textContent = displayText ? displayText.slice(0, -2) : 'Не выбрана';
+    currentSortDisplay.textContent = displayText || 'Не настроена';
 }
 
-// Восстановление сортировки при загрузке
-
-document.addEventListener('DOMContentLoaded', () => {
-    renderSortFields();
-    // Кнопка Добавить
-    document.addEventListener('click', function(event) {
-        if (event.target && event.target.id === 'addSortBtn') {
-            event.preventDefault();
-            addSortField();
-        }
-    });
-    // Кнопка Очистить
-    document.addEventListener('click', function(event) {
-        if (event.target && event.target.id === 'clearSortBtn') {
-            event.preventDefault();
-            clearSort();
-        }
-    });
-    // Кнопка Применить сортировку
-    document.addEventListener('click', function(event) {
-        if (event.target && event.target.id === 'applySortBtn') {
-            event.preventDefault();
-            // Собираем параметры сортировки
-            const sortFields = document.querySelectorAll('.sort-field');
-            const sortOrders = document.querySelectorAll('.sort-order');
-            const url = new URL(window.location.href);
-            // Удаляем старые sort_ и order_ параметры
-            for (const key of Array.from(url.searchParams.keys())) {
-                if (key.startsWith('sort_') || key.startsWith('order_')) {
-                    url.searchParams.delete(key);
-                }
-            }
-            // Добавляем новые
-            let sortCount = 0;
-            const sortToSave = [];
-            for (let i = 0; i < sortFields.length; i++) {
-                const field = sortFields[i].value;
-                const order = sortOrders[i] ? sortOrders[i].value : 'asc';
-                if (field) {
-                    url.searchParams.set(`sort_${sortCount}`, field);
-                    url.searchParams.set(`order_${sortCount}`, order);
-                    sortToSave.push({field, order});
-                    sortCount++;
-                }
-            }
-            // Сохраняем в localStorage
-            localStorage.setItem('alarmsSortFields', JSON.stringify(sortToSave));
-            // Переходим по новому URL
-            window.location.href = url.pathname + '?' + url.searchParams.toString();
-        }
-    });
-});
-// === КОНЕЦ СОРТИРОВКИ ===
-
-// Функция для принудительного обновления таблицы аварий
-function refreshAlarmsTable() {
-    console.log('=== ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ ТАБЛИЦЫ ===');
-    
-    // Строим URL без параметров фильтрации
-    const url = new URL(window.location.href);
-    
-    // Удаляем все параметры фильтрации
-    for (const key of Array.from(url.searchParams.keys())) {
-        if (key.startsWith('filter_')) {
-            url.searchParams.delete(key);
-            console.log(`Удаляем параметр фильтрации: ${key}`);
-        }
-    }
-    
-    // Сохраняем display_mode если есть
-    const currentDisplayMode = url.searchParams.get('display_mode');
-    if (currentDisplayMode) {
-        url.searchParams.set('display_mode', currentDisplayMode);
-    }
-    
-    console.log('Обновляем таблицу по URL:', url.toString());
-    window.location.href = url.toString();
-}
-
-// Функция для удаления отдельного фильтра
-function removeFilter(button) {
-    const filterRow = button.closest('.filter-row');
-    if (!filterRow) return;
-    
-    console.log('=== УДАЛЕНИЕ ОТДЕЛЬНОГО ФИЛЬТРА ===');
-    
-    const filterFields = document.getElementById('filterFields');
-    const allRows = filterFields.querySelectorAll('.filter-row');
-    const rowIndex = Array.from(allRows).indexOf(filterRow);
-    
-    console.log('Индекс удаляемого фильтра:', rowIndex);
-    console.log('Всего фильтров:', allRows.length);
-    
-    // Удаляем строку фильтра из DOM
-    filterRow.remove();
-    
-    // Если это был последний фильтр, добавляем пустой дефолтный
-    if (filterFields.querySelectorAll('.filter-row').length === 0) {
-        console.log('Добавляем пустой дефолтный фильтр');
-        addFilterField();
-    }
-    
-    // Обновляем localStorage - собираем данные из оставшихся фильтров
-    const remainingFilters = [];
-    const remainingRows = filterFields.querySelectorAll('.filter-row');
-    
-    remainingRows.forEach((row, index) => {
-        const fieldSelect = row.querySelector('.filter-field');
-        const opSelect = row.querySelector('.filter-op');
-        const valueInput = row.querySelector('.filter-value');
-        
-        if (fieldSelect && opSelect && valueInput) {
-            const field = fieldSelect.value;
-            const op = opSelect.value;
-            const value = valueInput.value;
-            
-            // Проверяем, что фильтр заполнен
-            if (field && value && value.trim() !== '') {
-                remainingFilters.push({
-                    field: field,
-                    op: op,
-                    value: value.trim()
-                });
-                console.log(`Сохраняем оставшийся фильтр ${index}: ${field} ${op} ${value.trim()}`);
-            }
-        }
-    });
-    
-    // Обновляем localStorage
-    if (remainingFilters.length > 0) {
-        localStorage.setItem('alarms_filters', JSON.stringify(remainingFilters));
-        console.log('Обновлен localStorage, осталось фильтров:', remainingFilters.length);
-    } else {
-        localStorage.removeItem('alarms_filters');
-        console.log('localStorage очищен, фильтров не осталось');
-    }
-    
-    console.log('Фильтр удален, обновляем таблицу');
-    
-    // Принудительно обновляем таблицу
-    refreshAlarmsTable();
-}
-
-// Функции для фильтров (оставлены для полноты, но не используются в текущем коде)
-function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
-    console.log('=== addFilterField вызвана ===');
-    console.log('Параметры:', { index, fieldValue, operatorValue, valueValue });
-    
-    const filterFields = document.getElementById('filterFields');
-    console.log('Контейнер filterFields найден:', !!filterFields);
-    
-    if (!filterFields) {
-        console.error('Контейнер filterFields не найден!');
-        return;
-    }
-    
-    const currentCount = filterFields.querySelectorAll('.filter-row').length;
-    const idx = index !== null ? index : currentCount;
-    console.log('Текущее количество фильтров:', currentCount);
-    console.log('Индекс для нового фильтра:', idx);
-    
-    const row = document.createElement('div');
-    row.className = 'row mb-2 filter-row';
-    row.innerHTML = `
-        <div class="col-md-3 mb-1">
-            <select name="filter_field_${idx}" class="form-select form-select-sm filter-field" onchange="updateFilterOperators(${idx})">
-                <option value="">Выберите поле</option>
-                <option value="id" ${fieldValue === 'id' ? 'selected' : ''}>ID</option>
-                <option value="alarm_class" ${fieldValue === 'alarm_class' ? 'selected' : ''}>Класс</option>
-                <option value="table" ${fieldValue === 'table' ? 'selected' : ''}>Таблица</option>
-                <option value="logic" ${fieldValue === 'logic' ? 'selected' : ''}>Логика</option>
-                <option value="channel" ${fieldValue === 'channel' ? 'selected' : ''}>Канал</option>
-                <option value="msg" ${fieldValue === 'msg' ? 'selected' : ''}>Сообщение</option>
-                <option value="prior" ${fieldValue === 'prior' ? 'selected' : ''}>Приоритет</option>
-                <option value="created_at" ${fieldValue === 'created_at' ? 'selected' : ''}>Дата создания</option>
-                <option value="updated_at" ${fieldValue === 'updated_at' ? 'selected' : ''}>Дата обновления</option>
-            </select>
-        </div>
-        <div class="col-md-3 mb-1">
-            <select name="filter_op_${idx}" class="form-select form-select-sm filter-op" onchange="updateFilterValueType(${idx})">
-                <option value="exact" ${operatorValue === 'exact' ? 'selected' : ''}>Точно</option>
-                <option value="contains" ${operatorValue === 'contains' ? 'selected' : ''}>Содержит</option>
-                <option value="startswith" ${operatorValue === 'startswith' ? 'selected' : ''}>Начинается с</option>
-                <option value="endswith" ${operatorValue === 'endswith' ? 'selected' : ''}>Заканчивается на</option>
-            </select>
-        </div>
-        <div class="col-md-3 mb-1">
-            <input type="text" name="filter_value_${idx}" class="form-control form-control-sm filter-value" value="${valueValue}" placeholder="Значение">
-        </div>
-        <div class="col-md-3 mb-1 d-flex align-items-center">
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFilter(this)" title="Удалить фильтр">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    `;
-    filterFields.appendChild(row);
-    console.log('Фильтр добавлен. Новое количество фильтров:', filterFields.querySelectorAll('.filter-row').length);
-    
-    // Если поле уже выбрано, обновляем операторы
-    if (fieldValue) {
-        updateFilterOperators(idx);
-        // Если оператор тоже задан, устанавливаем его
-        if (operatorValue) {
-            const opSelect = row.querySelector('.filter-op');
-            if (opSelect) {
-                for (let i = 0; i < opSelect.options.length; i++) {
-                    if (opSelect.options[i].value === operatorValue) {
-                        opSelect.selectedIndex = i;
-                        break;
-                    }
-                }
-            }
-        }
-        
-        // Если есть значение, устанавливаем его
-        if (valueValue) {
-            if (operatorValue === 'range' && (fieldValue === 'created_at' || fieldValue === 'updated_at')) {
-                // Для диапазона дат разбираем значение
-                const parts = valueValue.split(',');
-                if (parts.length === 2) {
-                    const startInput = row.querySelector(`input[name="filter_value_${idx}_start"]`);
-                    const endInput = row.querySelector(`input[name="filter_value_${idx}_end"]`);
-                    if (startInput) startInput.value = parts[0];
-                    if (endInput) endInput.value = parts[1];
-                }
-            } else {
-                // Для обычных полей устанавливаем значение
-                const valueInput = row.querySelector('.filter-value');
-                if (valueInput) valueInput.value = valueValue;
-            }
-        }
-    }
-    
-    updateActiveNotices();
-}
-
-function applyFilters() {
-    console.log('=== ПРИМЕНЕНИЕ ФИЛЬТРОВ ===');
-    const filterForm = document.getElementById('filterForm');
-    
-    // Проверяем, что форма существует
-    if (!filterForm) {
-        console.error('Форма фильтров не найдена!');
-        return;
-    }
-    
-    // Строим URL с параметрами фильтрации
-    const url = new URL(window.location.href);
-    
-    console.log('Текущий URL:', window.location.href);
-    console.log('Текущий display_mode:', url.searchParams.get('display_mode'));
-    
-    // Очищаем старые параметры фильтрации
-    for (const key of url.searchParams.keys()) {
-        if (key.startsWith('filter_')) {
-            url.searchParams.delete(key);
-            console.log(`Удаляем старый параметр: ${key}`);
-        }
-    }
-    
-    // Собираем данные из формы напрямую
-    const filterFields = filterForm.querySelectorAll('.filter-field');
-    const filterOps = filterForm.querySelectorAll('.filter-op');
-    const filterValues = filterForm.querySelectorAll('.filter-value');
-    
-    console.log('=== ДАННЫЕ ИЗ ФОРМЫ ===');
-    console.log('Поля фильтров:', filterFields.length);
-    console.log('Операторы фильтров:', filterOps.length);
-    console.log('Значения фильтров:', filterValues.length);
-    
-    // Добавляем новые параметры фильтрации
-    let hasFilters = false;
-    const filtersData = [];
-    let filterIndex = 0; // Используем отдельный индекс для активных фильтров
-    
-    for (let i = 0; i < filterFields.length; i++) {
-        const field = filterFields[i].value;
-        const op = filterOps[i] ? filterOps[i].value : 'exact';
-        
-        // Получаем значение в зависимости от типа оператора
-        let value = '';
-        if (op === 'range' && (field === 'created_at' || field === 'updated_at')) {
-            // Для диапазона дат получаем значения из двух полей
-            const startValue = filterForm.querySelector(`input[name="filter_value_${i}_start"]`);
-            const endValue = filterForm.querySelector(`input[name="filter_value_${i}_end"]`);
-            const start = startValue ? startValue.value : '';
-            const end = endValue ? endValue.value : '';
-            
-            if (start && end) {
-                value = `${start},${end}`;
-            } else if (start || end) {
-                // Если заполнено только одно поле, используем его как точное значение
-                value = start || end;
-            }
-        } else {
-            // Для остальных случаев получаем значение из обычного поля
-            const valueInput = filterValues[i];
-            value = valueInput ? valueInput.value : '';
-        }
-        
-        console.log(`Фильтр ${i}: поле=${field}, оператор=${op}, значение=${value}`);
-        
-        // Проверяем, что поле и значение заполнены
-        if (field && value && value.trim() !== '') {
-            url.searchParams.set(`filter_field_${filterIndex}`, field);
-            url.searchParams.set(`filter_op_${filterIndex}`, op);
-            url.searchParams.set(`filter_value_${filterIndex}`, value.trim());
-            hasFilters = true;
-            console.log(`Добавляем фильтр ${filterIndex}: ${field} ${op} ${value.trim()}`);
-            
-            // Сохраняем фильтр для localStorage
-            filtersData.push({
-                field: field,
-                op: op,
-                value: value.trim()
-            });
-            
-            filterIndex++; // Увеличиваем индекс только для активных фильтров
-        } else {
-            console.log(`Пропускаем фильтр ${i}: поле=${field}, значение=${value}`);
-        }
-    }
-    
-    // Сохраняем фильтры в localStorage
-    if (hasFilters) {
-        localStorage.setItem('alarms_filters', JSON.stringify(filtersData));
-        console.log('Фильтры сохранены в localStorage:', filtersData);
-    } else {
-        localStorage.removeItem('alarms_filters');
-        console.log('Фильтры удалены из localStorage');
-    }
-    
-    // Сохраняем текущий display_mode из URL
-    const currentDisplayMode = url.searchParams.get('display_mode');
-    if (currentDisplayMode) {
-        url.searchParams.set('display_mode', currentDisplayMode);
-        console.log(`Сохраняем display_mode: ${currentDisplayMode}`);
-    }
-    
-    // Всегда переходим на URL, даже если нет фильтров (для обновления таблицы)
-    console.log('Переходим на URL:', url.toString());
-    console.log('Есть ли фильтры:', hasFilters);
-    
-    // Принудительно обновляем страницу для обновления таблицы аварий
-    console.log('Обновляем страницу для применения изменений фильтров');
-    window.location.href = url.toString();
-    updateActiveNotices();
-}
-
-function clearFilters() {
-    console.log('=== УДАЛЕНИЕ ВСЕХ ФИЛЬТРОВ ===');
-    // Очищаем все фильтры в UI
-    const filterFieldsContainer = document.getElementById('filterFields');
-    if (filterFieldsContainer) {
-        filterFieldsContainer.innerHTML = '';
-        addFilterField(); // Добавляем только один дефолтный фильтр
-    }
-    // Удаляем фильтры из localStorage
-    localStorage.removeItem('alarms_filters');
-    
-    console.log('Все фильтры удалены, обновляем таблицу');
-    
-    // Принудительно обновляем таблицу
-    refreshAlarmsTable();
-}
-
-
-
-// Функция для восстановления фильтров из URL-параметров или localStorage
-function restoreFilters() {
-    console.log('=== ВОССТАНОВЛЕНИЕ ФИЛЬТРОВ ===');
-    
-    // Сначала проверяем localStorage
-    const savedFilters = localStorage.getItem('alarms_filters');
-    let filtersData = [];
-    let shouldApplyFilters = false;
-    
-    if (savedFilters) {
-        try {
-            filtersData = JSON.parse(savedFilters);
-            console.log('Найдены сохраненные фильтры в localStorage:', filtersData);
-            
-            // Проверяем, есть ли фильтры в URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_'));
-            
-            // Если в localStorage есть фильтры, но в URL их нет - нужно применить
-            if (filtersData.length > 0 && !hasUrlFilters) {
-                shouldApplyFilters = true;
-                console.log('Фильтры найдены в localStorage, но не в URL - применяем их');
-            }
-        } catch (e) {
-            console.error('Ошибка при парсинге фильтров из localStorage:', e);
-            localStorage.removeItem('alarms_filters');
-        }
-    }
-    
-    // Если в localStorage нет фильтров, проверяем URL (но только если мы не в процессе очистки)
-    const isClearing = sessionStorage.getItem('clearing_filters');
-    if (filtersData.length === 0 && !isClearing) {
-        const urlParams = new URLSearchParams(window.location.search);
-        const filterFields = [];
-        const filterOps = [];
-        const filterValues = [];
-        
-        console.log('URL параметры:', window.location.search);
-        
-        // Собираем все параметры фильтров из URL
-        for (const [key, value] of urlParams.entries()) {
-            console.log(`Параметр: ${key} = ${value}`);
-            if (key.startsWith('filter_field_')) {
-                const index = key.replace('filter_field_', '');
-                filterFields[index] = value;
-            } else if (key.startsWith('filter_op_')) {
-                const index = key.replace('filter_op_', '');
-                filterOps[index] = value;
-            } else if (key.startsWith('filter_value_')) {
-                const index = key.replace('filter_value_', '');
-                filterValues[index] = value;
-            }
-        }
-        
-        console.log('Найденные фильтры в URL:', { filterFields, filterOps, filterValues });
-        
-        // Преобразуем данные из URL в формат для восстановления
-        const maxIndex = Math.max(filterFields.length, filterOps.length, filterValues.length);
-        for (let i = 0; i < maxIndex; i++) {
-            const field = filterFields[i] || '';
-            const op = filterOps[i] || '';
-            const value = filterValues[i] || '';
-            
-            if (field || op || value) {
-                filtersData.push({
-                    field: field,
-                    op: op,
-                    value: value
-                });
-            }
-        }
-        
-        // Если найдены фильтры в URL, сохраняем их в localStorage
-        if (filtersData.length > 0) {
-            localStorage.setItem('alarms_filters', JSON.stringify(filtersData));
-            console.log('Фильтры из URL сохранены в localStorage');
-        }
-    }
-    
-    console.log('Итоговые данные фильтров для восстановления:', filtersData);
-    
-    // Очищаем существующие фильтры
-    const filterFieldsContainer = document.getElementById('filterFields');
-    if (!filterFieldsContainer) {
-        console.error('Контейнер фильтров не найден!');
-        return;
-    }
-    filterFieldsContainer.innerHTML = '';
-    
-    // Восстанавливаем фильтры
-    for (let i = 0; i < filtersData.length; i++) {
-        const filter = filtersData[i];
-        console.log(`Восстанавливаем фильтр ${i}:`, filter);
-        addFilterField(i, filter.field, filter.op, filter.value);
-    }
-    
-    // Если есть активные фильтры, открываем спойлер
-    if (filtersData.length > 0) {
-        const filterSettingsBody = document.getElementById('filterSettingsBody');
-        const filterToggleIcon = document.getElementById('filterToggleIcon');
-        if (filterSettingsBody && filterToggleIcon) {
-            filterSettingsBody.style.display = 'block';
-            filterToggleIcon.className = 'bi bi-chevron-down';
-            console.log('Спойлер фильтров открыт');
-        }
-    }
-    
-    // Если нет фильтров, добавляем пустой
-    if (filtersData.length === 0) {
-        console.log('Добавляем пустой фильтр');
-        addFilterField();
-    }
-    
-    // Проверяем кнопку после восстановления фильтров
-    setTimeout(() => {
-        const clearFiltersBtn = document.getElementById('clearFiltersBtn');
-        console.log('Проверка кнопки clearFiltersBtn через 1 секунду:', !!clearFiltersBtn);
-        if (clearFiltersBtn) {
-            console.log('Кнопка найдена, добавляем обработчик');
-            clearFiltersBtn.onclick = function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                console.log('Кнопка "Удалить все фильтры" нажата (onclick)');
-                clearFilters();
-                return false;
-            };
-            
-            // Добавляем обработчик mousedown с очень высоким приоритетом
-            clearFiltersBtn.addEventListener('mousedown', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                console.log('Кнопка "Удалить все фильтры" нажата (mousedown)');
-                clearFilters();
-                return false;
-            }, true);
-            
-            // Добавляем обработчик mouseup
-            clearFiltersBtn.addEventListener('mouseup', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                console.log('Кнопка "Удалить все фильтры" отпущена (mouseup)');
-                return false;
-            }, true);
-            
-            // Добавляем обработчик click
-            clearFiltersBtn.addEventListener('click', function(event) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation();
-                console.log('Кнопка "Удалить все фильтры" нажата (addEventListener click)');
-                clearFilters();
-                return false;
-            }, true);
-        } else {
-            console.log('Кнопка clearFiltersBtn не найдена через 1 секунду');
-        }
-    }, 1000);
-    
-    // Если нужно применить фильтры из localStorage, делаем это
-    if (shouldApplyFilters && filtersData.length > 0) {
-        console.log('Автоматически применяем фильтры из localStorage');
-        setTimeout(() => {
-            applyFilters();
-        }, 100); // Небольшая задержка для завершения восстановления UI
-    }
-    updateActiveNotices();
-}
-
-// Функции для сортировки
 function toggleSortSettings() {
     const sortSettingsBody = document.getElementById('sortSettingsBody');
     const sortToggleIcon = document.getElementById('sortToggleIcon');
@@ -1185,34 +579,6 @@ function toggleFilterSettings() {
     updateActiveNotices();
 }
 
-// Функция для обновления страницы при изменении параметров сортировки или фильтров
-function updatePage() {
-    const currentUrl = new URL(window.location.href);
-    const displayMode = currentUrl.searchParams.get('display_mode');
-    const sortFields = Array.from(currentUrl.searchParams.keys()).filter(key => key.startsWith('sort_'));
-    const sortOrders = Array.from(currentUrl.searchParams.keys()).filter(key => key.startsWith('order_'));
-    const filterFields = Array.from(currentUrl.searchParams.keys()).filter(key => key.startsWith('filter_'));
-
-    let url = `?display_mode=${displayMode}`;
-    sortFields.forEach(field => {
-        const index = field.replace('sort_', '');
-        const value = currentUrl.searchParams.get(field);
-        url += `&${field}=${value}`;
-    });
-    sortOrders.forEach(order => {
-        const index = order.replace('order_', '');
-        const value = currentUrl.searchParams.get(order);
-        url += `&${order}=${value}`;
-    });
-    filterFields.forEach(field => {
-        const index = field.replace('filter_field_', '');
-        const value = currentUrl.searchParams.get(field);
-        url += `&${field}=${value}`;
-    });
-
-    window.location.href = url;
-}
-
 function updateActiveNotices() {
     // Сортировка
     const sortActiveNotice = document.getElementById('sortActiveNotice');
@@ -1240,145 +606,6 @@ function updateActiveNotices() {
     // Показываем бейдж, если есть фильтры в URL или в UI
     if (filtersActiveNotice) {
         filtersActiveNotice.style.display = (filtersActive || hasUrlFilters) ? 'inline-block' : 'none';
-    }
-}
-
-// Функция для обновления операторов фильтра в зависимости от выбранного поля
-function updateFilterOperators(idx) {
-    const filterRow = document.querySelectorAll('.filter-row')[idx];
-    if (!filterRow) return;
-    
-    const fieldSelect = filterRow.querySelector('.filter-field');
-    const opSelect = filterRow.querySelector('.filter-op');
-    const valueInput = filterRow.querySelector('.filter-value');
-    
-    if (!fieldSelect || !opSelect || !valueInput) return;
-    
-    const selectedField = fieldSelect.value;
-    
-    // Очищаем текущие операторы
-    opSelect.innerHTML = '';
-    
-    // Определяем операторы в зависимости от типа поля
-    if (selectedField === 'created_at' || selectedField === 'updated_at') {
-        // Для дат используем операторы сравнения
-        const dateOperators = [
-            {value: 'exact', text: 'Равно'},
-            {value: 'gt', text: 'Больше'},
-            {value: 'lt', text: 'Меньше'},
-            {value: 'gte', text: 'Больше или равно'},
-            {value: 'lte', text: 'Меньше или равно'},
-            {value: 'range', text: 'Диапазон'}
-        ];
-        
-        dateOperators.forEach(op => {
-            const option = document.createElement('option');
-            option.value = op.value;
-            option.textContent = op.text;
-            opSelect.appendChild(option);
-        });
-        
-        // Устанавливаем тип поля ввода как date
-        valueInput.type = 'date';
-        valueInput.placeholder = 'ГГГГ-ММ-ДД';
-        
-    } else if (selectedField === 'prior') {
-        // Для приоритета используем числовые операторы
-        const numericOperators = [
-            {value: 'exact', text: 'Равно'},
-            {value: 'gt', text: 'Больше'},
-            {value: 'lt', text: 'Меньше'},
-            {value: 'gte', text: 'Больше или равно'},
-            {value: 'lte', text: 'Меньше или равно'},
-            {value: 'contains', text: 'Содержит'},
-            {value: 'startswith', text: 'Начинается с'},
-            {value: 'endswith', text: 'Заканчивается на'}
-        ];
-        
-        numericOperators.forEach(op => {
-            const option = document.createElement('option');
-            option.value = op.value;
-            option.textContent = op.text;
-            opSelect.appendChild(option);
-        });
-        
-        // Устанавливаем тип поля ввода как number
-        valueInput.type = 'number';
-        valueInput.placeholder = 'Число';
-        
-    } else {
-        // Для остальных полей используем строковые операторы
-        const stringOperators = [
-            {value: 'exact', text: 'Точно'},
-            {value: 'contains', text: 'Содержит'},
-            {value: 'startswith', text: 'Начинается с'},
-            {value: 'endswith', text: 'Заканчивается на'}
-        ];
-        
-        stringOperators.forEach(op => {
-            const option = document.createElement('option');
-            option.value = op.value;
-            option.textContent = op.text;
-            opSelect.appendChild(option);
-        });
-        
-        // Устанавливаем тип поля ввода как text
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Значение';
-    }
-    
-    // Устанавливаем первый оператор по умолчанию
-    if (opSelect.options.length > 0) {
-        opSelect.selectedIndex = 0;
-    }
-}
-
-// Функция для обновления типа поля ввода при изменении оператора
-function updateFilterValueType(idx) {
-    const filterRow = document.querySelectorAll('.filter-row')[idx];
-    if (!filterRow) return;
-    
-    const fieldSelect = filterRow.querySelector('.filter-field');
-    const opSelect = filterRow.querySelector('.filter-op');
-    const valueInput = filterRow.querySelector('.filter-value');
-    
-    if (!fieldSelect || !opSelect || !valueInput) return;
-    
-    const selectedField = fieldSelect.value;
-    const selectedOp = opSelect.value;
-    
-    if (selectedField === 'created_at' || selectedField === 'updated_at') {
-        if (selectedOp === 'range') {
-            // Для диапазона дат создаем специальный виджет
-            const valueContainer = valueInput.parentElement;
-            valueContainer.innerHTML = `
-                <div class="row g-1">
-                    <div class="col-6">
-                        <input type="date" name="filter_value_${idx}_start" class="form-control form-control-sm filter-value-start" placeholder="От">
-                    </div>
-                    <div class="col-6">
-                        <input type="date" name="filter_value_${idx}_end" class="form-control form-control-sm filter-value-end" placeholder="До">
-                    </div>
-                </div>
-            `;
-        } else {
-            // Для остальных операторов дат используем обычное поле даты
-            const valueContainer = valueInput.parentElement;
-            valueContainer.innerHTML = `
-                <input type="date" name="filter_value_${idx}" class="form-control form-control-sm filter-value" placeholder="ГГГГ-ММ-ДД">
-            `;
-        }
-    } else if (selectedField === 'prior') {
-        if (['gt', 'lt', 'gte', 'lte', 'exact'].includes(selectedOp)) {
-            valueInput.type = 'number';
-            valueInput.placeholder = 'Число';
-        } else {
-            valueInput.type = 'text';
-            valueInput.placeholder = 'Значение';
-        }
-    } else {
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Значение';
     }
 }
 
@@ -1413,8 +640,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {}
         }
     }
-    // Очищаем флаг очистки фильтров, если он был установлен
-    sessionStorage.removeItem('clearing_filters');
     
     // Инициализация сортировки
     renderSortFields(); // Добавляем хотя бы одно поле сортировки по умолчанию
@@ -1459,34 +684,23 @@ document.addEventListener('DOMContentLoaded', () => {
             const url = new URL(link.href, window.location.origin);
             const currentParams = new URLSearchParams(window.location.search);
             
-            console.log('=== ОБРАБОТКА ССЫЛКИ KEEP-FILTERS ===');
-            console.log('Исходная ссылка:', link.href);
-            console.log('Текущие параметры URL:', window.location.search);
-            
             // Копируем все filter_ параметры
             let filterCount = 0;
             for (const [key, value] of currentParams.entries()) {
                 if (key.startsWith('filter_')) {
                     url.searchParams.set(key, value);
                     filterCount++;
-                    console.log(`Добавляем параметр: ${key} = ${value}`);
                 }
             }
             // Также копируем display_mode, если есть
             if (currentParams.has('display_mode')) {
                 url.searchParams.set('display_mode', currentParams.get('display_mode'));
-                console.log(`Добавляем display_mode: ${currentParams.get('display_mode')}`);
             }
-            
-            console.log(`Найдено фильтров: ${filterCount}`);
-            console.log('Итоговый URL:', url.toString());
             
             // Проверяем, что URL действительно изменился
             if (url.toString() !== link.href) {
-                console.log('URL изменен, переходим...');
                 window.location.href = url.toString();
             } else {
-                console.log('URL не изменился, используем исходную ссылку');
                 window.location.href = link.href;
             }
         }
@@ -1496,7 +710,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('keypress', function(event) {
         if (event.target.classList.contains('filter-value') && event.key === 'Enter') {
             event.preventDefault();
-            console.log('Enter нажат в поле фильтра, применяем фильтры...');
             applyFilters();
         }
     });
@@ -1505,21 +718,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const applyFiltersBtn = document.getElementById('applyFiltersBtn');
     if (applyFiltersBtn) {
         applyFiltersBtn.addEventListener('click', function() {
-            console.log('Кнопка "Применить фильтры" нажата');
             applyFilters();
         });
     }
-
-    // Добавляем обработчик для кнопки "Очистить все фильтры" через делегирование событий
-    document.addEventListener('click', function(event) {
-        if (event.target.closest('#clearFiltersBtn')) {
-            event.preventDefault();
-            event.stopPropagation();
-            console.log('Кнопка "Удалить все фильтры" нажата (через делегирование)');
-            clearFilters();
-            return false;
-        }
-    });
 
     // Добавляем обработчик для кнопки "Применить сортировку"
     document.addEventListener('click', function(event) {
@@ -1557,4 +758,5 @@ document.addEventListener('DOMContentLoaded', () => {
     updateActiveNotices();
 });
 </script>
+<script src="{% static 'js/filters.js' %}"></script>
 {% endblock %}

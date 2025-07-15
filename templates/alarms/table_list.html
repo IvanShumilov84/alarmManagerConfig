@@ -19,38 +19,7 @@
 </div>
 
 <!-- ФИЛЬТРЫ -->
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleFilterSettings()">
-        <div class="d-flex align-items-center">
-            <h6 class="mb-0">
-                <i class="bi bi-funnel"></i> Настройка фильтрации
-            </h6>
-            <span id="filtersActiveNotice" class="badge bg-danger ms-2" {% if not has_active_filters %}style="display:none"{% endif %}>
-                Фильтрация активна
-                <span class="ms-1">(таблиц отфильтровано {{ filtered_count }}/{{ total_count }})</span>
-            </span>
-        </div>
-        <i class="bi bi-chevron-down" id="filterToggleIcon"></i>
-    </div>
-    <div class="card-body" id="filterSettingsBody">
-        <div id="filterForm">
-            <div class="row" id="filterFields">
-                <!-- JS вставит фильтры -->
-            </div>
-        </div>
-        <div class="d-flex mb-2">
-            <a href="#" class="btn btn-sm btn-outline-danger me-2" id="clearFiltersBtn" onclick="event.preventDefault(); clearFilters(); return false;">
-                <i class="bi bi-x"></i> Удалить все фильтры
-            </a>
-            <button type="button" class="btn btn-sm btn-outline-success me-2" onclick="addFilterField()">
-                <i class="bi bi-plus"></i> Добавить фильтр
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-primary" id="applyFiltersBtn">
-                <i class="bi bi-check"></i> Применить фильтры
-            </button>
-        </div>
-    </div>
-</div>
+{% include 'alarms/includes/filter_form.html' %}
 
 <!-- СОРТИРОВКА -->
 <div class="card mb-3">
@@ -198,17 +167,7 @@
         {% else %}
             <div class="text-center text-muted py-5">
                 {% if has_active_filters %}
-                    <i class="bi bi-search fs-1"></i>
-                    <h4>По вашему запросу ничего не найдено</h4>
-                    <p>Попробуйте изменить критерии фильтрации или очистить фильтры</p>
-                    <div class="mt-3">
-                        <a href="#" class="btn btn-outline-secondary me-2" onclick="event.preventDefault(); clearFilters(); return false;">
-                            <i class="bi bi-x-circle"></i> Очистить фильтры
-                        </a>
-                        <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Добавить таблицу
-                        </a>
-                    </div>
+                    {% include 'alarms/includes/empty_filtered.html' %}
                 {% else %}
                     <i class="bi bi-table fs-1"></i>
                     <h4>Таблицы аварий не найдены</h4>
@@ -451,61 +410,7 @@ function refreshTablesTable() {
     window.location.href = url.toString();
 }
 
-// Функция для удаления отдельного фильтра
-function removeFilter(button) {
-    const filterRow = button.closest('.filter-row');
-    if (!filterRow) return;
-    
-    
-    const filterFields = document.getElementById('filterFields');
-    const allRows = filterFields.querySelectorAll('.filter-row');
-    const rowIndex = Array.from(allRows).indexOf(filterRow);
-    
-    
-    // Удаляем строку фильтра из DOM
-    filterRow.remove();
-    
-    // Если это был последний фильтр, добавляем пустой дефолтный
-    if (filterFields.querySelectorAll('.filter-row').length === 0) {
-        addFilterField();
-    }
-    
-    // Обновляем localStorage - собираем данные из оставшихся фильтров
-    const remainingFilters = [];
-    const remainingRows = filterFields.querySelectorAll('.filter-row');
-    
-    remainingRows.forEach((row, index) => {
-        const fieldSelect = row.querySelector('.filter-field');
-        const opSelect = row.querySelector('.filter-op');
-        const valueInput = row.querySelector('.filter-value');
-        
-        if (fieldSelect && opSelect && valueInput) {
-            const field = fieldSelect.value;
-            const op = opSelect.value;
-            const value = valueInput.value;
-            
-            // Проверяем, что фильтр заполнен
-            if (field && value && value.trim() !== '') {
-                remainingFilters.push({
-                    field: field,
-                    op: op,
-                    value: value.trim()
-                });
-            }
-        }
-    });
-    
-    // Обновляем localStorage
-    if (remainingFilters.length > 0) {
-        localStorage.setItem('tables_filters', JSON.stringify(remainingFilters));
-    } else {
-        localStorage.removeItem('tables_filters');
-    }
-    
-    
-    // Принудительно обновляем таблицу
-    refreshTablesTable();
-}
+// Функция removeFilter теперь унифицирована и находится в filters.js
 
 // Функции для сортировки
 function toggleSortSettings() {
