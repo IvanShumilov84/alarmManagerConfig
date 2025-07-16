@@ -1,6 +1,10 @@
 // Универсальный JS-модуль фильтрации для таблиц аварий
 
 function applyFilters() {
+    // Сбрасываем флаг блокировки восстановления
+    preventAutoRestore = false;
+
+    console.log('applyFilters вызвана');
     const filterForm = document.getElementById('filterForm');
     if (!filterForm) {
         console.error('Форма фильтров не найдена!');
@@ -16,14 +20,18 @@ function applyFilters() {
     }
     // Собираем только реально существующие строки фильтров и формируем индексы подряд
     const filterRows = document.querySelectorAll('.filter-row');
+    console.log('Найдено строк фильтров:', filterRows.length);
     let hasFilters = false;
     const filtersData = [];
     let filterIndex = 0;
     const filterParams = [];
-    filterRows.forEach(row => {
+    filterRows.forEach((row, idx) => {
         const fieldSelect = row.querySelector('.filter-field');
         const opSelect = row.querySelector('.filter-op');
-        if (!fieldSelect || !opSelect) return;
+        if (!fieldSelect || !opSelect) {
+            console.log(`Строка ${idx}: не найдены select'ы`);
+            return;
+        }
         const field = fieldSelect.value;
         const op = opSelect.value;
         let value = '';
@@ -31,9 +39,16 @@ function applyFilters() {
         if (valueInput) {
             value = valueInput.value.trim();
         }
+        console.log(`Строка ${idx}: field=${field}, op=${op}, value=${value}`);
         // Фильтруем только валидные фильтры
-        if (!field || !op) return;
-        if (!value) return;
+        if (!field || !op) {
+            console.log(`Строка ${idx}: пропущена - нет field или op`);
+            return;
+        }
+        if (!value) {
+            console.log(`Строка ${idx}: пропущена - нет value`);
+            return;
+        }
         filterParams.push(`filter_field_${filterIndex}=${encodeURIComponent(field)}`);
         filterParams.push(`filter_op_${filterIndex}=${encodeURIComponent(op)}`);
         filterParams.push(`filter_value_${filterIndex}=${encodeURIComponent(value)}`);
@@ -45,12 +60,16 @@ function applyFilters() {
         });
         filterIndex++;
     });
+    console.log('hasFilters:', hasFilters);
+    console.log('filtersData:', filtersData);
     // Определяем ключ localStorage
-    const storageKey = 'alarms_filters';
+    const storageKey = getStorageKey();
     if (hasFilters) {
         localStorage.setItem(storageKey, JSON.stringify(filtersData));
+        console.log('Фильтры сохранены в localStorage:', JSON.stringify(filtersData));
     } else {
         localStorage.removeItem(storageKey);
+        console.log('Фильтры удалены из localStorage');
     }
     // Собираем итоговый query string
     let queryString = '';
@@ -59,17 +78,34 @@ function applyFilters() {
     }
     // Формируем итоговый URL
     const finalUrl = url.origin + url.pathname + queryString;
+    console.log('Переход на URL:', finalUrl);
     window.location.href = finalUrl;
     updateActiveNotices();
 }
 
 function clearFilters() {
+    // Блокируем автоматическое восстановление
+    preventAutoRestore = true;
+
+    console.log('clearFilters вызвана');
+
     const filterFieldsContainer = document.getElementById('filterFields');
     if (filterFieldsContainer) {
         filterFieldsContainer.innerHTML = '';
         addFilterField();
     }
-    localStorage.removeItem('alarms_filters');
+
+    // Удаляем все возможные ключи фильтров из localStorage для текущей страницы
+    const storageKey = getStorageKey();
+    const oldKeys = getOldStorageKeys();
+
+    localStorage.removeItem(storageKey);
+    localStorage.removeItem(oldKeys.fields);
+    localStorage.removeItem(oldKeys.operators);
+    localStorage.removeItem(oldKeys.values);
+
+    console.log('Все ключи фильтров удалены из localStorage для текущей страницы');
+
     // Строим URL без параметров фильтрации
     const url = new URL(window.location.href);
     for (const key of Array.from(url.searchParams.keys())) {
@@ -77,11 +113,14 @@ function clearFilters() {
             url.searchParams.delete(key);
         }
     }
+
+    console.log('Переход на URL без фильтров:', url.toString());
     window.location.href = url.toString();
+    updateActiveNotices();
 }
 
 function restoreFilters() {
-    const storageKey = 'alarms_filters';
+    const storageKey = getStorageKey();
     const savedFilters = localStorage.getItem(storageKey);
     let filtersData = [];
     if (savedFilters) {
@@ -366,14 +405,19 @@ function toggleFilterSettings() {
     const filterSettingsBody = document.getElementById('filterSettingsBody');
     const filterToggleIcon = document.getElementById('filterToggleIcon');
     if (!filterSettingsBody || !filterToggleIcon) return;
+
+    // Получаем правильный ключ для сохранения состояния
+    const path = window.location.pathname;
+    const settingsKey = path.includes('/alarms/') ? 'alarmsFilterSettingsExpanded' : 'tablesFilterSettingsExpanded';
+
     if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
         filterSettingsBody.style.display = 'block';
         filterToggleIcon.className = 'bi bi-chevron-down';
-        localStorage.setItem('alarmsFilterSettingsExpanded', 'true');
+        localStorage.setItem(settingsKey, 'true');
     } else {
         filterSettingsBody.style.display = 'none';
         filterToggleIcon.className = 'bi bi-chevron-right';
-        localStorage.setItem('alarmsFilterSettingsExpanded', 'false');
+        localStorage.setItem(settingsKey, 'false');
     }
     const filtersActiveNotice = document.getElementById('filtersActiveNotice');
     if (filterSettingsBody.style.display === 'none' || filterSettingsBody.style.display === '') {
@@ -392,6 +436,11 @@ function toggleFilterSettings() {
 }
 
 function removeFilter(button) {
+    // Блокируем автоматическое восстановление при удалении фильтра
+    preventAutoRestore = true;
+
+    console.log('removeFilter вызвана');
+
     const row = button.closest('.filter-row');
     if (row) {
         row.remove();
@@ -401,42 +450,230 @@ function removeFilter(button) {
 
         // Если не осталось ни одной строки, полностью сбрасываем фильтры
         if (remainingRows.length === 0) {
+            console.log('Нет оставшихся фильтров, вызываем clearFilters');
             clearFilters();
             return;
         } else {
-            // После удаления фильтра пересоздаём все строки фильтров для корректных индексов
-            const filtersData = [];
-            remainingRows.forEach((row) => {
+            // Просто обновляем индексы оставшихся строк
+            remainingRows.forEach((row, index) => {
+                // Обновляем name атрибуты
                 const fieldSelect = row.querySelector('.filter-field');
                 const opSelect = row.querySelector('.filter-op');
                 const valueInput = row.querySelector('.filter-value');
-                if (fieldSelect && fieldSelect.value && opSelect && opSelect.value) {
-                    const field = fieldSelect.value;
-                    const op = opSelect.value;
-                    let value = '';
-                    if (valueInput) {
-                        value = valueInput.value.trim();
-                    }
-                    filtersData.push({ field, op, value });
+
+                if (fieldSelect) fieldSelect.name = `filter_field_${index}`;
+                if (opSelect) opSelect.name = `filter_op_${index}`;
+                if (valueInput) valueInput.name = `filter_value_${index}`;
+
+                // Обновляем обработчики событий
+                if (fieldSelect) {
+                    fieldSelect.onchange = () => updateFilterOperators(index);
+                }
+                if (opSelect) {
+                    opSelect.onchange = () => updateFilterValueType(index);
                 }
             });
-            // Очищаем контейнер и пересоздаём строки фильтров с правильными индексами
-            filterFields.innerHTML = '';
-            filtersData.forEach((f, i) => {
-                addFilterField(i, f.field, f.op, f.value);
-            });
+
             updateActiveNotices();
-            // После пересоздания DOM сразу вызываем applyFilters для применения фильтрации
-            setTimeout(applyFilters, 0);
-            return;
+
+            // Автоматически применяем фильтры после удаления
+            console.log('Применяем фильтры после удаления');
+            setTimeout(() => {
+                applyFilters();
+            }, 100);
+        }
+    }
+}
+
+// Флаг для предотвращения автоматического восстановления фильтров
+let preventAutoRestore = false;
+
+// Функция для получения правильного ключа localStorage в зависимости от страницы
+function getStorageKey() {
+    const path = window.location.pathname;
+    if (path.includes('/alarms/')) {
+        return 'alarms_filters';
+    } else if (path.includes('/tables/')) {
+        return 'tables_filters';
+    }
+    // По умолчанию — ключ для tables
+    return 'tables_filters';
+}
+
+// Функция для получения старых ключей localStorage в зависимости от страницы
+function getOldStorageKeys() {
+    const path = window.location.pathname;
+    if (path.includes('/alarms/')) {
+        return {
+            fields: 'alarmFilterFields',
+            operators: 'alarmFilterOperators',
+            values: 'alarmFilterValues'
+        };
+    } else if (path.includes('/tables/')) {
+        return {
+            fields: 'tableFilterFields',
+            operators: 'tableFilterOperators',
+            values: 'tableFilterValues'
+        };
+    }
+    // По умолчанию — ключи для tables
+    return {
+        fields: 'tableFilterFields',
+        operators: 'tableFilterOperators',
+        values: 'tableFilterValues'
+    };
+}
+
+function restoreFiltersUniversal() {
+    // Если восстановление заблокировано, не восстанавливаем
+    if (preventAutoRestore) {
+        console.log('Автоматическое восстановление фильтров заблокировано');
+        return;
+    }
+
+    console.log('restoreFiltersUniversal вызвана');
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterFieldsContainer = document.getElementById('filterFields');
+    if (!filterFieldsContainer) {
+        console.error('Контейнер фильтров не найден!');
+        return;
+    }
+    // Проверяем, есть ли параметры фильтрации в URL
+    const urlFilters = [];
+    let i = 0;
+    while (true) {
+        const field = urlParams.get(`filter_field_${i}`);
+        const op = urlParams.get(`filter_op_${i}`);
+        const value = urlParams.get(`filter_value_${i}`);
+        if (!field || !op || !value) break;
+        urlFilters.push({ field, op, value });
+        i++;
+    }
+    console.log('URL фильтры:', urlFilters);
+    filterFieldsContainer.innerHTML = '';
+    if (urlFilters.length > 0) {
+        // Восстанавливаем из URL
+        console.log('Восстанавливаем фильтры из URL');
+        urlFilters.forEach((f, idx) => {
+            console.log(`Восстанавливаем фильтр ${idx}:`, f);
+            addFilterField(idx, f.field, f.op, f.value);
+        });
+        updateActiveNotices();
+    } else {
+        // Восстанавливаем из localStorage и применяем
+        console.log('Восстанавливаем фильтры из localStorage');
+        restoreFilters();
+
+        // Проверяем старые ключи localStorage
+        const oldKeys = getOldStorageKeys();
+        const fields = localStorage.getItem(oldKeys.fields);
+        const operators = localStorage.getItem(oldKeys.operators);
+        const values = localStorage.getItem(oldKeys.values);
+
+        console.log('Старые ключи:', { fields, operators, values });
+
+        if (fields && operators && values) {
+            try {
+                const fieldsData = JSON.parse(fields);
+                const operatorsData = JSON.parse(operators);
+                const valuesData = JSON.parse(values);
+
+                console.log('Данные из старых ключей:', { fieldsData, operatorsData, valuesData });
+
+                if (Array.isArray(fieldsData) && fieldsData.length > 0) {
+                    console.log('Восстанавливаем фильтры из старых ключей');
+                    const filterFieldsContainer = document.getElementById('filterFields');
+                    if (filterFieldsContainer) {
+                        filterFieldsContainer.innerHTML = '';
+                        for (let i = 0; i < fieldsData.length; i++) {
+                            const field = fieldsData[i];
+                            const op = operatorsData[i] || 'exact';
+                            const value = valuesData[i] || '';
+                            if (field && op && value) {
+                                addFilterField(i, field, op, value);
+                            }
+                        }
+                        updateActiveNotices();
+                        // Проверяем, есть ли уже фильтры в URL
+                        const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
+                        if (!hasUrlFilters) {
+                            // Применяем фильтры автоматически с небольшой задержкой
+                            console.log('Фильтры восстановлены из старых ключей, применяем их');
+                            setTimeout(() => {
+                                applyFilters();
+                            }, 200);
+                        } else {
+                            console.log('Фильтры уже есть в URL, не применяем автоматически');
+                        }
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.log('Ошибка при парсинге старых ключей:', e);
+            }
+        }
+
+        // Если старые ключи не работают, пробуем новый ключ
+        const storageKey = getStorageKey();
+        console.log('Ищем ключ:', storageKey);
+        console.log('Все ключи localStorage:', Object.keys(localStorage));
+        const savedFilters = localStorage.getItem(storageKey);
+        console.log('Сохранённые фильтры из localStorage:', savedFilters);
+        if (savedFilters) {
+            try {
+                const filtersData = JSON.parse(savedFilters);
+                console.log('Распарсенные фильтры:', filtersData);
+                if (Array.isArray(filtersData) && filtersData.length > 0) {
+                    // Проверяем, есть ли уже фильтры в URL
+                    const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
+                    if (!hasUrlFilters) {
+                        console.log('Фильтры найдены в localStorage, применяем их');
+                        // Применяем фильтры автоматически с небольшой задержкой
+                        setTimeout(() => {
+                            applyFilters();
+                        }, 200);
+                    } else {
+                        console.log('Фильтры уже есть в URL, не применяем автоматически');
+                    }
+                } else {
+                    console.log('Фильтры не прошли проверку: не массив или пустой');
+                }
+            } catch (e) {
+                console.log('Ошибка при парсинге фильтров:', e);
+            }
+        } else {
+            console.log('В localStorage нет сохранённых фильтров');
+            // Проверяем все ключи, содержащие "filter"
+            const filterKeys = Object.keys(localStorage).filter(key => key.includes('filter'));
+            console.log('Ключи с "filter":', filterKeys);
+            filterKeys.forEach(key => {
+                console.log(`Ключ ${key}:`, localStorage.getItem(key));
+            });
         }
     }
 }
 
 // === Обработчики событий фильтрации ===
 document.addEventListener('DOMContentLoaded', () => {
-    // Восстанавливаем фильтры из localStorage
-    restoreFilters();
+    restoreFiltersUniversal();
+
+    // Восстанавливаем состояние спойлера фильтров
+    const path = window.location.pathname;
+    const settingsKey = path.includes('/alarms/') ? 'alarmsFilterSettingsExpanded' : 'tablesFilterSettingsExpanded';
+    const filterSettingsBody = document.getElementById('filterSettingsBody');
+    const filterToggleIcon = document.getElementById('filterToggleIcon');
+
+    if (filterSettingsBody && filterToggleIcon) {
+        const isExpanded = localStorage.getItem(settingsKey) === 'true';
+        if (isExpanded) {
+            filterSettingsBody.style.display = 'block';
+            filterToggleIcon.className = 'bi bi-chevron-down';
+        } else {
+            filterSettingsBody.style.display = 'none';
+            filterToggleIcon.className = 'bi bi-chevron-right';
+        }
+    }
+
     // Делегирование для .keep-filters
     document.addEventListener('click', function (event) {
         if (event.target.closest('a.keep-filters')) {
@@ -473,4 +710,18 @@ document.addEventListener('DOMContentLoaded', () => {
             applyFilters();
         });
     }
+});
+
+// Обработчик для восстановления фильтров при возврате на страницу
+window.addEventListener('pageshow', (event) => {
+    // Восстанавливаем фильтры при каждом показе страницы
+    restoreFiltersUniversal();
+});
+
+// Дополнительный обработчик для случаев, когда pageshow не срабатывает
+window.addEventListener('focus', () => {
+    // Небольшая задержка для гарантии, что DOM готов
+    setTimeout(() => {
+        restoreFiltersUniversal();
+    }, 100);
 }); 
