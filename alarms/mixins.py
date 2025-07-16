@@ -1,7 +1,3 @@
-from django.db.models import Q
-from datetime import datetime, timedelta
-
-
 class FilterMixin:
     """Миксин для унифицированной фильтрации"""
 
@@ -111,126 +107,36 @@ class FilterMixin:
 
     def _filter_by_alarm_class(self, queryset, operator, value):
         """Фильтрация по полю alarm_class с поддержкой русских названий"""
-        from django.db.models import Q
-
-        # Преобразуем русские названия в английские значения
-        alarm_class_mapping = {
-            "ошибка": "error",
-            "предупреждение": "warn",
-            "информирование": "info",
-            "error": "error",
-            "warn": "warn",
-            "info": "info",
-        }
         search_value = value.lower()
 
         # Для точного поиска ищем точное совпадение
         if operator == "exact":
-            if search_value in alarm_class_mapping:
-                db_value = alarm_class_mapping[search_value]
-                return queryset.filter(alarm_class=db_value)
-            else:
-                return queryset.none()
+            return queryset.filter(alarm_class__verbose_name_ru__iexact=value)
         elif operator == "contains":
             # Для поиска "содержит" ищем частичные совпадения
-            if search_value in alarm_class_mapping:
-                # Если найдено точное совпадение, используем его
-                db_value = alarm_class_mapping[search_value]
-                return queryset.filter(alarm_class=db_value)
-            else:
-                # Ищем по всем возможным значениям
-                q_objects = Q()
-                for rus_name, eng_value in alarm_class_mapping.items():
-                    if search_value in rus_name or search_value in eng_value:
-                        q_objects |= Q(alarm_class=eng_value)
-                if q_objects:
-                    return queryset.filter(q_objects)
-                else:
-                    return queryset.none()
+            return queryset.filter(alarm_class__verbose_name_ru__icontains=value)
         elif operator == "startswith":
             # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
-            q_objects = Q()
-            for rus_name, eng_value in alarm_class_mapping.items():
-                if rus_name.startswith(search_value) or eng_value.startswith(
-                    search_value
-                ):
-                    q_objects |= Q(alarm_class=eng_value)
-            if q_objects:
-                return queryset.filter(q_objects)
-            else:
-                return queryset.none()
+            return queryset.filter(alarm_class__verbose_name_ru__istartswith=value)
         elif operator == "endswith":
             # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
-            q_objects = Q()
-            for rus_name, eng_value in alarm_class_mapping.items():
-                if rus_name.endswith(search_value) or eng_value.endswith(search_value):
-                    q_objects |= Q(alarm_class=eng_value)
-            if q_objects:
-                return queryset.filter(q_objects)
-            else:
-                return queryset.none()
+            return queryset.filter(alarm_class__verbose_name_ru__iendswith=value)
         return queryset
 
     def _filter_by_logic(self, queryset, operator, value):
         """Фильтрация по полю logic с поддержкой русских названий"""
-        from django.db.models import Q
-
-        # Преобразуем русские названия в английские значения
-        logic_mapping = {
-            "дискретное событие": "discrete",
-            "аналоговое событие": "analog",
-            "изменение события": "change",
-            "discrete": "discrete",
-            "analog": "analog",
-            "change": "change",
-        }
-        search_value = value.lower()
-
         # Для точного поиска ищем точное совпадение
         if operator == "exact":
-            if search_value in logic_mapping:
-                db_value = logic_mapping[search_value]
-                return queryset.filter(logic=db_value)
-            else:
-                return queryset.none()
+            return queryset.filter(logic__verbose_name_ru__iexact=value)
         elif operator == "contains":
             # Для поиска "содержит" ищем частичные совпадения
-            if search_value in logic_mapping:
-                # Если найдено точное совпадение, используем его
-                db_value = logic_mapping[search_value]
-                return queryset.filter(logic=db_value)
-            else:
-                # Ищем по всем возможным значениям
-                q_objects = Q()
-                for rus_name, eng_value in logic_mapping.items():
-                    if search_value in rus_name or search_value in eng_value:
-                        q_objects |= Q(logic=eng_value)
-                if q_objects:
-                    return queryset.filter(q_objects)
-                else:
-                    return queryset.none()
+            return queryset.filter(logic__verbose_name_ru__icontains=value)
         elif operator == "startswith":
             # Для поиска "начинается с" ищем значения, начинающиеся с поискового запроса
-            q_objects = Q()
-            for rus_name, eng_value in logic_mapping.items():
-                if rus_name.startswith(search_value) or eng_value.startswith(
-                    search_value
-                ):
-                    q_objects |= Q(logic=eng_value)
-            if q_objects:
-                return queryset.filter(q_objects)
-            else:
-                return queryset.none()
+            return queryset.filter(logic__verbose_name_ru__istartswith=value)
         elif operator == "endswith":
             # Для поиска "заканчивается на" ищем значения, заканчивающиеся на поисковый запрос
-            q_objects = Q()
-            for rus_name, eng_value in logic_mapping.items():
-                if rus_name.endswith(search_value) or eng_value.endswith(search_value):
-                    q_objects |= Q(logic=eng_value)
-            if q_objects:
-                return queryset.filter(q_objects)
-            else:
-                return queryset.none()
+            return queryset.filter(logic__verbose_name_ru__iendswith=value)
         return queryset
 
     def _filter_by_number_field(self, queryset, field, operator, value):

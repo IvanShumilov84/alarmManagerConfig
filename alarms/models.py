@@ -70,8 +70,13 @@ class AlarmConfig(models.Model):
     ]
 
     # Основные поля
-    alarm_class = models.CharField(
-        max_length=20, choices=ALARM_CLASS_CHOICES, verbose_name="Класс тревоги"
+    alarm_class = models.ForeignKey(
+        "AlarmClass",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Класс тревоги",
+        related_name="alarm_configs",
     )
     table = models.ForeignKey(
         AlarmTable,
@@ -79,23 +84,32 @@ class AlarmConfig(models.Model):
         related_name="alarms",
         verbose_name="Таблица сообщений",
     )
-    logic = models.CharField(
-        max_length=20, choices=LOGIC_CHOICES, verbose_name="Способ наблюдения"
+    logic = models.ForeignKey(
+        "Logic",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        verbose_name="Способ наблюдения",
+        related_name="alarm_configs",
     )
     channel = models.CharField(max_length=100, blank=True, verbose_name="Имя канала")
 
     # Поля для аналоговых сигналов
-    limit_type = models.CharField(
-        max_length=20,
-        choices=LIMIT_TYPE_CHOICES,
+    limit_type = models.ForeignKey(
+        "LimitType",
+        null=True,
         blank=True,
+        on_delete=models.SET_NULL,
         verbose_name="Тип ограничения",
+        related_name="alarm_configs",
     )
-    limit_config_type = models.CharField(
-        max_length=20,
-        choices=LIMIT_CONFIG_TYPE_CHOICES,
-        default="values",
+    limit_config_type = models.ForeignKey(
+        "LimitConfigType",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         verbose_name="Тип настройки пределов",
+        related_name="alarm_configs",
     )
     low = models.FloatField(default=0.0, verbose_name="Нижний предел")
     high = models.FloatField(default=0.0, verbose_name="Верхний предел")
@@ -117,11 +131,13 @@ class AlarmConfig(models.Model):
     ch_high = models.CharField(
         max_length=100, blank=True, verbose_name="Канал верхнего предела"
     )
-    confirm_method = models.CharField(
-        max_length=20,
-        choices=CONFIRM_METHOD_CHOICES,
-        default="manual",
+    confirm_method = models.ForeignKey(
+        "ConfirmMethod",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
         verbose_name="Способ подтверждения",
+        related_name="alarm_configs",
     )
     prior = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(1000)],
@@ -160,3 +176,68 @@ class AlarmConfig(models.Model):
         """Переопределяем стандартное удаление для предотвращения физического удаления"""
         # Не вызываем super().delete() - блокируем физическое удаление
         return 0  # Возвращаем 0 удаленных записей
+
+
+class AlarmClass(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    verbose_name_ru = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Класс аварии"
+        verbose_name_plural = "Классы аварий"
+
+    def __str__(self):
+        return self.verbose_name_ru
+
+
+class Logic(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    verbose_name_ru = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Логика"
+        verbose_name_plural = "Логики"
+
+    def __str__(self):
+        return self.verbose_name_ru
+
+
+class ConfirmMethod(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    verbose_name_ru = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Способ подтверждения"
+        verbose_name_plural = "Способы подтверждения"
+
+    def __str__(self):
+        return self.verbose_name_ru
+
+
+class LimitType(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    verbose_name_ru = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Тип ограничения"
+        verbose_name_plural = "Типы ограничений"
+
+    def __str__(self):
+        return self.verbose_name_ru
+
+
+class LimitConfigType(models.Model):
+    name = models.CharField(max_length=32, unique=True)
+    verbose_name_ru = models.CharField(max_length=64)
+
+    class Meta:
+        ordering = ["id"]
+        verbose_name = "Тип настройки пределов"
+        verbose_name_plural = "Типы настройки пределов"
+
+    def __str__(self):
+        return self.verbose_name_ru

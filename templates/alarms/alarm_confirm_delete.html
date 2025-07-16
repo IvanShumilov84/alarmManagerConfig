@@ -31,8 +31,8 @@
                     <h6>Детали сигнала:</h6>
                     <ul class="list-unstyled mb-0">
                         <li><strong>ID:</strong> {{ object.id }}</li>
-                        <li><strong>Класс:</strong> {{ object.get_alarm_class_display }}</li>
-                        <li><strong>Логика:</strong> {{ object.get_logic_display }}</li>
+                        <li><strong>Класс:</strong> {{ object.alarm_class.verbose_name_ru|default:"Не указан" }}</li>
+                        <li><strong>Логика:</strong> {{ object.logic.verbose_name_ru|default:"Не указан" }}</li>
                         <li><strong>Сообщение:</strong> {{ object.msg }}</li>
                         <li><strong>Таблица:</strong> {{ object.table.name }}</li>
                     </ul>

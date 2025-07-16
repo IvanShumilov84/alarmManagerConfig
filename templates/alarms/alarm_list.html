@@ -119,13 +119,13 @@
                             <tr>
                                 <td>{{ alarm.id }}</td>
                                 <td>
-                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %}">
-                                        {{ alarm.get_alarm_class_display }}
+                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% elif alarm.alarm_class.name == 'info' %}info{% else %}secondary{% endif %}">
+                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
                                     </span>
                                 </td>
                                 <td>{{ alarm.table.name }}</td>
                                 <td>
-                                    <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                    <span class="badge bg-primary">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
                                 </td>
                                 <td>
                                     {% if alarm.channel %}
@@ -166,8 +166,8 @@
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
-                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %} me-2">
-                                        {{ alarm.get_alarm_class_display }}
+                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% elif alarm.alarm_class.name == 'info' %}info{% else %}secondary{% endif %} me-2">
+                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
                                     </span>
                                     ID: {{ alarm.id }}
                                 </h6>
@@ -193,7 +193,7 @@
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Логика:</strong></div>
                                     <div class="col-8">
-                                        <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                        <span class="badge bg-primary">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
@@ -288,4 +288,5 @@
 
 <script src="{% static 'js/filters.js' %}"></script>
 <script src="{% static 'js/sort.js' %}"></script>
+<script src="{% static 'js/dynamic_filters.js' %}"></script>
 {% endblock %}

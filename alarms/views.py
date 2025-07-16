@@ -9,6 +9,8 @@ from .models import AlarmConfig, AlarmTable
 from .forms import AlarmConfigForm, AlarmTableForm
 from django.http import HttpResponseRedirect
 from .mixins import FilterMixin
+from .models import AlarmClass, Logic, ConfirmMethod, LimitType, LimitConfigType
+from django.views.decorators.http import require_GET
 
 
 class AlarmTableListView(FilterMixin, ListView):
@@ -107,10 +109,10 @@ class AlarmConfigListView(FilterMixin, ListView):
 
     def get_queryset(self):
         """Получаем queryset с поддержкой сортировки и фильтрации по русским названиям"""
-        from django.db.models import Case, When, Value, CharField
+        from django.db.models.functions import Lower
 
         queryset = AlarmConfig.objects.filter(deleted_at__isnull=True).select_related(
-            "table"
+            "table", "alarm_class", "logic", "limit_type", "confirm_method"
         )
 
         # Применяем фильтрацию через миксин
@@ -137,38 +139,11 @@ class AlarmConfigListView(FilterMixin, ListView):
             sort_orders = ["asc"]
 
         # Создаем аннотации для сортировки по русским названиям
-        from django.db.models.functions import Lower
-
         queryset = queryset.annotate(
-            alarm_class_display=Case(
-                When(alarm_class="error", then=Value("Ошибка")),
-                When(alarm_class="warn", then=Value("Предупреждение")),
-                When(alarm_class="info", then=Value("Информирование")),
-                default=Value(""),
-                output_field=CharField(),
-            ),
-            logic_display=Case(
-                When(logic="discrete", then=Value("Дискретное событие")),
-                When(logic="analog", then=Value("Аналоговое событие")),
-                When(logic="change", then=Value("Изменение события")),
-                default=Value(""),
-                output_field=CharField(),
-            ),
-            limit_type_display=Case(
-                When(limit_type="low", then=Value("Ограничение снизу")),
-                When(limit_type="high", then=Value("Ограничение сверху")),
-                When(limit_type="low_high", then=Value("Ограничение снизу и сверху")),
-                default=Value(""),
-                output_field=CharField(),
-            ),
-            confirm_method_display=Case(
-                When(
-                    confirm_method="rep_ack",
-                    then=Value("Квитирование деактивированной тревоги"),
-                ),
-                default=Value(""),
-                output_field=CharField(),
-            ),
+            alarm_class_display=Lower("alarm_class__verbose_name_ru"),
+            logic_display=Lower("logic__verbose_name_ru"),
+            limit_type_display=Lower("limit_type__verbose_name_ru"),
+            confirm_method_display=Lower("confirm_method__verbose_name_ru"),
             channel_lower=Lower("channel"),
         )
 
@@ -310,28 +285,17 @@ class AlarmTableDetailView(ListView):
 
     def get_queryset(self):
         """Получаем аварии только для конкретной таблицы с сортировкой по русским названиям"""
-        from django.db.models import Case, When, Value, CharField
         from django.db.models.functions import Lower
 
         self.table = get_object_or_404(AlarmTable, pk=self.kwargs["table_id"])
-        queryset = AlarmConfig.objects.filter(table=self.table, deleted_at__isnull=True)
+        queryset = AlarmConfig.objects.filter(
+            table=self.table, deleted_at__isnull=True
+        ).select_related("alarm_class", "logic")
 
         # Создаем аннотации для сортировки по русским названиям
         queryset = queryset.annotate(
-            alarm_class_display=Case(
-                When(alarm_class="error", then=Value("Ошибка")),
-                When(alarm_class="warn", then=Value("Предупреждение")),
-                When(alarm_class="info", then=Value("Информирование")),
-                default=Value(""),
-                output_field=CharField(),
-            ),
-            logic_display=Case(
-                When(logic="discrete", then=Value("Дискретное событие")),
-                When(logic="analog", then=Value("Аналоговое событие")),
-                When(logic="change", then=Value("Изменение события")),
-                default=Value(""),
-                output_field=CharField(),
-            ),
+            alarm_class_display=Lower("alarm_class__verbose_name_ru"),
+            logic_display=Lower("logic__verbose_name_ru"),
             channel_lower=Lower("channel"),
         )
 
@@ -396,7 +360,7 @@ class AlarmConfigDeleteView(View):
 
 def dashboard(request):
     """Главная страница приложения"""
-    from django.db.models import Case, When, Value, CharField
+    from django.db.models.functions import Lower
 
     tables_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
     alarms_count = AlarmConfig.objects.filter(deleted_at__isnull=True).count()
@@ -404,15 +368,8 @@ def dashboard(request):
     # Получаем последние аварии с групповой сортировкой
     recent_alarms = (
         AlarmConfig.objects.filter(deleted_at__isnull=True)
-        .annotate(
-            alarm_class_display=Case(
-                When(alarm_class="error", then=Value("Ошибка")),
-                When(alarm_class="warn", then=Value("Предупреждение")),
-                When(alarm_class="info", then=Value("Информирование")),
-                default=Value(""),
-                output_field=CharField(),
-            )
-        )
+        .select_related("alarm_class")
+        .annotate(alarm_class_display=Lower("alarm_class__verbose_name_ru"))
         .order_by("-created_at", "alarm_class_display", "prior")[:5]
     )
 
@@ -430,19 +387,12 @@ def export_json(request):
     if request.method == "POST":
         try:
             # Получаем все конфигурации аварий с сортировкой по русским названиям
-            from django.db.models import Case, When, Value, CharField
+            from django.db.models.functions import Lower
 
             alarms = (
                 AlarmConfig.objects.filter(deleted_at__isnull=True)
-                .annotate(
-                    alarm_class_display=Case(
-                        When(alarm_class="error", then=Value("Ошибка")),
-                        When(alarm_class="warn", then=Value("Предупреждение")),
-                        When(alarm_class="info", then=Value("Информирование")),
-                        default=Value(""),
-                        output_field=CharField(),
-                    )
-                )
+                .select_related("alarm_class")
+                .annotate(alarm_class_display=Lower("alarm_class__verbose_name_ru"))
                 .order_by("alarm_class_display", "prior", "table__name")
             )
 
@@ -466,12 +416,20 @@ def export_json(request):
             for alarm in alarms:
                 alarm_data = {
                     "id": alarm.id,
-                    "alarm_class": alarm.alarm_class,
+                    "alarm_class": (
+                        alarm.alarm_class.verbose_name_ru if alarm.alarm_class else None
+                    ),
                     "table_id": alarm.table.id,
-                    "logic": alarm.logic,
+                    "logic": alarm.logic.verbose_name_ru if alarm.logic else None,
                     "channel": alarm.channel,
-                    "limit_type": alarm.limit_type,
-                    "limit_config_type": alarm.limit_config_type,
+                    "limit_type": (
+                        alarm.limit_type.verbose_name_ru if alarm.limit_type else None
+                    ),
+                    "limit_config_type": (
+                        alarm.limit_config_type.verbose_name_ru
+                        if alarm.limit_config_type
+                        else None
+                    ),
                     "low": alarm.low,
                     "high": alarm.high,
                     "discrete_val": alarm.discrete_val,
@@ -480,7 +438,11 @@ def export_json(request):
                     "hyst_high": alarm.hyst_high,
                     "ch_low": alarm.ch_low,
                     "ch_high": alarm.ch_high,
-                    "confirm_method": alarm.confirm_method,
+                    "confirm_method": (
+                        alarm.confirm_method.verbose_name_ru
+                        if alarm.confirm_method
+                        else None
+                    ),
                     "prior": alarm.prior,
                     "created_at": alarm.created_at.isoformat(),
                     "updated_at": alarm.updated_at.isoformat(),
@@ -558,3 +520,33 @@ def get_logic_fields(request):
         return JsonResponse(fields_config.get(logic, {"show": [], "hide": []}))
 
     return JsonResponse({"error": "Метод не поддерживается"}, status=405)
+
+
+@require_GET
+def api_alarm_classes(request):
+    data = list(AlarmClass.objects.values("id", "verbose_name_ru"))
+    return JsonResponse(data, safe=False)
+
+
+@require_GET
+def api_logics(request):
+    data = list(Logic.objects.values("id", "verbose_name_ru"))
+    return JsonResponse(data, safe=False)
+
+
+@require_GET
+def api_confirm_methods(request):
+    data = list(ConfirmMethod.objects.values("id", "verbose_name_ru"))
+    return JsonResponse(data, safe=False)
+
+
+@require_GET
+def api_limit_types(request):
+    data = list(LimitType.objects.values("id", "verbose_name_ru"))
+    return JsonResponse(data, safe=False)
+
+
+@require_GET
+def api_limit_config_types(request):
+    data = list(LimitConfigType.objects.values("id", "verbose_name_ru"))
+    return JsonResponse(data, safe=False)

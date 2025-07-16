@@ -357,6 +357,14 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
         </div>
     `;
     filterFields.appendChild(row);
+
+    // Интеграция с динамическими фильтрами
+    if (typeof shouldUseSelect === 'function' && typeof replaceInputWithSelect === 'function') {
+        if (fieldValue && shouldUseSelect(fieldValue)) {
+            replaceInputWithSelect(row, fieldValue, valueValue, idx);
+        }
+    }
+
     // Если поле уже выбрано, обновляем операторы и тип значения
     if (fieldValue) {
         updateFilterOperators(idx);

@@ -91,12 +91,12 @@
                             <tr>
                                 <td>{{ alarm.id }}</td>
                                 <td>
-                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %}">
-                                        {{ alarm.get_alarm_class_display }}
+                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% elif alarm.alarm_class.name == 'info' %}info{% else %}secondary{% endif %}">
+                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
                                     </span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                    <span class="badge bg-primary">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
                                 </td>
                                 <td>
                                     {% if alarm.channel %}
@@ -137,8 +137,8 @@
                         <div class="card h-100">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0">
-                                    <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% elif alarm.alarm_class == 'info' %}info{% else %}secondary{% endif %} me-2">
-                                        {{ alarm.get_alarm_class_display }}
+                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% elif alarm.alarm_class.name == 'info' %}info{% else %}secondary{% endif %} me-2">
+                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
                                     </span>
                                     ID: {{ alarm.id }}
                                 </h6>
@@ -160,7 +160,7 @@
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Логика:</strong></div>
                                     <div class="col-8">
-                                        <span class="badge bg-primary">{{ alarm.get_logic_display }}</span>
+                                        <span class="badge bg-primary">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
                                     </div>
                                 </div>
                                 {% if alarm.channel %}
@@ -172,7 +172,7 @@
                                 {% if alarm.limit_type %}
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Тип лимита:</strong></div>
-                                    <div class="col-8">{{ alarm.get_limit_type_display }}</div>
+                                    <div class="col-8">{{ alarm.limit_type.verbose_name_ru }}</div>
                                 </div>
                                 {% endif %}
                                 {% if alarm.low or alarm.high %}
@@ -215,7 +215,7 @@
                                 {% if alarm.confirm_method %}
                                 <div class="row mb-2">
                                     <div class="col-4"><strong>Подтверждение:</strong></div>
-                                    <div class="col-8">{{ alarm.get_confirm_method_display }}</div>
+                                    <div class="col-8">{{ alarm.confirm_method.verbose_name_ru }}</div>
                                 </div>
                                 {% endif %}
                                 <div class="row mb-2">

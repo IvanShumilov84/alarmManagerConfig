@@ -118,11 +118,11 @@
                                 {% for alarm in recent_alarms %}
                                 <tr>
                                     <td>
-                                        <span class="badge bg-{% if alarm.alarm_class == 'error' %}danger{% elif alarm.alarm_class == 'warn' %}warning{% else %}info{% endif %}">
-                                            {{ alarm.get_alarm_class_display }}
+                                        <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% else %}info{% endif %}">
+                                            {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
                                         </span>
                                     </td>
-                                    <td>{{ alarm.get_logic_display }}</td>
+                                    <td>{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</td>
                                     <td>{{ alarm.msg|truncatechars:50 }}</td>
                                     <td>
                                         <a href="{% url 'alarms:table_detail' alarm.table.pk %}" class="text-decoration-none">
