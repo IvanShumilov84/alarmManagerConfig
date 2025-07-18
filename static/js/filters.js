@@ -364,6 +364,10 @@ function addFilterField(index = null, fieldValue = '', operatorValue = '', value
             replaceInputWithSelect(row, fieldValue, valueValue, idx);
         }
     }
+    // Гарантируем инициализацию динамических фильтров после добавления
+    if (typeof initDynamicFilters === 'function') {
+        setTimeout(initDynamicFilters, 0);
+    }
 
     // Если поле уже выбрано, обновляем операторы и тип значения
     if (fieldValue) {

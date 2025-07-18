@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -25,9 +25,7 @@ class AlarmTableListView(FilterMixin, ListView):
         """Получаем queryset с подсчетом аварий для каждой таблицы и применяем фильтры"""
         from django.db.models import Count
 
-        queryset = AlarmTable.objects.filter(deleted_at__isnull=True).annotate(
-            alarms_count=Count("alarms")
-        )
+        queryset = AlarmTable.objects.all().annotate(alarms_count=Count("alarms"))
 
         # Применяем фильтрацию через миксин
         queryset = self.apply_filters(queryset)
@@ -39,7 +37,7 @@ class AlarmTableListView(FilterMixin, ListView):
         context = super().get_context_data(**kwargs)
 
         # Добавляем счетчики для отображения в бейджах
-        total_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
+        total_count = AlarmTable.objects.all().count()
 
         # Новый способ определения наличия активных фильтров
         has_active_filters = any(
@@ -50,9 +48,9 @@ class AlarmTableListView(FilterMixin, ListView):
             # Получаем queryset без пагинации для подсчета всех отфильтрованных записей
             from django.db.models import Count
 
-            filtered_queryset = AlarmTable.objects.filter(
-                deleted_at__isnull=True
-            ).annotate(alarms_count=Count("alarms"))
+            filtered_queryset = AlarmTable.objects.all().annotate(
+                alarms_count=Count("alarms")
+            )
             filtered_queryset = self.apply_filters(filtered_queryset)
             filtered_count = filtered_queryset.count()
         else:
@@ -111,7 +109,7 @@ class AlarmConfigListView(FilterMixin, ListView):
         """Получаем queryset с поддержкой сортировки и фильтрации по русским названиям"""
         from django.db.models.functions import Lower
 
-        queryset = AlarmConfig.objects.filter(deleted_at__isnull=True).select_related(
+        queryset = AlarmConfig.objects.all().select_related(
             "table", "alarm_class", "logic", "limit_type", "confirm_method"
         )
 
@@ -257,11 +255,11 @@ class AlarmConfigListView(FilterMixin, ListView):
         context["filter_values"] = filter_values
 
         # Получаем общее количество аварий (без фильтров)
-        total_queryset = AlarmConfig.objects.filter(deleted_at__isnull=True)
+        total_queryset = AlarmConfig.objects.all()
         context["total_count"] = total_queryset.count()
 
         # Получаем отфильтрованный queryset для подсчета
-        filtered_queryset = AlarmConfig.objects.filter(deleted_at__isnull=True)
+        filtered_queryset = AlarmConfig.objects.all()
         filtered_queryset = self.apply_filters(filtered_queryset)
         context["filtered_count"] = filtered_queryset.count()
 
@@ -288,9 +286,9 @@ class AlarmTableDetailView(ListView):
         from django.db.models.functions import Lower
 
         self.table = get_object_or_404(AlarmTable, pk=self.kwargs["table_id"])
-        queryset = AlarmConfig.objects.filter(
-            table=self.table, deleted_at__isnull=True
-        ).select_related("alarm_class", "logic")
+        queryset = AlarmConfig.objects.filter(table=self.table).select_related(
+            "alarm_class", "logic"
+        )
 
         # Создаем аннотации для сортировки по русским названиям
         queryset = queryset.annotate(
@@ -317,6 +315,15 @@ class AlarmConfigCreateView(CreateView):
     form_class = AlarmConfigForm
     template_name = "alarms/alarm_form.html"
     success_url = reverse_lazy("alarms:alarm_list")
+
+    def dispatch(self, request, *args, **kwargs):
+        if not AlarmTable.objects.exists():
+            messages.error(
+                request,
+                'Вы перенаправлены на страницу "Таблицы аварий", так как нельзя создать аварийный сигнал: нет ни одной таблицы аварий.',
+            )
+            return redirect("alarms:table_list")
+        return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         messages.success(self.request, "Аварийный сигнал успешно создан!")
@@ -362,12 +369,12 @@ def dashboard(request):
     """Главная страница приложения"""
     from django.db.models.functions import Lower
 
-    tables_count = AlarmTable.objects.filter(deleted_at__isnull=True).count()
-    alarms_count = AlarmConfig.objects.filter(deleted_at__isnull=True).count()
+    tables_count = AlarmTable.objects.all().count()
+    alarms_count = AlarmConfig.objects.all().count()
 
     # Получаем последние аварии с групповой сортировкой
     recent_alarms = (
-        AlarmConfig.objects.filter(deleted_at__isnull=True)
+        AlarmConfig.objects.all()
         .select_related("alarm_class")
         .annotate(alarm_class_display=Lower("alarm_class__verbose_name_ru"))
         .order_by("-created_at", "alarm_class_display", "prior")[:5]
@@ -390,7 +397,7 @@ def export_json(request):
             from django.db.models.functions import Lower
 
             alarms = (
-                AlarmConfig.objects.filter(deleted_at__isnull=True)
+                AlarmConfig.objects.all()
                 .select_related("alarm_class")
                 .annotate(alarm_class_display=Lower("alarm_class__verbose_name_ru"))
                 .order_by("alarm_class_display", "prior", "table__name")
@@ -400,7 +407,7 @@ def export_json(request):
             export_data = {"alarm_tables": [], "alarm_configs": []}
 
             # Добавляем таблицы аварий
-            tables = AlarmTable.objects.filter(deleted_at__isnull=True)
+            tables = AlarmTable.objects.all()
             for table in tables:
                 export_data["alarm_tables"].append(
                     {

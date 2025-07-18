@@ -1,29 +1,48 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
 
 
-class AlarmTable(models.Model):
-    """Модель для таблиц аварийных сигналов"""
+# --- Кастомный QuerySet для soft delete ---
+class SoftDeleteQuerySet(models.QuerySet):
+    def deleted(self):
+        """Только мягко удалённые записи"""
+        return self.filter(deleted_at__isnull=False)
 
-    name = models.CharField(max_length=100, verbose_name="Название таблицы")
-    description = models.TextField(blank=True, verbose_name="Описание")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+    def not_deleted(self):
+        """Только не удалённые записи"""
+        return self.filter(deleted_at__isnull=True)
+
+    def restore(self):
+        """Массовое восстановление записей"""
+        return self.update(deleted_at=None)
+
+
+# --- Менеджеры ---
+class NotDeletedManager(models.Manager):
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db).not_deleted()
+
+
+class AllObjectsManager(models.Manager):
+    def get_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db)
+
+
+class SoftDeleteModel(models.Model):
     deleted_at = models.DateTimeField(
         null=True, blank=True, verbose_name="Дата удаления"
     )
 
-    class Meta:
-        verbose_name = "Таблица аварий"
-        verbose_name_plural = "Таблицы аварий"
+    # Менеджеры
+    objects = NotDeletedManager()  # Только не удалённые
+    all_objects = AllObjectsManager()  # Все записи (в т.ч. удалённые)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        abstract = True
 
     def soft_delete(self):
         """Мягкое удаление записи - устанавливает deleted_at в текущее время"""
-        from django.utils import timezone
-
         self.deleted_at = timezone.now()
         self.save()
 
@@ -38,68 +57,66 @@ class AlarmTable(models.Model):
         return 0  # Возвращаем 0 удаленных записей
 
 
-class AlarmConfig(models.Model):
+class AlarmTable(SoftDeleteModel):
+    """Модель для таблиц аварийных сигналов"""
+
+    name = models.CharField(
+        max_length=100, unique=True, verbose_name="Название таблицы"
+    )
+    description = models.TextField(blank=True, verbose_name="Описание")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Таблица аварий"
+        verbose_name_plural = "Таблицы аварий"
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.name
+
+
+class AlarmConfig(SoftDeleteModel):
     """Модель для конфигурации аварийных сигналов"""
-
-    # Константы для выбора
-    LOGIC_CHOICES = [
-        ("discrete", "Дискретное событие"),
-        ("analog", "Аналоговое событие"),
-        ("change", "Изменение события"),
-    ]
-
-    LIMIT_TYPE_CHOICES = [
-        ("low", "Ограничение снизу"),
-        ("high", "Ограничение сверху"),
-        ("low_high", "Ограничение снизу и сверху"),
-    ]
-
-    LIMIT_CONFIG_TYPE_CHOICES = [
-        ("values", "Значения пределов"),
-        ("channels", "Каналы пределов"),
-    ]
-
-    ALARM_CLASS_CHOICES = [
-        ("error", "Ошибка"),
-        ("warn", "Предупреждение"),
-        ("info", "Информирование"),
-    ]
-
-    CONFIRM_METHOD_CHOICES = [
-        ("rep_ack", "Квитирование деактивированной тревоги"),
-    ]
 
     # Основные поля
     alarm_class = models.ForeignKey(
         "AlarmClass",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         verbose_name="Класс тревоги",
         related_name="alarm_configs",
     )
     table = models.ForeignKey(
         AlarmTable,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="alarms",
         verbose_name="Таблица сообщений",
     )
     logic = models.ForeignKey(
         "Logic",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         verbose_name="Способ наблюдения",
         related_name="alarm_configs",
     )
-    channel = models.CharField(max_length=100, blank=True, verbose_name="Имя канала")
+    channel = models.CharField(max_length=100, unique=True, verbose_name="Имя канала")
+    msg = models.TextField(verbose_name="Текст сообщения")
+    confirm_method = models.ForeignKey(
+        "ConfirmMethod",
+        on_delete=models.PROTECT,
+        verbose_name="Способ подтверждения",
+        related_name="alarm_configs",
+    )
+    prior = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(1000)],
+        verbose_name="Приоритет тревоги",
+    )
 
     # Поля для аналоговых сигналов
     limit_type = models.ForeignKey(
         "LimitType",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         verbose_name="Тип ограничения",
         related_name="alarm_configs",
     )
@@ -107,45 +124,28 @@ class AlarmConfig(models.Model):
         "LimitConfigType",
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         verbose_name="Тип настройки пределов",
         related_name="alarm_configs",
     )
-    low = models.FloatField(default=0.0, verbose_name="Нижний предел")
-    high = models.FloatField(default=0.0, verbose_name="Верхний предел")
+    low = models.FloatField(null=True, blank=True, verbose_name="Нижний предел")
+    high = models.FloatField(null=True, blank=True, verbose_name="Верхний предел")
+    ch_low = models.CharField(
+        null=True, blank=True, max_length=100, verbose_name="Канал нижнего предела"
+    )
+    ch_high = models.CharField(
+        null=True, blank=True, max_length=100, verbose_name="Канал верхнего предела"
+    )
+    hyst_low = models.FloatField(
+        null=True, blank=True, verbose_name="Гистерезис нижнего предела"
+    )
+    hyst_high = models.FloatField(
+        null=True, blank=True, verbose_name="Гистерезис верхнего предела"
+    )
 
     # Поля для дискретных сигналов
     discrete_val = models.FloatField(
-        default=0.0, verbose_name="Значение предела для дискретного сигнала"
-    )
-
-    # Общие поля
-    msg = models.TextField(verbose_name="Текст сообщения")
-    hyst_low = models.FloatField(default=0.0, verbose_name="Гистерезис нижнего предела")
-    hyst_high = models.FloatField(
-        default=0.0, verbose_name="Гистерезис верхнего предела"
-    )
-    ch_low = models.CharField(
-        max_length=100, blank=True, verbose_name="Канал нижнего предела"
-    )
-    ch_high = models.CharField(
-        max_length=100, blank=True, verbose_name="Канал верхнего предела"
-    )
-    confirm_method = models.ForeignKey(
-        "ConfirmMethod",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        verbose_name="Способ подтверждения",
-        related_name="alarm_configs",
-    )
-    prior = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(1000)],
-        default=500,
-        verbose_name="Приоритет тревоги",
-    )
-    deleted_at = models.DateTimeField(
-        null=True, blank=True, verbose_name="Дата удаления"
+        null=True, blank=True, verbose_name="Значение предела для дискретного сигнала"
     )
 
     # Метаданные
@@ -155,27 +155,10 @@ class AlarmConfig(models.Model):
     class Meta:
         verbose_name = "Конфигурация аварии"
         verbose_name_plural = "Конфигурации аварий"
-        ordering = ["alarm_class", "prior"]
+        ordering = ["id"]
 
     def __str__(self):
         return f"{self.alarm_class} - {self.msg[:50]}"
-
-    def soft_delete(self):
-        """Мягкое удаление записи - устанавливает deleted_at в текущее время"""
-        from django.utils import timezone
-
-        self.deleted_at = timezone.now()
-        self.save()
-
-    def restore(self):
-        """Восстановление записи - очищает deleted_at"""
-        self.deleted_at = None
-        self.save()
-
-    def delete(self, *args, **kwargs):
-        """Переопределяем стандартное удаление для предотвращения физического удаления"""
-        # Не вызываем super().delete() - блокируем физическое удаление
-        return 0  # Возвращаем 0 удаленных записей
 
 
 class AlarmClass(models.Model):
