@@ -58,7 +58,7 @@ class SoftDeleteModel(models.Model):
 
 
 class AlarmTable(SoftDeleteModel):
-    """Модель для таблиц аварийных сигналов"""
+    """Модель для таблиц тревог"""
 
     name = models.CharField(
         max_length=100, unique=True, verbose_name="Название таблицы"
@@ -68,8 +68,8 @@ class AlarmTable(SoftDeleteModel):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     class Meta:
-        verbose_name = "Таблица аварий"
-        verbose_name_plural = "Таблицы аварий"
+        verbose_name = "Таблица тревог"
+        verbose_name_plural = "Таблицы тревог"
         ordering = ["id"]
 
     def __str__(self):
@@ -77,20 +77,22 @@ class AlarmTable(SoftDeleteModel):
 
 
 class AlarmConfig(SoftDeleteModel):
-    """Модель для конфигурации аварийных сигналов"""
+    """Модель для конфигурации тревог"""
 
     # Основные поля
+    channel = models.CharField(max_length=100, unique=True, verbose_name="Имя канала")
+    msg = models.TextField(verbose_name="Текст сообщения")
+    table = models.ForeignKey(
+        AlarmTable,
+        on_delete=models.PROTECT,
+        related_name="alarms",
+        verbose_name="Таблица тревог",
+    )
     alarm_class = models.ForeignKey(
         "AlarmClass",
         on_delete=models.PROTECT,
         verbose_name="Класс тревоги",
         related_name="alarm_configs",
-    )
-    table = models.ForeignKey(
-        AlarmTable,
-        on_delete=models.PROTECT,
-        related_name="alarms",
-        verbose_name="Таблица сообщений",
     )
     logic = models.ForeignKey(
         "Logic",
@@ -98,8 +100,6 @@ class AlarmConfig(SoftDeleteModel):
         verbose_name="Способ наблюдения",
         related_name="alarm_configs",
     )
-    channel = models.CharField(max_length=100, unique=True, verbose_name="Имя канала")
-    msg = models.TextField(verbose_name="Текст сообщения")
     confirm_method = models.ForeignKey(
         "ConfirmMethod",
         on_delete=models.PROTECT,
@@ -153,8 +153,8 @@ class AlarmConfig(SoftDeleteModel):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     class Meta:
-        verbose_name = "Конфигурация аварии"
-        verbose_name_plural = "Конфигурации аварий"
+        verbose_name = "Конфигурация тревоги"
+        verbose_name_plural = "Конфигурации тревог"
         ordering = ["id"]
 
     def __str__(self):
@@ -162,32 +162,35 @@ class AlarmConfig(SoftDeleteModel):
 
 
 class AlarmClass(models.Model):
+    """Модель для класса тревоги"""
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
     class Meta:
         ordering = ["id"]
-        verbose_name = "Класс аварии"
-        verbose_name_plural = "Классы аварий"
+        verbose_name = "Класс тревоги"
+        verbose_name_plural = "Классы тревог"
 
     def __str__(self):
         return self.verbose_name_ru
 
 
 class Logic(models.Model):
+    """Модель для способа наблюдения"""
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
     class Meta:
         ordering = ["id"]
-        verbose_name = "Логика"
-        verbose_name_plural = "Логики"
+        verbose_name = "Способ наблюдения"
+        verbose_name_plural = "Способ наблюдения"
 
     def __str__(self):
         return self.verbose_name_ru
 
 
 class ConfirmMethod(models.Model):
+    """Модель для способа подтверждения"""
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -201,6 +204,7 @@ class ConfirmMethod(models.Model):
 
 
 class LimitType(models.Model):
+    """Модель для типа ограничения"""
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -214,6 +218,7 @@ class LimitType(models.Model):
 
 
 class LimitConfigType(models.Model):
+    """Модель для типа настройки пределов"""
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
