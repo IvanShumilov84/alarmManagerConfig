@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 
-{% block title %}Удаление аварийного сигнала{% endblock %}
+{% block title %}{% include 'alarms/includes/page_title.html' with page_title="Тревоги" subtitle="Удаление" %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-exclamation-triangle"></i> Удаление аварийного сигнала
+        <i class="bi bi-exclamation-triangle"></i> Удаление тревоги
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{% url 'alarms:alarm_list' %}" class="btn btn-outline-secondary">
@@ -24,11 +24,11 @@
             </div>
             <div class="card-body">
                 <p class="card-text">
-                    Вы действительно хотите удалить аварийный сигнал:
+                    Вы действительно хотите удалить тревогу:
                 </p>
                 
                 <div class="alert alert-warning">
-                    <h6>Детали сигнала:</h6>
+                    <h6>Детали тревоги:</h6>
                     <ul class="list-unstyled mb-0">
                         <li><strong>ID:</strong> {{ object.id }}</li>
                         <li><strong>Класс:</strong> {{ object.alarm_class.verbose_name_ru|default:"Не указан" }}</li>
@@ -40,7 +40,7 @@
                 
                 <p class="text-danger">
                     <i class="bi bi-exclamation-triangle"></i>
-                    <strong>Внимание!</strong> Запись будет помечена как удалённая, но останется в базе данных.
+                    <strong>Внимание!</strong> Это действие нельзя отменить. Тревога будет полностью удалена из базы данных.
                 </p>
                 
                 <form method="post">

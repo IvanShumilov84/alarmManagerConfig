@@ -22,7 +22,7 @@ class AlarmTableListView(FilterMixin, ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с подсчетом аварий для каждой таблицы и применяем фильтры"""
+        """Получаем queryset с подсчетом тревог для каждой таблицы и применяем фильтры"""
         from django.db.models import Count
 
         queryset = AlarmTable.objects.all().annotate(alarms_count=Count("alarms"))
@@ -30,7 +30,7 @@ class AlarmTableListView(FilterMixin, ListView):
         # Применяем фильтрацию через миксин
         queryset = self.apply_filters(queryset)
 
-        return queryset.order_by("id")
+        return queryset.order_by("table_number")
 
     def get_context_data(self, **kwargs):
         """Добавляем базовые параметры в контекст"""
@@ -64,16 +64,22 @@ class AlarmTableListView(FilterMixin, ListView):
 
 
 class AlarmTableCreateView(CreateView):
-    """Представление для создания новой таблицы аварий"""
+    """Представление для создания новой таблицы тревог"""
 
     model = AlarmTable
     form_class = AlarmTableForm
     template_name = "alarms/table_form.html"
     success_url = reverse_lazy("alarms:table_list")
 
+    def get_initial(self):
+        """Автоматически подставляем следующий доступный номер таблицы"""
+        initial = super().get_initial()
+        initial['table_number'] = AlarmTable.get_next_available_number()
+        return initial
+
 
 class AlarmTableUpdateView(UpdateView):
-    """Представление для редактирования таблицы аварий"""
+    """Представление для редактирования таблицы тревог"""
 
     model = AlarmTable
     form_class = AlarmTableForm
@@ -82,7 +88,7 @@ class AlarmTableUpdateView(UpdateView):
 
 
 class AlarmTableDeleteView(View):
-    """Представление для удаления таблицы аварий"""
+    """Представление для удаления таблицы тревог"""
 
     def get(self, request, pk):
         """Показываем форму подтверждения удаления"""
@@ -90,10 +96,20 @@ class AlarmTableDeleteView(View):
         return render(request, "alarms/table_confirm_delete.html", {"object": table})
 
     def post(self, request, pk):
-        """Мягкое удаление - устанавливает deleted_at вместо физического удаления"""
+        """Физическое удаление таблицы тревог"""
         table = get_object_or_404(AlarmTable, pk=pk)
-        table.soft_delete()
-        messages.success(request, "Таблица аварий успешно удалена!")
+        
+        # Проверяем, можно ли удалить таблицу
+        if not table.can_be_deleted():
+            messages.error(
+                request, 
+                f"Невозможно удалить таблицу '{table.name}'. В ней содержится {table.get_alarms_count()} тревог. "
+                "Сначала удалите все тревоги из таблицы."
+            )
+            return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
+        
+        table.delete()
+        messages.success(request, "Таблица тревог успешно удалена!")
         return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
 
 
@@ -320,13 +336,13 @@ class AlarmConfigCreateView(CreateView):
         if not AlarmTable.objects.exists():
             messages.error(
                 request,
-                'Вы перенаправлены на страницу "Таблицы аварий", так как нельзя создать аварийный сигнал: нет ни одной таблицы аварий.',
+                'Вы перенаправлены на страницу "Таблицы тревог", так как нельзя создать тревогу: нет ни одной таблицы тревог.',
             )
             return redirect("alarms:table_list")
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
-        messages.success(self.request, "Аварийный сигнал успешно создан!")
+        messages.success(self.request, "Тревога успешно создана!")
         return super().form_valid(form)
 
     def form_invalid(self, form):
@@ -345,7 +361,7 @@ class AlarmConfigUpdateView(UpdateView):
     success_url = reverse_lazy("alarms:alarm_list")
 
     def form_valid(self, form):
-        messages.success(self.request, "Аварийный сигнал успешно обновлен!")
+        messages.success(self.request, "Тревога успешно обновлена!")
         return super().form_valid(form)
 
 
@@ -358,10 +374,10 @@ class AlarmConfigDeleteView(View):
         return render(request, "alarms/alarm_confirm_delete.html", {"object": alarm})
 
     def post(self, request, pk):
-        """Мягкое удаление - устанавливает deleted_at вместо физического удаления"""
+        """Физическое удаление аварийного сигнала"""
         alarm = get_object_or_404(AlarmConfig, pk=pk)
-        alarm.soft_delete()
-        messages.success(request, "Аварийный сигнал успешно удален!")
+        alarm.delete()
+        messages.success(request, "Тревога успешно удалена!")
         return HttpResponseRedirect(reverse_lazy("alarms:alarm_list"))
 
 
@@ -406,7 +422,7 @@ def export_json(request):
             # Формируем структуру данных для экспорта
             export_data = {"alarm_tables": [], "alarm_configs": []}
 
-            # Добавляем таблицы аварий
+            # Добавляем таблицы тревог
             tables = AlarmTable.objects.all()
             for table in tables:
                 export_data["alarm_tables"].append(
@@ -557,3 +573,10 @@ def api_limit_types(request):
 def api_limit_config_types(request):
     data = list(LimitConfigType.objects.values("id", "verbose_name_ru"))
     return JsonResponse(data, safe=False)
+
+
+@require_GET
+def api_next_table_number(request):
+    """API для получения следующего доступного номера таблицы"""
+    next_number = AlarmTable.get_next_available_number()
+    return JsonResponse({"next_number": next_number})

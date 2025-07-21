@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} аварийного сигнала
+    {% if form.instance.pk %}
+        {% include 'alarms/includes/page_title.html' with page_title="Тревоги" subtitle="Редактирование" %}
+    {% else %}
+        {% include 'alarms/includes/page_title.html' with page_title="Тревоги" subtitle="Создание" %}
+    {% endif %}
 {% endblock %}
 
 {% block extra_css %}
@@ -89,7 +93,7 @@
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-exclamation-triangle"></i> 
-        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} аварийного сигнала
+        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} тревоги
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{% url 'alarms:alarm_list' %}" class="btn btn-outline-secondary">
@@ -103,7 +107,7 @@
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-gear"></i> Настройки аварийного сигнала
+                    <i class="bi bi-gear"></i> Настройки тревоги
                 </h5>
             </div>
             <div class="card-body">
@@ -419,11 +423,19 @@ $(document).ready(function() {
             $('#discreteValField').show();
         }
         
+        // Убираем required-звёздочки с полей гистерезиса для не-аналоговых логик
+        if (logic !== 'analog' && !logicSelect.find('option:selected').text().includes('Аналоговое')) {
+            $('#id_hyst_low').closest('.mb-3').find('.form-label').removeClass('required-field');
+            $('#id_hyst_high').closest('.mb-3').find('.form-label').removeClass('required-field');
+        }
+        
         // Проверяем по значению и по тексту для analog
         if (logic === 'analog' || logicSelect.find('option:selected').text().includes('Аналоговое')) {
             console.log('Showing analog fields');
             $('#limitTypeField, #hysteresisSection').show();
             $('#limitTypeField .form-label').addClass('required-field');
+            $('#id_hyst_low').closest('.mb-3').find('.form-label').addClass('required-field');
+            $('#id_hyst_high').closest('.mb-3').find('.form-label').addClass('required-field');
             
             console.log('After show - limitTypeField visible:', $('#limitTypeField').is(':visible'));
             console.log('After show - limitConfigTypeField visible:', $('#limitConfigTypeField').is(':visible'));
@@ -556,8 +568,8 @@ $(document).ready(function() {
         if (!logicValue || logicValue === '' || logicText === '---------') {
             console.log('Logic not selected - skipping conditional validation');
             // Убираем все ошибки с условных полей
-            $('#id_discrete_val, #id_limit_type, #id_limit_config_type, #id_low, #id_high, #id_ch_low, #id_ch_high').removeClass('is-invalid');
-            $('#id_discrete_val-error, #id_limit_type-error, #id_limit_config_type-error, #id_low-error, #id_high-error, #id_ch_low-error, #id_ch_high-error').remove();
+            $('#id_discrete_val, #id_limit_type, #id_limit_config_type, #id_low, #id_high, #id_ch_low, #id_ch_high, #id_hyst_low, #id_hyst_high').removeClass('is-invalid');
+            $('#id_discrete_val-error, #id_limit_type-error, #id_limit_config_type-error, #id_low-error, #id_high-error, #id_ch_low-error, #id_ch_high-error, #id_hyst_low-error, #id_hyst_high-error').remove();
         } else if (isDiscreteLogic) {
             console.log('Checking discrete_val for discrete logic');
             const discreteVal = $('#id_discrete_val').val();
@@ -575,6 +587,10 @@ $(document).ready(function() {
                 $('#id_discrete_val').removeClass('is-invalid');
                 $('#id_discrete_val-error').remove();
             }
+            
+            // Убираем ошибки с полей гистерезиса для дискретной логики
+            $('#id_hyst_low, #id_hyst_high').removeClass('is-invalid');
+            $('#id_hyst_low-error, #id_hyst_high-error').remove();
         } else if (isAnalogLogic) {
             console.log('Checking analog fields for analog logic');
             if (!limitTypeText || limitTypeText === '---------') {
@@ -590,6 +606,40 @@ $(document).ready(function() {
             } else {
                 $('#id_limit_type').removeClass('is-invalid');
                 $('#id_limit_type-error').remove();
+            }
+            
+            // Проверяем поля гистерезиса для аналоговой логики
+            const hystLow = $('#id_hyst_low').val();
+            const hystHigh = $('#id_hyst_high').val();
+            
+            if (!hystLow || hystLow === '') {
+                console.log('Hyst low required but empty');
+                $('#id_hyst_low').addClass('is-invalid');
+                if (!$('#id_hyst_low-error').length) {
+                    $('#id_hyst_low').closest('.mb-3').append('<div id="id_hyst_low-error" class="invalid-feedback d-block">Обязательное поле для аналоговых событий</div>');
+                }
+                if (!firstErrorField) {
+                    firstErrorField = $('#id_hyst_low');
+                }
+                isValid = false;
+            } else {
+                $('#id_hyst_low').removeClass('is-invalid');
+                $('#id_hyst_low-error').remove();
+            }
+            
+            if (!hystHigh || hystHigh === '') {
+                console.log('Hyst high required but empty');
+                $('#id_hyst_high').addClass('is-invalid');
+                if (!$('#id_hyst_high-error').length) {
+                    $('#id_hyst_high').closest('.mb-3').append('<div id="id_hyst_high-error" class="invalid-feedback d-block">Обязательное поле для аналоговых событий</div>');
+                }
+                if (!firstErrorField) {
+                    firstErrorField = $('#id_hyst_high');
+                }
+                isValid = false;
+            } else {
+                $('#id_hyst_high').removeClass('is-invalid');
+                $('#id_hyst_high-error').remove();
             }
             
             if (limitTypeText && limitTypeText !== '---------') {

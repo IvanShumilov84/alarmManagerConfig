@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from django.db.models.signals import post_migrate
+from django.db import connection
 
 
 def ensure_reference_data(sender, **kwargs):
@@ -12,9 +13,27 @@ def ensure_reference_data(sender, **kwargs):
         LimitConfigType,
     )
 
+    # Проверяем, существуют ли все необходимые таблицы
+    required_tables = [
+        'alarms_alarmclass',
+        'alarms_logic', 
+        'alarms_confirmmethod',
+        'alarms_limittype',
+        'alarms_limitconfigtype'
+    ]
+    
+    with connection.cursor() as cursor:
+        for table_name in required_tables:
+            cursor.execute("""
+                SELECT name FROM sqlite_master 
+                WHERE type='table' AND name=%s
+            """, [table_name])
+            if not cursor.fetchone():
+                return  # Если хотя бы одна таблица не существует, пропускаем создание данных
+
     # Создаём записи для AlarmClass
     alarm_classes = [
-        {"name": "error", "verbose_name_ru": "Ошибка"},
+        {"name": "error", "verbose_name_ru": "Авария"},
         {"name": "warn", "verbose_name_ru": "Предупреждение"},
         {"name": "info", "verbose_name_ru": "Информирование"},
     ]

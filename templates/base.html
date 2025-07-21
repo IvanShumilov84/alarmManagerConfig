@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Система управления аварийными сигналами{% endblock %}</title>
+    <title>{% block title %}Менеджер тревог{% endblock %}</title>
     
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="{% static 'images/favicon.svg' %}">
@@ -98,6 +98,43 @@
         }
         
         .btn-primary:hover {
+            background: var(--btn-primary-hover);
+        }
+        
+        /* Анимированная рамка для важных сообщений */
+        .blinking-border {
+            animation: blinkBorder 1s ease-in-out infinite !important;
+            border: 3px solid #dc3545 !important;
+            box-shadow: 0 0 15px rgba(220, 53, 69, 0.7) !important;
+            position: relative;
+            z-index: 10;
+        }
+        
+        @keyframes blinkBorder {
+            0% {
+                border-color: #dc3545;
+                box-shadow: 0 0 15px rgba(220, 53, 69, 0.7);
+                transform: scale(1);
+            }
+            50% {
+                border-color: #ff6b6b;
+                box-shadow: 0 0 25px rgba(220, 53, 69, 1);
+                transform: scale(1.02);
+            }
+            100% {
+                border-color: #dc3545;
+                box-shadow: 0 0 15px rgba(220, 53, 69, 0.7);
+                transform: scale(1);
+            }
+        }
+        
+        /* Остановка анимации через 3 секунды */
+        .blinking-border.stop-blink {
+            animation: none !important;
+            border: 1px solid #dc3545 !important;
+            box-shadow: none !important;
+            transform: none !important;
+        }
             background: var(--btn-primary-hover);
         }
         
@@ -229,7 +266,7 @@
                     <div class="text-center mb-4">
                         <h4 class="text-white">
                             <i class="bi bi-shield-exclamation"></i>
-                            Система аварий
+                            Менеджер тревог
                         </h4>
                     </div>
                     
@@ -243,13 +280,13 @@
                         <li class="nav-item">
                             <a class="nav-link {% if 'alarm' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'alarms:alarm_list' %}">
-                                <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы
+                                <i class="bi bi-exclamation-triangle"></i> Тревоги
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if 'table' in request.resolver_match.url_name %}active{% endif %}" 
                                href="{% url 'alarms:table_list' %}">
-                                <i class="bi bi-table"></i> Таблицы аварий
+                                <i class="bi bi-table"></i> Таблицы тревог
                             </a>
                         </li>
                     </ul>
@@ -271,7 +308,7 @@
                 <div class="pt-3 pb-2 mb-3">
                     {% if messages %}
                         {% for message in messages %}
-                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                            <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show {% if message.tags == 'error' %}blinking-border{% endif %}" role="alert" id="message-{{ forloop.counter }}">
                                 {{ message }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                             </div>
@@ -439,6 +476,40 @@
 
         // Инициализируем тему при загрузке страницы
         document.addEventListener('DOMContentLoaded', initializeTheme);
+        
+        // Функция для управления анимированными рамками сообщений
+        function handleBlinkingMessages() {
+            const errorMessages = document.querySelectorAll('.alert-danger');
+            console.log('Найдено сообщений об ошибках:', errorMessages.length);
+            
+            errorMessages.forEach((message, index) => {
+                console.log(`Сообщение ${index + 1}:`, message.textContent.trim());
+                
+                // Добавляем анимацию через JavaScript
+                message.style.animation = 'blinkBorder 1s ease-in-out infinite';
+                message.style.border = '3px solid #dc3545';
+                message.style.boxShadow = '0 0 15px rgba(220, 53, 69, 0.7)';
+                message.style.position = 'relative';
+                message.style.zIndex = '10';
+                
+                // Останавливаем анимацию через 3 секунды
+                setTimeout(() => {
+                    message.style.animation = 'none';
+                    message.style.border = '1px solid #dc3545';
+                    message.style.boxShadow = 'none';
+                    console.log(`Анимация остановлена для сообщения ${index + 1}`);
+                }, 3000);
+            });
+        }
+        
+        // Запускаем обработку анимированных сообщений при загрузке страницы
+        document.addEventListener('DOMContentLoaded', handleBlinkingMessages);
+        
+        // Дополнительная проверка через 1 секунду
+        setTimeout(() => {
+            console.log('Дополнительная проверка анимированных сообщений...');
+            handleBlinkingMessages();
+        }, 1000);
     </script>
     
     {% block extra_js %}{% endblock %}

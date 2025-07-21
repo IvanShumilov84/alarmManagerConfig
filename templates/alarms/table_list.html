@@ -1,12 +1,52 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Таблицы аварий - Система управления аварийными сигналами{% endblock %}
+{% block title %}{% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Стили для кнопок удаления */
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        border-color: #ffc107;
+        color: #000;
+    }
+    
+    .btn-outline-warning:focus {
+        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    }
+    
+    /* Улучшенные tooltips */
+    [title] {
+        position: relative;
+        cursor: help;
+    }
+    
+    /* Анимация для кнопки предупреждения */
+    .btn-outline-warning {
+        transition: all 0.2s ease-in-out;
+    }
+    
+    .btn-outline-warning:hover {
+        transform: scale(1.05);
+    }
+    
+    /* Стили для модального окна */
+    .modal-header.bg-warning {
+        border-bottom: 1px solid #ffc107;
+    }
+    
+    .badge.bg-warning.text-dark {
+        font-size: 0.9em;
+        padding: 0.4em 0.6em;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-table"></i> Таблицы аварий
+                        <i class="bi bi-table"></i> Таблицы тревог
         <span class="badge bg-secondary ms-2">
             Всего: {{ total_count }}
         </span>
@@ -36,7 +76,7 @@
         <form method="get" id="sortForm">
             <input type="hidden" name="display_mode" value="{{ display_mode }}">
             <div class="row" id="sortFields"
-                 data-sort-fields='[{"value": "id", "label": "ID"}, {"value": "name", "label": "Название"}, {"value": "description", "label": "Описание"}, {"value": "alarms_count", "label": "Количество аварий"}, {"value": "created_at", "label": "Дата создания"}, {"value": "updated_at", "label": "Дата обновления"}]'
+                 data-sort-fields='[{"value": "table_number", "label": "Номер"}, {"value": "name", "label": "Название"}, {"value": "description", "label": "Описание"}, {"value": "alarms_count", "label": "Количество тревог"}, {"value": "created_at", "label": "Дата создания"}, {"value": "updated_at", "label": "Дата обновления"}]'
                  data-storage-key="tablesSortFields">
                 <!-- JS вставит поля сортировки -->
             </div>
@@ -60,9 +100,9 @@
                     <thead class="table-light">
                         <tr>
                             <th>
-                                ID
-                                {% if 'id' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.id == 'asc' %}up{% else %}down{% endif %}"></i>
+                                Номер
+                                {% if 'table_number' in sort_indicators %}
+                                    <i class="bi bi-arrow-{% if sort_indicators.table_number == 'asc' %}up{% else %}down{% endif %}"></i>
                                 {% endif %}
                             </th>
                             <th>
@@ -78,7 +118,7 @@
                                 {% endif %}
                             </th>
                             <th>
-                                Количество аварий
+                                Количество тревог
                                 {% if 'alarms_count' in sort_indicators %}
                                     <i class="bi bi-arrow-{% if sort_indicators.alarms_count == 'asc' %}up{% else %}down{% endif %}"></i>
                                 {% endif %}
@@ -95,7 +135,9 @@
                     <tbody>
                         {% for table in tables %}
                         <tr>
-                            <td>{{ table.id }}</td>
+                            <td>
+                                <span class="badge bg-primary">{{ table.table_number }}</span>
+                            </td>
                             <td>
                                 <strong>{{ table.name }}</strong>
                             </td>
@@ -114,7 +156,7 @@
                                 <div class="btn-group" role="group">
                                     <a href="{% url 'alarms:table_detail' table.pk %}" 
                                        class="btn btn-sm btn-outline-success" 
-                                       title="Просмотреть аварии">
+                                       title="Просмотреть тревоги">
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <a href="{% url 'alarms:table_edit' table.pk %}" 
@@ -122,12 +164,19 @@
                                        title="Редактировать">
                                         <i class="bi bi-pencil"></i>
                                     </a>
-                                    <a href="{% url 'alarms:table_delete' table.pk %}" 
-                                       class="btn btn-sm btn-outline-danger" 
-                                       title="Удалить"
-                                       onclick="return confirm('Вы уверены, что хотите удалить эту таблицу? Все связанные аварийные сигналы также будут удалены.')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                    {% if table.alarms_count == 0 %}
+                                        <a href="{% url 'alarms:table_delete' table.pk %}" 
+                                           class="btn btn-sm btn-outline-danger" 
+                                           title="Удалить таблицу '{{ table.name }}'">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-sm btn-outline-warning" 
+                                                title="Удаление невозможно - в таблице '{{ table.name }}' содержится {{ table.alarms_count }} тревог(а). Сначала удалите все тревоги из таблицы."
+                                                onclick="showDeleteWarning({{ table.alarms_count }}, '{{ table.name }}', {{ table.pk }})">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                        </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -172,8 +221,8 @@
                     {% include 'alarms/includes/empty_filtered.html' %}
                 {% else %}
                     <i class="bi bi-table fs-1"></i>
-                    <h4>Таблицы аварий не найдены</h4>
-                    <p>Создайте первую таблицу аварий для начала работы</p>
+                                            <h4>Таблицы тревог не найдены</h4>
+                    <p>Создайте первую таблицу тревог для начала работы</p>
                     <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
                         <i class="bi bi-plus-circle"></i> Создать первую таблицу
                     </a>
@@ -185,4 +234,67 @@
 
 <script src="{% static 'js/filters.js' %}"></script>
 <script src="{% static 'js/sort.js' %}"></script>
+
+<!-- Модальное окно для предупреждения о невозможности удаления -->
+<div class="modal fade" id="deleteWarningModal" tabindex="-1" aria-labelledby="deleteWarningModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="deleteWarningModalLabel">
+                    <i class="bi bi-exclamation-triangle"></i> Удаление невозможно
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Невозможно удалить таблицу <strong id="tableName"></strong>.</p>
+                <p>В таблице содержится <span id="alarmsCount" class="badge bg-warning text-dark"></span> тревог(а).</p>
+                <p>Для удаления таблицы сначала удалите все тревоги из неё.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <a href="#" id="viewAlarmsLink" class="btn btn-primary">
+                    <i class="bi bi-eye"></i> Просмотреть тревоги
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showDeleteWarning(alarmsCount, tableName, tableId) {
+    // Заполняем данные в модальном окне
+    document.getElementById('tableName').textContent = tableName;
+    document.getElementById('alarmsCount').textContent = alarmsCount;
+    document.getElementById('viewAlarmsLink').href = `/tables/${tableId}/alarms/`;
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('deleteWarningModal'));
+    modal.show();
+}
+
+// Инициализация улучшенных tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализируем Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {
+            placement: 'top',
+            trigger: 'hover focus',
+            html: true
+        });
+    });
+    
+    // Добавляем анимацию для кнопок предупреждения
+    const warningButtons = document.querySelectorAll('.btn-outline-warning');
+    warningButtons.forEach(button => {
+        button.addEventListener('mouseenter', function() {
+            this.style.transform = 'scale(1.05)';
+        });
+        
+        button.addEventListener('mouseleave', function() {
+            this.style.transform = 'scale(1)';
+        });
+    });
+});
+</script>
 {% endblock %} 

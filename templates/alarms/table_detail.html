@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ table.name }} - Аварийные сигналы{% endblock %}
+{% block title %}{% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" subtitle=table.name %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -17,7 +17,7 @@
             </a>
         </div>
         <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Добавить сигнал
+            <i class="bi bi-plus-circle"></i> Добавить тревогу
         </a>
         <a href="{% url 'alarms:table_list' %}" class="btn btn-outline-secondary ms-2">
             <i class="bi bi-arrow-left"></i> Назад к таблицам
@@ -66,7 +66,7 @@
 <div class="card">
     <div class="card-header">
         <h5 class="mb-0">
-            <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы в таблице
+                            <i class="bi bi-exclamation-triangle"></i> Тревоги в таблице
         </h5>
     </div>
     <div class="card-body">
@@ -119,7 +119,7 @@
                                         <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
                                            class="btn btn-sm btn-outline-danger" 
                                            title="Удалить"
-                                           onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                           onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -151,7 +151,7 @@
                                     <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
                                        class="btn btn-sm btn-outline-danger" 
                                        title="Удалить"
-                                       onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                       onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 </div>
@@ -267,10 +267,10 @@
         {% else %}
             <div class="text-center text-muted py-5">
                 <i class="bi bi-inbox fs-1"></i>
-                <h4>В этой таблице нет аварийных сигналов</h4>
-                <p>Создайте первый аварийный сигнал для этой таблицы</p>
+                <h4>В этой таблице нет тревог</h4>
+                <p>Создайте первую тревогу для этой таблицы</p>
                 <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                    <i class="bi bi-plus-circle"></i> Создать первый сигнал
+                    <i class="bi bi-plus-circle"></i> Создать первую тревогу
                 </a>
             </div>
         {% endif %}

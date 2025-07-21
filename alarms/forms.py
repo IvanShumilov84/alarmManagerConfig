@@ -4,12 +4,19 @@ from .models import AlarmConfig, AlarmTable
 
 
 class AlarmTableForm(forms.ModelForm):
-    """Форма для создания и редактирования таблиц аварий"""
+    """Форма для создания и редактирования таблиц тревог"""
 
     class Meta:
         model = AlarmTable
-        fields = ["name", "description"]
+        fields = ["table_number", "name", "description"]
         widgets = {
+            "table_number": forms.NumberInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Введите номер таблицы",
+                    "min": "1",
+                }
+            ),
             "name": forms.TextInput(
                 attrs={
                     "class": "form-control",
@@ -24,6 +31,38 @@ class AlarmTableForm(forms.ModelForm):
                 }
             ),
         }
+
+    def clean_table_number(self):
+        """Валидация уникальности номера таблицы"""
+        table_number = self.cleaned_data.get('table_number')
+        if table_number is not None:
+            # Проверяем, не занят ли номер
+            existing = AlarmTable.objects.filter(table_number=table_number)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError(
+                    f"Таблица с номером {table_number} уже существует. "
+                    "Выберите другой номер."
+                )
+        return table_number
+
+    def clean_name(self):
+        """Валидация уникальности названия таблицы"""
+        name = self.cleaned_data.get('name')
+        if name:
+            # Проверяем, не занято ли название
+            existing = AlarmTable.objects.filter(name=name)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError(
+                    f"Таблица с названием '{name}' уже существует. "
+                    "Выберите другое название."
+                )
+        return name
 
 
 class AlarmConfigForm(forms.ModelForm):
@@ -124,6 +163,8 @@ class AlarmConfigForm(forms.ModelForm):
             high = cleaned_data.get("high")
             ch_low = cleaned_data.get("ch_low")
             ch_high = cleaned_data.get("ch_high")
+            hyst_low = cleaned_data.get("hyst_low")
+            hyst_high = cleaned_data.get("hyst_high")
 
             if limit_config_type and limit_config_type.name == "values":
                 if limit_type and limit_type.name not in ["low", "low_high"]:
@@ -144,6 +185,12 @@ class AlarmConfigForm(forms.ModelForm):
                     and is_empty(high)
                 ):
                     self.add_error("high", "Обязательное поле.")
+                
+                # Валидация гистерезиса для аналоговых событий
+                if is_empty(hyst_low):
+                    self.add_error("hyst_low", "Обязательное поле для аналоговых событий.")
+                if is_empty(hyst_high):
+                    self.add_error("hyst_high", "Обязательное поле для аналоговых событий.")
             elif limit_config_type and limit_config_type.name == "channels":
                 if limit_type and limit_type.name not in ["low", "low_high"]:
                     cleaned_data.pop("ch_low", None)
@@ -163,11 +210,23 @@ class AlarmConfigForm(forms.ModelForm):
                     and is_empty(ch_high)
                 ):
                     self.add_error("ch_high", "Обязательное поле.")
+                
+                # Валидация гистерезиса для аналоговых событий
+                if is_empty(hyst_low):
+                    self.add_error("hyst_low", "Обязательное поле для аналоговых событий.")
+                if is_empty(hyst_high):
+                    self.add_error("hyst_high", "Обязательное поле для аналоговых событий.")
             else:
                 cleaned_data["low"] = 0
                 cleaned_data["high"] = 0
                 cleaned_data["ch_low"] = ""
                 cleaned_data["ch_high"] = ""
+                
+                # Валидация гистерезиса для аналоговых событий
+                if is_empty(hyst_low):
+                    self.add_error("hyst_low", "Обязательное поле для аналоговых событий.")
+                if is_empty(hyst_high):
+                    self.add_error("hyst_high", "Обязательное поле для аналоговых событий.")
 
         return cleaned_data
 

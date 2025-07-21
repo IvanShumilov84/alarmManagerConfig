@@ -6,7 +6,7 @@ app_name = "alarms"
 urlpatterns = [
     # Главная страница
     path("", views.dashboard, name="dashboard"),
-    # Таблицы аварий
+    # Таблицы тревог
     path("tables/", views.AlarmTableListView.as_view(), name="table_list"),
     path("tables/create/", views.AlarmTableCreateView.as_view(), name="table_create"),
     path(
@@ -47,5 +47,10 @@ urlpatterns = [
         "api/limit-config-types/",
         views.api_limit_config_types,
         name="api_limit_config_types",
+    ),
+    path(
+        "api/next-table-number/",
+        views.api_next_table_number,
+        name="api_next_table_number",
     ),
 ]

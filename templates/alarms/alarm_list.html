@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Аварийные сигналы - Система управления аварийными сигналами{% endblock %}
+{% block title %}{% include 'alarms/includes/page_title.html' with page_title="Тревоги" %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы
+                        <i class="bi bi-exclamation-triangle"></i> Тревоги
         <span class="badge bg-secondary ms-2">
             Всего: {{ total_count }}
         </span>
@@ -21,7 +21,7 @@
             </a>
         </div>
         <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Добавить сигнал
+            <i class="bi bi-plus-circle"></i> Добавить тревогу
         </a>
     </div>
 </div>
@@ -148,7 +148,7 @@
                                         <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
                                            class="btn btn-sm btn-outline-danger" 
                                            title="Удалить"
-                                           onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                           onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
                                             <i class="bi bi-trash"></i>
                                         </a>
                                     </div>
@@ -180,7 +180,7 @@
                                     <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
                                        class="btn btn-sm btn-outline-danger" 
                                        title="Удалить"
-                                       onclick="return confirm('Вы уверены, что хотите удалить этот аварийный сигнал?')">
+                                       onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 </div>
@@ -275,10 +275,10 @@
                     {% include 'alarms/includes/empty_filtered.html' %}
                 {% else %}
                     <i class="bi bi-exclamation-triangle fs-1"></i>
-                    <h4>Аварийные сигналы не найдены</h4>
-                    <p>Создайте первый аварийный сигнал для начала работы</p>
+                                            <h4>Тревоги не найдены</h4>
+                    <p>Создайте первую тревогу для начала работы</p>
                     <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Создать первый сигнал
+                        <i class="bi bi-plus-circle"></i> Создать первую тревогу
                     </a>
                 {% endif %}
             </div>

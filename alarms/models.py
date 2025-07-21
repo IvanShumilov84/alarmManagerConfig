@@ -1,82 +1,51 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from django.utils import timezone
 
 
-# --- Кастомный QuerySet для soft delete ---
-class SoftDeleteQuerySet(models.QuerySet):
-    def deleted(self):
-        """Только мягко удалённые записи"""
-        return self.filter(deleted_at__isnull=False)
-
-    def not_deleted(self):
-        """Только не удалённые записи"""
-        return self.filter(deleted_at__isnull=True)
-
-    def restore(self):
-        """Массовое восстановление записей"""
-        return self.update(deleted_at=None)
-
-
-# --- Менеджеры ---
-class NotDeletedManager(models.Manager):
-    def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db).not_deleted()
-
-
-class AllObjectsManager(models.Manager):
-    def get_queryset(self):
-        return SoftDeleteQuerySet(self.model, using=self._db)
-
-
-class SoftDeleteModel(models.Model):
-    deleted_at = models.DateTimeField(
-        null=True, blank=True, verbose_name="Дата удаления"
-    )
-
-    # Менеджеры
-    objects = NotDeletedManager()  # Только не удалённые
-    all_objects = AllObjectsManager()  # Все записи (в т.ч. удалённые)
-
-    class Meta:
-        abstract = True
-
-    def soft_delete(self):
-        """Мягкое удаление записи - устанавливает deleted_at в текущее время"""
-        self.deleted_at = timezone.now()
-        self.save()
-
-    def restore(self):
-        """Восстановление записи - очищает deleted_at"""
-        self.deleted_at = None
-        self.save()
-
-    def delete(self, *args, **kwargs):
-        """Переопределяем стандартное удаление для предотвращения физического удаления"""
-        # Не вызываем super().delete() - блокируем физическое удаление
-        return 0  # Возвращаем 0 удаленных записей
-
-
-class AlarmTable(SoftDeleteModel):
+class AlarmTable(models.Model):
     """Модель для таблиц тревог"""
 
-    name = models.CharField(
-        max_length=100, unique=True, verbose_name="Название таблицы"
+    table_number = models.IntegerField(
+        unique=True, 
+        verbose_name="Номер таблицы",
+        help_text="Уникальный номер таблицы. При создании автоматически подставляется следующий доступный номер.",
+        validators=[MinValueValidator(0, message="Номер таблицы не может быть меньше 0")]
     )
-    description = models.TextField(blank=True, verbose_name="Описание")
+    name = models.CharField(
+        max_length=100, unique=True, verbose_name="Название таблицы",
+        help_text="Укажите уникальное название для таблицы тревог."
+    )
+    description = models.TextField(blank=True, verbose_name="Описание", help_text="Описание поможет понять назначение таблицы.")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
     class Meta:
         verbose_name = "Таблица тревог"
         verbose_name_plural = "Таблицы тревог"
-        ordering = ["id"]
+        ordering = ["table_number"]
 
     def __str__(self):
-        return self.name
+        return f"Таблица {self.table_number}: {self.name}"
+    
+    def can_be_deleted(self):
+        """Проверяет, можно ли удалить таблицу"""
+        return self.alarms.count() == 0
+    
+    def get_alarms_count(self):
+        """Возвращает количество тревог в таблице"""
+        return self.alarms.count()
+    
+    @classmethod
+    def get_next_available_number(cls):
+        """Возвращает следующий доступный номер таблицы"""
+        existing_numbers = set(cls.objects.values_list('table_number', flat=True))
+        next_number = 1
+        while next_number in existing_numbers:
+            next_number += 1
+        return next_number
 
 
-class AlarmConfig(SoftDeleteModel):
+class AlarmConfig(models.Model):
     """Модель для конфигурации тревог"""
 
     # Основные поля
@@ -109,6 +78,7 @@ class AlarmConfig(SoftDeleteModel):
     prior = models.IntegerField(
         validators=[MinValueValidator(1), MaxValueValidator(1000)],
         verbose_name="Приоритет тревоги",
+        default=500,
     )
 
     # Поля для аналоговых сигналов
@@ -137,10 +107,10 @@ class AlarmConfig(SoftDeleteModel):
         null=True, blank=True, max_length=100, verbose_name="Канал верхнего предела"
     )
     hyst_low = models.FloatField(
-        null=True, blank=True, verbose_name="Гистерезис нижнего предела"
+        null=True, blank=True, verbose_name="Гистерезис нижнего предела", default=0.0
     )
     hyst_high = models.FloatField(
-        null=True, blank=True, verbose_name="Гистерезис верхнего предела"
+        null=True, blank=True, verbose_name="Гистерезис верхнего предела", default=0.0
     )
 
     # Поля для дискретных сигналов

@@ -1,14 +1,93 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} таблицы аварий
+    {% if form.instance.pk %}
+        {% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" subtitle="Редактирование" %}
+    {% else %}
+        {% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" subtitle="Создание" %}
+    {% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .required-field::after {
+        content: " *";
+        color: #dc3545;
+        font-weight: bold;
+    }
+    
+    .required-field {
+        color: #495057;
+        font-weight: 500;
+    }
+    
+    .form-label.required-field {
+        margin-bottom: 0.25rem;
+    }
+    
+    .form-control:disabled {
+        background-color: #f8f9fa !important;
+        opacity: 0.6 !important;
+        cursor: not-allowed !important;
+        border-color: #dee2e6 !important;
+    }
+    
+    .form-control:not(:disabled) {
+        background-color: #fff !important;
+        opacity: 1 !important;
+        cursor: text !important;
+    }
+    
+    .form-label.disabled {
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    .field-hint {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+    }
+    
+    .field-hint.text-success {
+        background-color: #d1e7dd;
+        color: #0f5132;
+        border: 1px solid #badbcc;
+    }
+    
+    .field-hint.text-warning {
+        background-color: #fff3cd;
+        color: #664d03;
+        border: 1px solid #ffecb5;
+    }
+    
+    /* Стили для валидации минимального значения */
+    .form-control.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .form-control.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .invalid-feedback {
+        display: block;
+        width: 100%;
+        margin-top: 0.25rem;
+        font-size: 0.875em;
+        color: #dc3545;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="bi bi-table"></i> 
-        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} таблицы аварий
+        {% if form.instance.pk %}Редактирование{% else %}Создание{% endif %} таблицы тревог
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <a href="{% url 'alarms:table_list' %}" class="btn btn-outline-secondary">
@@ -26,21 +105,41 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="post" novalidate>
                     {% csrf_token %}
                     
                     <div class="mb-3">
-                        <label for="{{ form.name.id_for_label }}" class="form-label">
+                        <label for="{{ form.table_number.id_for_label }}" class="form-label required-field">
+                            {{ form.table_number.label }}
+                        </label>
+                        <div class="input-group">
+                            <input type="number" name="{{ form.table_number.name }}" id="{{ form.table_number.id_for_label }}" class="form-control{% if form.table_number.errors %} is-invalid{% endif %}" value="{{ form.table_number.value|default_if_none:'' }}" min="0">
+                            <button type="button" class="btn btn-outline-secondary" id="autoFillNumberBtn" title="Автоматически подставить следующий доступный номер">
+                                <i class="bi bi-magic"></i> Автозаполнить
+                            </button>
+                        </div>
+                        {% if form.table_number.errors %}
+                            <div id="{{ form.table_number.id_for_label }}-error" class="invalid-feedback d-block">
+                                {{ form.table_number.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            {{ form.table_number.help_text }}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label required-field">
                             {{ form.name.label }}
                         </label>
-                        {{ form.name }}
+                        <input type="text" name="{{ form.name.name }}" id="{{ form.name.id_for_label }}" class="form-control{% if form.name.errors %} is-invalid{% endif %}" value="{{ form.name.value|default_if_none:'' }}">
                         {% if form.name.errors %}
-                            <div class="invalid-feedback d-block">
+                            <div id="{{ form.name.id_for_label }}-error" class="invalid-feedback d-block">
                                 {{ form.name.errors.0 }}
                             </div>
                         {% endif %}
                         <div class="form-text">
-                            Укажите уникальное название для таблицы аварий
+                            {{ form.name.help_text }}
                         </div>
                     </div>
                     
@@ -48,14 +147,14 @@
                         <label for="{{ form.description.id_for_label }}" class="form-label">
                             {{ form.description.label }}
                         </label>
-                        {{ form.description }}
+                        <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="form-control{% if form.description.errors %} is-invalid{% endif %}" rows="3">{{ form.description.value|default_if_none:'' }}</textarea>
                         {% if form.description.errors %}
-                            <div class="invalid-feedback d-block">
+                            <div id="{{ form.description.id_for_label }}-error" class="invalid-feedback d-block">
                                 {{ form.description.errors.0 }}
                             </div>
                         {% endif %}
                         <div class="form-text">
-                            Описание поможет понять назначение таблицы
+                            {{ form.description.help_text }}
                         </div>
                     </div>
                     
@@ -82,20 +181,20 @@
                 </h5>
             </div>
             <div class="card-body">
-                <h6>Таблицы аварий:</h6>
-                <p>Таблицы аварий используются для группировки аварийных сигналов по функциональным областям или системам.</p>
+                <h6>Таблицы тревог:</h6>
+                <p>Таблицы тревог используются для группировки тревог по функциональным областям или системам.</p>
                 
                 <h6>Рекомендации:</h6>
                 <ul>
                     <li>Используйте понятные названия</li>
                     <li>Добавляйте описания для лучшего понимания</li>
-                    <li>Группируйте связанные аварии в одну таблицу</li>
+                    <li>Группируйте связанные тревоги в одну таблицу</li>
                 </ul>
                 
                 {% if form.instance.pk %}
                     <hr>
                     <h6>Статистика:</h6>
-                    <p><strong>Аварийных сигналов:</strong> {{ form.instance.alarms.count }}</p>
+                    <p><strong>Тревог:</strong> {{ form.instance.alarms.count }}</p>
                     <p><strong>Создана:</strong> {{ form.instance.created_at|date:"d.m.Y H:i" }}</p>
                     <p><strong>Обновлена:</strong> {{ form.instance.updated_at|date:"d.m.Y H:i" }}</p>
                 {% endif %}
@@ -103,4 +202,316 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    console.log('Table form initialization started');
+    
+    // Проверяем существующие серверные ошибки при загрузке страницы
+    console.log('Checking for existing server errors...');
+    $('.invalid-feedback').each(function() {
+        const errorText = $(this).text();
+        const fieldId = $(this).attr('id');
+        console.log('Found error element:', fieldId, 'text:', errorText);
+        
+        if (errorText.includes('уже существует')) {
+            if (fieldId) {
+                const fieldElement = $('#' + fieldId.replace('-error', ''));
+                if (fieldElement.length > 0) {
+                    fieldElement.addClass('is-invalid');
+                    console.log('Added is-invalid class to field:', fieldId.replace('-error', ''));
+                } else {
+                    console.log('Field element not found for:', fieldId.replace('-error', ''));
+                }
+            }
+        }
+    });
+    
+    // Проверяем все поля с ошибками
+    $('.is-invalid').each(function() {
+        console.log('Field with is-invalid class:', $(this).attr('id'));
+    });
+    
+    // Обработчик кнопки автозаполнения номера таблицы
+    $('#autoFillNumberBtn').on('click', function() {
+        const button = $(this);
+        const input = $('#id_table_number');
+        
+        // Показываем индикатор загрузки
+        button.prop('disabled', true);
+        button.html('<i class="bi bi-hourglass-split"></i> Загрузка...');
+        
+        // Запрашиваем следующий доступный номер
+        $.get('{% url "alarms:api_next_table_number" %}')
+            .done(function(data) {
+                input.val(data.next_number);
+                console.log('Auto-filled table number:', data.next_number);
+                
+                // Убираем ошибки с поля
+                input.removeClass('is-invalid');
+                $('#' + input.attr('id') + '-error').remove();
+                
+                // Показываем уведомление об успехе
+                showNotification('Номер таблицы автоматически заполнен: ' + data.next_number, 'success');
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to get next table number:', error);
+                showNotification('Ошибка при получении номера таблицы', 'error');
+            })
+            .always(function() {
+                // Восстанавливаем кнопку
+                button.prop('disabled', false);
+                button.html('<i class="bi bi-magic"></i> Автозаполнить');
+            });
+    });
+    
+    // Функция для показа уведомлений
+    function showNotification(message, type) {
+        const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+        const icon = type === 'success' ? 'bi-check-circle' : 'bi-exclamation-triangle';
+        
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                <i class="bi ${icon}"></i> ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        // Добавляем уведомление в начало формы
+        $('form').prepend(notification);
+        
+        // Автоматически скрываем через 3 секунды
+        setTimeout(function() {
+            notification.fadeOut(function() {
+                $(this).remove();
+            });
+        }, 3000);
+    }
+    
+    // Функция для валидации обязательных полей при отправке формы
+    function validateRequiredFields() {
+        let isValid = true;
+        let firstErrorField = null;
+        
+        console.log('=== validateRequiredFields called ===');
+        
+        // Список всех обязательных полей с их валидаторами
+        const requiredFields = [
+            { 
+                id: 'id_table_number', 
+                name: 'Номер таблицы',
+                validator: function(value) {
+                    const numValue = parseInt(value);
+                    if (isNaN(numValue)) {
+                        return 'Номер таблицы должен быть числом';
+                    }
+                    if (numValue < 0) {
+                        return 'Номер таблицы не может быть меньше 0';
+                    }
+                    return null; // нет ошибки
+                }
+            },
+            { 
+                id: 'id_name', 
+                name: 'Название',
+                validator: function(value) {
+                    if (value.trim().length === 0) {
+                        return 'Название не может быть пустым';
+                    }
+                    if (value.trim().length < 2) {
+                        return 'Название должно содержать минимум 2 символа';
+                    }
+                    return null; // нет ошибки
+                }
+            }
+        ];
+        
+        // Проверяем обязательные поля
+        requiredFields.forEach(field => {
+            const element = $('#' + field.id);
+            const value = element.val();
+            let fieldHasError = false;
+            
+            // Проверяем наличие значения
+            if (!value || value === '' || value === '---------') {
+                console.log('Required field empty:', field.name, 'value:', value);
+                element.addClass('is-invalid');
+                
+                // Создаем или обновляем сообщение об ошибке
+                let errorId = field.id + '-error';
+                if (!$('#' + errorId).length) {
+                    element.closest('.mb-3').append('<div id="' + errorId + '" class="invalid-feedback d-block">Обязательное поле</div>');
+                }
+                
+                if (!firstErrorField) {
+                    firstErrorField = element;
+                }
+                fieldHasError = true;
+                isValid = false;
+            } else {
+                // Проверяем валидность значения
+                const validationError = field.validator(value);
+                if (validationError) {
+                    console.log('Validation error for', field.name, ':', validationError);
+                    element.addClass('is-invalid');
+                    
+                    let errorId = field.id + '-error';
+                    if (!$('#' + errorId).length) {
+                        element.closest('.mb-3').append('<div id="' + errorId + '" class="invalid-feedback d-block">' + validationError + '</div>');
+                    } else {
+                        $('#' + errorId).text(validationError);
+                    }
+                    
+                    if (!firstErrorField) {
+                        firstErrorField = element;
+                    }
+                    fieldHasError = true;
+                    isValid = false;
+                }
+            }
+            
+            // Убираем ошибки только если поле валидно
+            if (!fieldHasError) {
+                element.removeClass('is-invalid');
+                $('#' + field.id + '-error').remove();
+            }
+        });
+        
+        // Прокручиваем к первому полю с ошибкой
+        if (firstErrorField) {
+            firstErrorField[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        console.log('Form validation result:', isValid);
+        // Не возвращаем false, чтобы форма всегда отправлялась
+        return true;
+    }
+    
+    // Обработчик отправки формы
+    $('form').on('submit', function(e) {
+        console.log('Form submit event triggered');
+        
+        // Полностью предотвращаем стандартную валидацию браузера
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        // Показываем клиентские ошибки пользователю, но не блокируем отправку
+        console.log('Showing client validation errors...');
+        validateRequiredFields();
+        
+        // Выполняем валидацию обязательных полей
+        console.log('Running client validation...');
+        const validationResult = validateRequiredFields();
+        console.log('Client validation result:', validationResult);
+        
+        // Всегда отправляем форму на сервер, даже при клиентских ошибках
+        // Сервер проверит все ошибки и вернет их
+        console.log('Sending form to server for validation...');
+        this.submit();
+        return true;
+    });
+    
+    // Глобальная блокировка браузерной валидации
+    $(document).on('invalid', 'input, select, textarea', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+    });
+    
+    // Дополнительная блокировка для всех элементов формы
+    $('form').on('invalid', 'input, select, textarea', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+    });
+    
+    // Блокировка стандартной валидации HTML5
+    $('input[type="number"]').on('invalid', function(e) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        return false;
+    });
+    
+    // Дополнительная блокировка для всех событий валидации
+    $(document).on('submit', 'form', function(e) {
+        // Предотвращаем стандартную валидацию браузера
+        e.stopImmediatePropagation();
+    });
+    
+    // Очистка ошибок при вводе в поля (только для клиентской валидации)
+    $('input, textarea').on('input', function() {
+        const fieldId = $(this).attr('id');
+        const errorElement = $('#' + fieldId + '-error');
+        
+        // Убираем только ошибки клиентской валидации, но не серверные
+        if ($(this).hasClass('is-invalid') && errorElement.length > 0) {
+            const errorText = errorElement.text();
+            // Убираем ошибку только если это не серверная ошибка
+            if (!errorText.includes('уже существует') && !errorText.includes('already exists') && 
+                !errorText.includes('уникальным') && !errorText.includes('unique')) {
+                $(this).removeClass('is-invalid');
+                errorElement.remove();
+            }
+        }
+    });
+    
+    // Валидаторы для полей
+    const fieldValidators = {
+        'id_table_number': function(value) {
+            if (!value || value === '') return null; // пустое поле обрабатывается отдельно
+            const numValue = parseInt(value);
+            if (isNaN(numValue)) {
+                return 'Номер таблицы должен быть числом';
+            }
+            if (numValue < 0) {
+                return 'Номер таблицы не может быть меньше 0';
+            }
+            return null;
+        },
+        'id_name': function(value) {
+            if (!value || value === '') return null; // пустое поле обрабатывается отдельно
+            if (value.trim().length === 0) {
+                return 'Название не может быть пустым';
+            }
+            if (value.trim().length < 2) {
+                return 'Название должно содержать минимум 2 символа';
+            }
+            return null;
+        }
+    };
+    
+    // Обработка ввода для всех полей с валидацией
+    $('#id_table_number, #id_name').on('input', function() {
+        const fieldId = $(this).attr('id');
+        const value = $(this).val();
+        const validator = fieldValidators[fieldId];
+        
+        if (validator) {
+            const error = validator(value);
+            const existingError = $('#' + fieldId + '-error');
+            
+            if (error) {
+                $(this).addClass('is-invalid');
+                if (!existingError.length) {
+                    $(this).closest('.mb-3').append('<div id="' + fieldId + '-error" class="invalid-feedback d-block">' + error + '</div>');
+                } else {
+                    // Обновляем только если это клиентская ошибка
+                    const errorText = existingError.text();
+                    if (!errorText.includes('уже существует') && !errorText.includes('already exists')) {
+                        existingError.text(error);
+                    }
+                }
+            } else {
+                // Убираем ошибку только если это не серверная ошибка
+                if (!existingError.length || (!existingError.text().includes('уже существует') && !existingError.text().includes('already exists'))) {
+                    $(this).removeClass('is-invalid');
+                    existingError.remove();
+                }
+            }
+        }
+    });
+});
+</script>
 {% endblock %} 

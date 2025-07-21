@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Главная - Система управления аварийными сигналами{% endblock %}
+{% block title %}{% include 'alarms/includes/page_title.html' with page_title="Главная" %}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -22,7 +22,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">
-                            <i class="bi bi-table"></i> Таблицы аварий
+                            <i class="bi bi-table"></i> Таблицы тревог
                         </h5>
                         <h2 class="card-text">{{ tables_count }}</h2>
                     </div>
@@ -43,7 +43,7 @@
                 <div class="d-flex justify-content-between">
                     <div>
                         <h5 class="card-title">
-                            <i class="bi bi-exclamation-triangle"></i> Аварийные сигналы
+                            <i class="bi bi-exclamation-triangle"></i> Тревоги
                         </h5>
                         <h2 class="card-text">{{ alarms_count }}</h2>
                     </div>
@@ -52,7 +52,7 @@
                     </div>
                 </div>
                 <a href="{% url 'alarms:alarm_list' %}" class="btn btn-light btn-sm">
-                    Управление сигналами
+                    Управление тревогами
                 </a>
             </div>
         </div>
@@ -77,7 +77,7 @@
                     </div>
                     <div class="col-md-4">
                         <a href="{% url 'alarms:alarm_create' %}" class="btn btn-warning w-100 mb-2">
-                            <i class="bi bi-plus-circle"></i> Добавить аварийный сигнал
+                            <i class="bi bi-plus-circle"></i> Добавить тревогу
                         </a>
                     </div>
                     <div class="col-md-4">
@@ -91,13 +91,13 @@
     </div>
 </div>
 
-<!-- Последние аварийные сигналы -->
+                <!-- Последние тревоги -->
 <div class="row">
     <div class="col-12">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">
-                    <i class="bi bi-clock-history"></i> Последние аварийные сигналы
+                    <i class="bi bi-clock-history"></i> Последние тревоги
                 </h5>
             </div>
             <div class="card-body">
@@ -143,9 +143,9 @@
                 {% else %}
                     <div class="text-center text-muted">
                         <i class="bi bi-inbox fs-1"></i>
-                        <p>Аварийные сигналы не найдены</p>
+                        <p>Тревоги не найдены</p>
                         <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                            Создать первый сигнал
+                            Создать первую тревогу
                         </a>
                     </div>
                 {% endif %}

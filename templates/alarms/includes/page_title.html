@@ -1,0 +1,31 @@
+{% comment %}
+Общий шаблон для заголовков страниц
+
+Использование:
+
+1. Простой заголовок:
+{% include 'alarms/includes/page_title.html' with page_title="Название страницы" %}
+
+2. Заголовок с подзаголовком:
+{% include 'alarms/includes/page_title.html' with page_title="Название страницы" subtitle="Подзаголовок" %}
+
+3. Динамический подзаголовок:
+{% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" subtitle=table.name %}
+
+4. Условный подзаголовок:
+{% if form.instance.pk %}
+    {% include 'alarms/includes/page_title.html' with page_title="Тревоги" subtitle="Редактирование" %}
+{% else %}
+    {% include 'alarms/includes/page_title.html' with page_title="Тревоги" subtitle="Создание" %}
+{% endif %}
+
+Результат:
+- Без subtitle: "Название страницы - Менеджер тревог"
+- С subtitle: "Название страницы - Подзаголовок - Менеджер тревог"
+{% endcomment %}
+
+{% if subtitle %}
+    {{ page_title }} - {{ subtitle }} - Менеджер тревог
+{% else %}
+    {{ page_title }} - Менеджер тревог
+{% endif %} 
