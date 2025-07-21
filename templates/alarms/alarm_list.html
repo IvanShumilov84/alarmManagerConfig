@@ -43,9 +43,9 @@
     <div class="card-body" id="sortSettingsBody">
         <form method="get" id="sortForm">
             <input type="hidden" name="display_mode" value="{{ display_mode }}">
+            {{ sort_fields|json_script:"sort-fields-data" }}
             <div class="row" id="sortFields"
-                 data-sort-fields='[{"value": "id", "label": "ID"}, {"value": "alarm_class", "label": "Класс"}, {"value": "table", "label": "Таблица"}, {"value": "logic", "label": "Логика"}, {"value": "channel", "label": "Канал"}, {"value": "msg", "label": "Сообщение"}, {"value": "prior", "label": "Приоритет"}, {"value": "created_at", "label": "Дата создания"}, {"value": "updated_at", "label": "Дата обновления"}]'
-                 data-storage-key="alarmsSortFields">
+                 data-storage-key="{{ storage_key }}">
                 <!-- JS вставит поля сортировки -->
             </div>
             

@@ -5,20 +5,48 @@
     // Получаем параметры из data-атрибутов
     function getConfig() {
         const container = document.getElementById('sortFields');
-        if (!container) return null;
+        if (!container) {
+            console.log('❌ Контейнер sortFields не найден');
+            return null;
+        }
         let fields = [];
         let storageKey = 'sortFields';
         try {
-            fields = JSON.parse(container.dataset.sortFields || '[]');
-        } catch { fields = []; }
+            // Пытаемся получить данные из json_script
+            const scriptElement = document.getElementById('sort-fields-data');
+            if (scriptElement) {
+                fields = JSON.parse(scriptElement.textContent);
+                console.log('✅ Поля сортировки загружены из json_script:', fields.length, 'полей');
+            } else {
+                // Fallback к data-атрибуту (для обратной совместимости)
+                const rawData = container.dataset.sortFields || '[]';
+                console.log('📊 Сырые данные сортировки:', rawData);
+
+                // Исправляем экранированные одинарные кавычки на двойные
+                let fixedData = rawData.replace(/\\u0027/g, '"');
+                console.log('🔧 Исправленные данные:', fixedData);
+
+                fields = JSON.parse(fixedData);
+                console.log('✅ Поля сортировки загружены из data-атрибута:', fields.length, 'полей');
+            }
+        } catch (error) {
+            console.error('❌ Ошибка парсинга полей сортировки:', error);
+            fields = [];
+        }
         if (container.dataset.storageKey) storageKey = container.dataset.storageKey;
+        console.log('🔑 Ключ хранилища:', storageKey);
         return { fields, storageKey, container };
     }
 
     function renderSortFields(savedValues = null) {
+        console.log('🎯 renderSortFields вызвана');
         const config = getConfig();
-        if (!config) return;
+        if (!config) {
+            console.log('❌ Конфигурация не получена');
+            return;
+        }
         const { fields, storageKey, container } = config;
+        console.log('📋 Рендерим поля сортировки:', fields.length, 'полей');
         container.innerHTML = '';
         let values = savedValues;
         if (!values) {
@@ -149,8 +177,7 @@
                     url.searchParams.delete(key);
                 }
             }
-            url.searchParams.set('sort_0', fields[0]?.value || 'id');
-            url.searchParams.set('order_0', 'asc');
+            // Полностью очищаем сортировку, не устанавливаем значения по умолчанию
             window.location.href = url.pathname + '?' + url.searchParams.toString();
             return;
         }
@@ -178,7 +205,7 @@
     function clearSort() {
         const config = getConfig();
         if (!config) return;
-        const { storageKey, fields } = config;
+        const { storageKey } = config;
         localStorage.removeItem(storageKey);
         const url = new URL(window.location.href);
         for (const key of Array.from(url.searchParams.keys())) {
@@ -186,8 +213,8 @@
                 url.searchParams.delete(key);
             }
         }
-        url.searchParams.set('sort_0', fields[0]?.value || 'id');
-        url.searchParams.set('order_0', 'asc');
+        // Полностью очищаем сортировку, не устанавливаем значения по умолчанию
+        console.log('🧹 clearSort: очищаем сортировку');
         window.location.href = url.pathname + '?' + url.searchParams.toString();
     }
 
@@ -248,6 +275,7 @@
                 break;
             }
         }
+        console.log('🔍 updateActiveNotices: hasSortParams =', hasSortParams, 'URL params:', Array.from(url.searchParams.keys()));
         sortActiveNotice.style.display = hasSortParams ? 'block' : 'none';
     }
 

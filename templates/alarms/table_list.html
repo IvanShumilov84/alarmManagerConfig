@@ -75,9 +75,9 @@
     <div class="card-body" id="sortSettingsBody">
         <form method="get" id="sortForm">
             <input type="hidden" name="display_mode" value="{{ display_mode }}">
+            {{ sort_fields|json_script:"sort-fields-data" }}
             <div class="row" id="sortFields"
-                 data-sort-fields='[{"value": "table_number", "label": "Номер"}, {"value": "name", "label": "Название"}, {"value": "description", "label": "Описание"}, {"value": "alarms_count", "label": "Количество тревог"}, {"value": "created_at", "label": "Дата создания"}, {"value": "updated_at", "label": "Дата обновления"}]'
-                 data-storage-key="tablesSortFields">
+                 data-storage-key="{{ storage_key }}">
                 <!-- JS вставит поля сортировки -->
             </div>
             
@@ -165,11 +165,11 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                     {% if table.alarms_count == 0 %}
-                                        <a href="{% url 'alarms:table_delete' table.pk %}" 
-                                           class="btn btn-sm btn-outline-danger" 
+                                    <a href="{% url 'alarms:table_delete' table.pk %}" 
+                                       class="btn btn-sm btn-outline-danger" 
                                            title="Удалить таблицу '{{ table.name }}'">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
+                                        <i class="bi bi-trash"></i>
+                                    </a>
                                     {% else %}
                                         <button class="btn btn-sm btn-outline-warning" 
                                                 title="Удаление невозможно - в таблице '{{ table.name }}' содержится {{ table.alarms_count }} тревог(а). Сначала удалите все тревоги из таблицы."

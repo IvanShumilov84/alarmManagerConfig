@@ -113,7 +113,7 @@
                             {{ form.table_number.label }}
                         </label>
                         <div class="input-group">
-                            <input type="number" name="{{ form.table_number.name }}" id="{{ form.table_number.id_for_label }}" class="form-control{% if form.table_number.errors %} is-invalid{% endif %}" value="{{ form.table_number.value|default_if_none:'' }}" min="0">
+                            <input type="number" name="{{ form.table_number.name }}" id="{{ form.table_number.id_for_label }}" class="form-control{% if form.table_number.errors %} is-invalid{% endif %}" value="{{ form.table_number.value|default_if_none:'' }}" min="{{ min_table_number }}">
                             <button type="button" class="btn btn-outline-secondary" id="autoFillNumberBtn" title="Автоматически подставить следующий доступный номер">
                                 <i class="bi bi-magic"></i> Автозаполнить
                             </button>
@@ -125,6 +125,26 @@
                         {% endif %}
                         <div class="form-text">
                             {{ form.table_number.help_text }}
+                        </div>
+                        
+                        <!-- Блок с занятыми номерами таблиц -->
+                        <div class="mt-2" id="usedNumbersBlock" style="display: none;">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning bg-opacity-10 py-2">
+                                    <h6 class="mb-0 text-warning">
+                                        <i class="bi bi-exclamation-triangle"></i> Занятые номера таблиц
+                                    </h6>
+                                </div>
+                                <div class="card-body py-2">
+                                    <div class="d-flex flex-wrap gap-1" id="usedNumbersList">
+                                        <!-- Номера будут загружены через JavaScript -->
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle"></i> 
+                                        Эти номера уже используются другими таблицами
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -234,6 +254,9 @@ $(document).ready(function() {
         console.log('Field with is-invalid class:', $(this).attr('id'));
     });
     
+    // Загружаем занятые номера таблиц при загрузке страницы
+    loadUsedTableNumbers();
+    
     // Обработчик кнопки автозаполнения номера таблицы
     $('#autoFillNumberBtn').on('click', function() {
         const button = $(this);
@@ -266,6 +289,60 @@ $(document).ready(function() {
                 button.html('<i class="bi bi-magic"></i> Автозаполнить');
             });
     });
+    
+    // Функция для загрузки занятых номеров таблиц
+    function loadUsedTableNumbers() {
+        const currentTableId = '{{ form.instance.pk|default:"" }}';
+        let apiUrl = '{% url "alarms:api_used_table_numbers" %}';
+        
+        if (currentTableId) {
+            apiUrl += '?exclude_id=' + currentTableId;
+        }
+        
+        $.get(apiUrl)
+            .done(function(data) {
+                console.log('Loaded used table numbers:', data);
+                displayUsedNumbers(data.used_numbers);
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load used table numbers:', error);
+            });
+    }
+    
+    // Функция для отображения занятых номеров
+    function displayUsedNumbers(usedNumbers) {
+        const container = $('#usedNumbersList');
+        const block = $('#usedNumbersBlock');
+        const currentNumber = $('#id_table_number').val();
+        
+        if (usedNumbers.length === 0) {
+            block.hide();
+            return;
+        }
+        
+        // Очищаем контейнер
+        container.empty();
+        
+        // Добавляем каждый номер
+        usedNumbers.forEach(function(number) {
+            const isCurrentNumber = parseInt(currentNumber) === number;
+            const badgeClass = isCurrentNumber ? 'bg-danger' : 'bg-secondary';
+            const badgeTitle = isCurrentNumber ? 
+                `Таблица №${number} (текущий номер - уже занят!)` : 
+                `Таблица №${number}`;
+            
+            const badge = $(`
+                <span class="badge ${badgeClass} me-1 mb-1" title="${badgeTitle}">
+                    <i class="bi bi-table"></i> ${number}
+                    ${isCurrentNumber ? ' <i class="bi bi-exclamation-triangle"></i>' : ''}
+                </span>
+            `);
+            container.append(badge);
+        });
+        
+        // Показываем блок
+        block.show();
+    }
     
     // Функция для показа уведомлений
     function showNotification(message, type) {
@@ -457,6 +534,9 @@ $(document).ready(function() {
         }
     });
     
+    // Минимальное значение для номера таблицы (получаем из Django)
+    const MIN_TABLE_NUMBER = {{ min_table_number }};
+    
     // Валидаторы для полей
     const fieldValidators = {
         'id_table_number': function(value) {
@@ -465,8 +545,8 @@ $(document).ready(function() {
             if (isNaN(numValue)) {
                 return 'Номер таблицы должен быть числом';
             }
-            if (numValue < 0) {
-                return 'Номер таблицы не может быть меньше 0';
+            if (numValue < MIN_TABLE_NUMBER) {
+                return `Номер таблицы не может быть меньше ${MIN_TABLE_NUMBER}`;
             }
             return null;
         },
@@ -510,6 +590,15 @@ $(document).ready(function() {
                     existingError.remove();
                 }
             }
+        }
+        
+        // Если изменился номер таблицы, обновляем список занятых номеров
+        if (fieldId === 'id_table_number') {
+            // Добавляем небольшую задержку, чтобы не делать запрос при каждом символе
+            clearTimeout(window.tableNumberTimeout);
+            window.tableNumberTimeout = setTimeout(function() {
+                loadUsedTableNumbers();
+            }, 500);
         }
     });
 });

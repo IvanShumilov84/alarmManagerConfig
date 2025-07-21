@@ -30,7 +30,39 @@ class AlarmTableListView(FilterMixin, ListView):
         # Применяем фильтрацию через миксин
         queryset = self.apply_filters(queryset)
 
-        return queryset.order_by("table_number")
+        # Применяем сортировку
+        sort_fields = []
+        sort_orders = []
+
+        # Собираем все параметры сортировки с индексами
+        i = 0
+        while True:
+            sort_field = self.request.GET.get(f"sort_{i}")
+            if not sort_field:
+                break
+            sort_fields.append(sort_field)
+            sort_order = self.request.GET.get(f"order_{i}", "asc")
+            sort_orders.append(sort_order)
+            i += 1
+
+        # Применяем сортировку
+        if sort_fields:
+            order_by_fields = []
+            for i, field in enumerate(sort_fields):
+                if field:
+                    order = sort_orders[i] if i < len(sort_orders) else "asc"
+                    if order == "desc":
+                        order_by_fields.append(f"-{field}")
+                    else:
+                        order_by_fields.append(field)
+
+            if order_by_fields:
+                queryset = queryset.order_by(*order_by_fields)
+        else:
+            # Сортировка по умолчанию
+            queryset = queryset.order_by("table_number")
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         """Добавляем базовые параметры в контекст"""
@@ -60,6 +92,37 @@ class AlarmTableListView(FilterMixin, ListView):
         context["filtered_count"] = filtered_count
         context["has_active_filters"] = has_active_filters
 
+        # Добавляем поля сортировки для таблиц
+        context["sort_fields"] = get_sort_fields("tables")
+        context["storage_key"] = "tablesSortFields"
+
+        # Получаем параметры сортировки
+        sort_fields = []
+        sort_orders = []
+
+        # Собираем все параметры сортировки с индексами
+        i = 0
+        while True:
+            sort_field = self.request.GET.get(f"sort_{i}")
+            if not sort_field:
+                break
+            sort_fields.append(sort_field)
+            sort_order = self.request.GET.get(f"order_{i}", "asc")
+            sort_orders.append(sort_order)
+            i += 1
+
+        # Для обратной совместимости
+        context["sort_orders"] = sort_orders[: len(sort_fields)]
+
+        # Создаем словарь для отображения стрелок в заголовках таблицы
+        context["sort_indicators"] = {}
+        for i, field in enumerate(sort_fields):
+            if field and i < len(sort_orders):
+                context["sort_indicators"][field] = sort_orders[i]
+
+        context["current_sort"] = self.request.GET.get("sort", "table_number")
+        context["current_order"] = self.request.GET.get("order", "asc")
+
         return context
 
 
@@ -74,8 +137,14 @@ class AlarmTableCreateView(CreateView):
     def get_initial(self):
         """Автоматически подставляем следующий доступный номер таблицы"""
         initial = super().get_initial()
-        initial['table_number'] = AlarmTable.get_next_available_number()
+        initial["table_number"] = AlarmTable.get_next_available_number()
         return initial
+
+    def get_context_data(self, **kwargs):
+        """Добавляем минимальное значение номера таблицы в контекст"""
+        context = super().get_context_data(**kwargs)
+        context["min_table_number"] = AlarmTable.get_min_table_number()
+        return context
 
 
 class AlarmTableUpdateView(UpdateView):
@@ -85,6 +154,12 @@ class AlarmTableUpdateView(UpdateView):
     form_class = AlarmTableForm
     template_name = "alarms/table_form.html"
     success_url = reverse_lazy("alarms:table_list")
+
+    def get_context_data(self, **kwargs):
+        """Добавляем минимальное значение номера таблицы в контекст"""
+        context = super().get_context_data(**kwargs)
+        context["min_table_number"] = AlarmTable.get_min_table_number()
+        return context
 
 
 class AlarmTableDeleteView(View):
@@ -98,16 +173,16 @@ class AlarmTableDeleteView(View):
     def post(self, request, pk):
         """Физическое удаление таблицы тревог"""
         table = get_object_or_404(AlarmTable, pk=pk)
-        
+
         # Проверяем, можно ли удалить таблицу
         if not table.can_be_deleted():
             messages.error(
-                request, 
+                request,
                 f"Невозможно удалить таблицу '{table.name}'. В ней содержится {table.get_alarms_count()} тревог. "
-                "Сначала удалите все тревоги из таблицы."
+                "Сначала удалите все тревоги из таблицы.",
             )
             return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
-        
+
         table.delete()
         messages.success(request, "Таблица тревог успешно удалена!")
         return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
@@ -176,15 +251,14 @@ class AlarmConfigListView(FilterMixin, ListView):
 
         # Определяем вторичные поля для групповой сортировки
         secondary_sort_fields = {
-            "id": ["alarm_class_display", "prior"],
-            "alarm_class": ["prior", "table__name"],
-            "table": ["alarm_class_display", "prior"],
-            "logic": ["alarm_class_display", "prior"],
-            "channel": ["alarm_class_display", "prior"],
-            "msg": ["alarm_class_display", "prior"],
-            "prior": ["alarm_class_display", "table__name"],
-            "created_at": ["alarm_class_display", "prior"],
-            "updated_at": ["alarm_class_display", "prior"],
+            "alarm_class": ["id"],
+            "table": ["id"],
+            "logic": ["id"],
+            "channel": ["id"],
+            "msg": ["id"],
+            "prior": ["id"],
+            "created_at": ["id"],
+            "updated_at": ["id"],
         }
 
         # Создаем список полей для сортировки
@@ -235,9 +309,12 @@ class AlarmConfigListView(FilterMixin, ListView):
             sort_orders.append(sort_order)
             i += 1
 
+        # Добавляем поля сортировки для тревог
+        context["sort_fields"] = get_sort_fields("alarms")
+        context["storage_key"] = "alarmsSortFields"
+
         # Для обратной совместимости
-        context["sort_fields"] = [field for field in sort_fields if field]
-        context["sort_orders"] = sort_orders[: len(context["sort_fields"])]
+        context["sort_orders"] = sort_orders[: len(sort_fields)]
 
         # Создаем словарь для отображения стрелок в заголовках таблицы
         context["sort_indicators"] = {}
@@ -580,3 +657,105 @@ def api_next_table_number(request):
     """API для получения следующего доступного номера таблицы"""
     next_number = AlarmTable.get_next_available_number()
     return JsonResponse({"next_number": next_number})
+
+
+@require_GET
+def api_used_table_numbers(request):
+    """API для получения списка занятых номеров таблиц"""
+    # Получаем все занятые номера таблиц, исключая текущую редактируемую таблицу
+    current_table_id = request.GET.get("exclude_id")
+
+    if current_table_id:
+        used_numbers = list(
+            AlarmTable.objects.exclude(id=current_table_id).values_list(
+                "table_number", flat=True
+            )
+        )
+    else:
+        used_numbers = list(AlarmTable.objects.values_list("table_number", flat=True))
+
+    return JsonResponse(
+        {"used_numbers": sorted(used_numbers), "count": len(used_numbers)}
+    )
+
+
+# Единая конфигурация полей для фильтров и сортировки
+FIELDS_CONFIG = {
+    "tables": [
+        # {"value": "id", "label": "ID", "type": "number"},
+        {"value": "table_number", "label": "Номер таблицы", "type": "number"},
+        {"value": "name", "label": "Название", "type": "text"},
+        {"value": "description", "label": "Описание", "type": "text"},
+        {"value": "alarms_count", "label": "Количество тревог", "type": "number"},
+        {"value": "created_at", "label": "Дата создания", "type": "date"},
+        {"value": "updated_at", "label": "Дата обновления", "type": "date"},
+    ],
+    "alarms": [
+        {"value": "id", "label": "ID", "type": "number"},
+        {"value": "alarm_class", "label": "Класс тревоги", "type": "select"},
+        {"value": "table", "label": "Таблица", "type": "select"},
+        {"value": "logic", "label": "Способ наблюдения", "type": "select"},
+        {"value": "channel", "label": "Канал", "type": "text"},
+        {"value": "msg", "label": "Сообщение", "type": "text"},
+        {"value": "prior", "label": "Приоритет", "type": "number"},
+        {"value": "confirm_method", "label": "Способ подтверждения", "type": "select"},
+        {"value": "limit_type", "label": "Тип ограничения", "type": "select"},
+        {
+            "value": "limit_config_type",
+            "label": "Тип настройки пределов",
+            "type": "select",
+        },
+        {"value": "low", "label": "Нижний предел", "type": "number"},
+        {"value": "high", "label": "Верхний предел", "type": "number"},
+        {"value": "hyst_low", "label": "Гистерезис нижнего предела", "type": "number"},
+        {
+            "value": "hyst_high",
+            "label": "Гистерезис верхнего предела",
+            "type": "number",
+        },
+        {"value": "ch_low", "label": "Канал нижнего предела", "type": "text"},
+        {"value": "ch_high", "label": "Канал верхнего предела", "type": "text"},
+        {
+            "value": "discrete_val",
+            "label": "Значение предела для дискретного сигнала",
+            "type": "number",
+        },
+        {"value": "created_at", "label": "Дата создания", "type": "date"},
+        {"value": "updated_at", "label": "Дата обновления", "type": "date"},
+    ],
+}
+
+
+def get_filter_fields(page_type):
+    """Возвращает поля для фильтров с типами"""
+    return FIELDS_CONFIG.get(page_type, [])
+
+
+def get_sort_fields(page_type):
+    """Возвращает поля для сортировки без типов"""
+    fields = FIELDS_CONFIG.get(page_type, [])
+    return [{"value": f["value"], "label": f["label"]} for f in fields]
+
+
+@require_GET
+def api_filter_fields(request):
+    """API для получения списка полей фильтров"""
+    page_type = request.GET.get("type", "tables")  # tables или alarms
+
+    if page_type not in FIELDS_CONFIG:
+        return JsonResponse({"error": "Неизвестный тип страницы"}, status=400)
+
+    fields = get_filter_fields(page_type)
+    return JsonResponse({"fields": fields, "type": page_type})
+
+
+@require_GET
+def api_sort_fields(request):
+    """API для получения списка полей сортировки"""
+    page_type = request.GET.get("type", "tables")  # tables или alarms
+
+    if page_type not in FIELDS_CONFIG:
+        return JsonResponse({"error": "Неизвестный тип страницы"}, status=400)
+
+    fields = get_sort_fields(page_type)
+    return JsonResponse({"fields": fields, "type": page_type})

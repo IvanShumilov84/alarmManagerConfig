@@ -53,4 +53,19 @@ urlpatterns = [
         views.api_next_table_number,
         name="api_next_table_number",
     ),
+    path(
+        "api/used-table-numbers/",
+        views.api_used_table_numbers,
+        name="api_used_table_numbers",
+    ),
+    path(
+        "api/filter-fields/",
+        views.api_filter_fields,
+        name="api_filter_fields",
+    ),
+    path(
+        "api/sort-fields/",
+        views.api_sort_fields,
+        name="api_sort_fields",
+    ),
 ]

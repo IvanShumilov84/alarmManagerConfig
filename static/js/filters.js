@@ -83,16 +83,22 @@ function applyFilters() {
     updateActiveNotices();
 }
 
-function clearFilters() {
-    // Блокируем автоматическое восстановление
-    preventAutoRestore = true;
-
+async function clearFilters() {
     console.log('clearFilters вызвана');
+
+    // Сбрасываем флаг инициализации и очищаем таймаут
+    isInitialized = false;
+    if (initTimeout) {
+        clearTimeout(initTimeout);
+        initTimeout = null;
+    }
 
     const filterFieldsContainer = document.getElementById('filterFields');
     if (filterFieldsContainer) {
+        // Очищаем все строки фильтров
         filterFieldsContainer.innerHTML = '';
-        addFilterField();
+        // Добавляем только одну пустую строку
+        await addFilterField();
     }
 
     // Удаляем все возможные ключи фильтров из localStorage для текущей страницы
@@ -119,7 +125,7 @@ function clearFilters() {
     updateActiveNotices();
 }
 
-function restoreFilters() {
+async function restoreFilters() {
     const storageKey = getStorageKey();
     const savedFilters = localStorage.getItem(storageKey);
     let filtersData = [];
@@ -135,13 +141,37 @@ function restoreFilters() {
         console.error('Контейнер фильтров не найден!');
         return;
     }
+
+    // Проверяем, есть ли уже строки фильтров
+    const existingRows = filterFieldsContainer.querySelectorAll('.filter-row');
+    if (existingRows.length > 0) {
+        console.log('Строки фильтров уже существуют, пропускаем восстановление');
+        return;
+    }
+
     filterFieldsContainer.innerHTML = '';
     for (let i = 0; i < filtersData.length; i++) {
         const filter = filtersData[i];
-        addFilterField(i, filter.field, filter.op, filter.value);
+        await addFilterField(i, filter.field, filter.op, filter.value);
     }
+    // Добавляем пустую строку только если нет сохраненных фильтров И нет URL фильтров
     if (filtersData.length === 0) {
-        addFilterField();
+        // Проверяем, есть ли URL фильтры
+        const urlParams = new URLSearchParams(window.location.search);
+        let hasUrlFilters = false;
+        let i = 0;
+        while (true) {
+            const field = urlParams.get(`filter_field_${i}`);
+            const op = urlParams.get(`filter_op_${i}`);
+            const value = urlParams.get(`filter_value_${i}`);
+            if (!field || !op || !value) break;
+            hasUrlFilters = true;
+            i++;
+        }
+
+        if (!hasUrlFilters) {
+            await addFilterField();
+        }
     }
     updateActiveNotices();
 }
@@ -279,28 +309,44 @@ function updateFilterValueType(index) {
     }
 }
 
-// Наборы полей для фильтрации
-const FILTER_FIELDS = {
-    tables: [
-        { value: 'id', label: 'ID' },
-        { value: 'name', label: 'Название' },
-        { value: 'description', label: 'Описание' },
-        { value: 'alarms_count', label: 'Количество аварий' },
-        { value: 'created_at', label: 'Дата создания' },
-        { value: 'updated_at', label: 'Дата обновления' },
-    ],
-    alarms: [
-        { value: 'id', label: 'ID' },
-        { value: 'alarm_class', label: 'Класс' },
-        { value: 'table', label: 'Таблица' },
-        { value: 'logic', label: 'Логика' },
-        { value: 'channel', label: 'Канал' },
-        { value: 'msg', label: 'Сообщение' },
-        { value: 'prior', label: 'Приоритет' },
-        { value: 'created_at', label: 'Дата создания' },
-        { value: 'updated_at', label: 'Дата обновления' },
-    ]
+// Наборы полей для фильтрации (теперь загружаются динамически)
+let FILTER_FIELDS = {
+    tables: [],
+    alarms: []
 };
+
+// Кэш для загруженных полей
+let filterFieldsCache = {};
+
+/**
+ * Загружает поля фильтров с сервера
+ * @param {string} pageType - тип страницы ('tables' или 'alarms')
+ * @returns {Promise<Array>} - массив полей фильтров
+ */
+async function loadFilterFields(pageType) {
+    // Проверяем кэш
+    if (filterFieldsCache[pageType]) {
+        return filterFieldsCache[pageType];
+    }
+
+    try {
+        const response = await fetch(`/api/filter-fields/?type=${pageType}`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+
+        // Кэшируем результат
+        filterFieldsCache[pageType] = data.fields;
+        FILTER_FIELDS[pageType] = data.fields;
+
+        return data.fields;
+    } catch (error) {
+        console.error(`Ошибка загрузки полей фильтров для ${pageType}:`, error);
+        // Возвращаем пустой массив в случае ошибки
+        return [];
+    }
+}
 
 function getCurrentFilterFields() {
     const path = window.location.pathname;
@@ -313,15 +359,29 @@ function getCurrentFilterFields() {
     return FILTER_FIELDS.tables;
 }
 
-function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
+async function addFilterField(index = null, fieldValue = '', operatorValue = '', valueValue = '') {
     const filterFields = document.getElementById('filterFields');
     if (!filterFields) {
         console.error('Контейнер filterFields не найден!');
         return;
     }
+
     const currentCount = filterFields.querySelectorAll('.filter-row').length;
     const idx = index !== null ? index : currentCount;
-    const fields = getCurrentFilterFields();
+
+    console.log(`addFilterField вызвана: index=${index}, currentCount=${currentCount}, idx=${idx}`);
+
+    // Определяем тип страницы
+    const path = window.location.pathname;
+    const pageType = path.includes('/alarms/') ? 'alarms' : 'tables';
+
+    // Загружаем поля фильтров, если еще не загружены
+    let fields = getCurrentFilterFields();
+    if (fields.length === 0) {
+        console.log('Загружаем поля фильтров для:', pageType);
+        fields = await loadFilterFields(pageType);
+    }
+
     let optionsHtml = '<option value="">Выберите поле</option>';
     for (const f of fields) {
         optionsHtml += `<option value="${f.value}" ${fieldValue === f.value ? 'selected' : ''}>${f.label}</option>`;
@@ -499,6 +559,8 @@ function removeFilter(button) {
 
 // Флаг для предотвращения автоматического восстановления фильтров
 let preventAutoRestore = false;
+// Флаг для предотвращения множественной инициализации
+let isInitialized = false;
 
 // Функция для получения правильного ключа localStorage в зависимости от страницы
 function getStorageKey() {
@@ -536,10 +598,16 @@ function getOldStorageKeys() {
     };
 }
 
-function restoreFiltersUniversal() {
+async function restoreFiltersUniversal() {
     // Если восстановление заблокировано, не восстанавливаем
     if (preventAutoRestore) {
         console.log('Автоматическое восстановление фильтров заблокировано');
+        return;
+    }
+
+    // Если уже инициализировано, не повторяем
+    if (isInitialized) {
+        console.log('Фильтры уже инициализированы, пропускаем');
         return;
     }
 
@@ -550,6 +618,14 @@ function restoreFiltersUniversal() {
         console.error('Контейнер фильтров не найден!');
         return;
     }
+
+    // Проверяем, есть ли уже строки фильтров
+    const existingRows = filterFieldsContainer.querySelectorAll('.filter-row');
+    if (existingRows.length > 0) {
+        console.log('Строки фильтров уже существуют, пропускаем восстановление');
+        return;
+    }
+
     // Проверяем, есть ли параметры фильтрации в URL
     const urlFilters = [];
     let i = 0;
@@ -566,174 +642,48 @@ function restoreFiltersUniversal() {
     if (urlFilters.length > 0) {
         // Восстанавливаем из URL
         console.log('Восстанавливаем фильтры из URL');
-        urlFilters.forEach((f, idx) => {
+        for (let idx = 0; idx < urlFilters.length; idx++) {
+            const f = urlFilters[idx];
             console.log(`Восстанавливаем фильтр ${idx}:`, f);
-            addFilterField(idx, f.field, f.op, f.value);
-        });
+            await addFilterField(idx, f.field, f.op, f.value);
+        }
         updateActiveNotices();
     } else {
         // Восстанавливаем из localStorage и применяем
         console.log('Восстанавливаем фильтры из localStorage');
-        restoreFilters();
-
-        // Проверяем старые ключи localStorage
-        const oldKeys = getOldStorageKeys();
-        const fields = localStorage.getItem(oldKeys.fields);
-        const operators = localStorage.getItem(oldKeys.operators);
-        const values = localStorage.getItem(oldKeys.values);
-
-        console.log('Старые ключи:', { fields, operators, values });
-
-        if (fields && operators && values) {
-            try {
-                const fieldsData = JSON.parse(fields);
-                const operatorsData = JSON.parse(operators);
-                const valuesData = JSON.parse(values);
-
-                console.log('Данные из старых ключей:', { fieldsData, operatorsData, valuesData });
-
-                if (Array.isArray(fieldsData) && fieldsData.length > 0) {
-                    console.log('Восстанавливаем фильтры из старых ключей');
-                    const filterFieldsContainer = document.getElementById('filterFields');
-                    if (filterFieldsContainer) {
-                        filterFieldsContainer.innerHTML = '';
-                        for (let i = 0; i < fieldsData.length; i++) {
-                            const field = fieldsData[i];
-                            const op = operatorsData[i] || 'exact';
-                            const value = valuesData[i] || '';
-                            if (field && op && value) {
-                                addFilterField(i, field, op, value);
-                            }
-                        }
-                        updateActiveNotices();
-                        // Проверяем, есть ли уже фильтры в URL
-                        const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
-                        if (!hasUrlFilters) {
-                            // Применяем фильтры автоматически с небольшой задержкой
-                            console.log('Фильтры восстановлены из старых ключей, применяем их');
-                            setTimeout(() => {
-                                applyFilters();
-                            }, 200);
-                        } else {
-                            console.log('Фильтры уже есть в URL, не применяем автоматически');
-                        }
-                        return;
-                    }
-                }
-            } catch (e) {
-                console.log('Ошибка при парсинге старых ключей:', e);
-            }
-        }
-
-        // Если старые ключи не работают, пробуем новый ключ
-        const storageKey = getStorageKey();
-        console.log('Ищем ключ:', storageKey);
-        console.log('Все ключи localStorage:', Object.keys(localStorage));
-        const savedFilters = localStorage.getItem(storageKey);
-        console.log('Сохранённые фильтры из localStorage:', savedFilters);
-        if (savedFilters) {
-            try {
-                const filtersData = JSON.parse(savedFilters);
-                console.log('Распарсенные фильтры:', filtersData);
-                if (Array.isArray(filtersData) && filtersData.length > 0) {
-                    // Проверяем, есть ли уже фильтры в URL
-                    const hasUrlFilters = Array.from(urlParams.keys()).some(key => key.startsWith('filter_field_'));
-                    if (!hasUrlFilters) {
-                        console.log('Фильтры найдены в localStorage, применяем их');
-                        // Применяем фильтры автоматически с небольшой задержкой
-                        setTimeout(() => {
-                            applyFilters();
-                        }, 200);
-                    } else {
-                        console.log('Фильтры уже есть в URL, не применяем автоматически');
-                    }
-                } else {
-                    console.log('Фильтры не прошли проверку: не массив или пустой');
-                }
-            } catch (e) {
-                console.log('Ошибка при парсинге фильтров:', e);
-            }
-        } else {
-            console.log('В localStorage нет сохранённых фильтров');
-            // Проверяем все ключи, содержащие "filter"
-            const filterKeys = Object.keys(localStorage).filter(key => key.includes('filter'));
-            console.log('Ключи с "filter":', filterKeys);
-            filterKeys.forEach(key => {
-                console.log(`Ключ ${key}:`, localStorage.getItem(key));
-            });
-        }
+        await restoreFilters();
     }
+
+    // Отмечаем, что инициализация завершена
+    isInitialized = true;
 }
 
-// === Обработчики событий фильтрации ===
-document.addEventListener('DOMContentLoaded', () => {
-    restoreFiltersUniversal();
+// Единая функция инициализации
+let initTimeout = null;
 
-    // Восстанавливаем состояние спойлера фильтров
-    const path = window.location.pathname;
-    const settingsKey = path.includes('/alarms/') ? 'alarmsFilterSettingsExpanded' : 'tablesFilterSettingsExpanded';
-    const filterSettingsBody = document.getElementById('filterSettingsBody');
-    const filterToggleIcon = document.getElementById('filterToggleIcon');
-
-    if (filterSettingsBody && filterToggleIcon) {
-        const isExpanded = localStorage.getItem(settingsKey) === 'true';
-        if (isExpanded) {
-            filterSettingsBody.style.display = 'block';
-            filterToggleIcon.className = 'bi bi-chevron-down';
-        } else {
-            filterSettingsBody.style.display = 'none';
-            filterToggleIcon.className = 'bi bi-chevron-right';
-        }
+function scheduleInit() {
+    if (initTimeout) {
+        clearTimeout(initTimeout);
     }
-
-    // Делегирование для .keep-filters
-    document.addEventListener('click', function (event) {
-        if (event.target.closest('a.keep-filters')) {
-            event.preventDefault();
-            const link = event.target.closest('a.keep-filters');
-            const url = new URL(link.href, window.location.origin);
-            const currentParams = new URLSearchParams(window.location.search);
-            for (const [key, value] of currentParams.entries()) {
-                if (key.startsWith('filter_')) {
-                    url.searchParams.set(key, value);
-                }
-            }
-            if (currentParams.has('display_mode')) {
-                url.searchParams.set('display_mode', currentParams.get('display_mode'));
-            }
-            if (url.toString() !== link.href) {
-                window.location.href = url.toString();
-            } else {
-                window.location.href = link.href;
-            }
+    initTimeout = setTimeout(() => {
+        if (!isInitialized) {
+            console.log('Выполняем инициализацию фильтров');
+            restoreFiltersUniversal();
         }
-    });
-    // Enter в .filter-value
-    document.addEventListener('keypress', function (event) {
-        if (event.target.classList.contains('filter-value') && event.key === 'Enter') {
-            event.preventDefault();
-            applyFilters();
-        }
-    });
-    // Кнопка "Применить фильтры"
-    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
-    if (applyFiltersBtn) {
-        applyFiltersBtn.addEventListener('click', function () {
-            applyFilters();
-        });
-    }
-});
-
-// Обработчик для восстановления фильтров при возврате на страницу
-window.addEventListener('pageshow', (event) => {
-    // Восстанавливаем фильтры при каждом показе страницы
-    restoreFiltersUniversal();
-});
-
-// Дополнительный обработчик для случаев, когда pageshow не срабатывает
-window.addEventListener('focus', () => {
-    // Небольшая задержка для гарантии, что DOM готов
-    setTimeout(() => {
-        restoreFiltersUniversal();
     }, 100);
-}); 
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function () {
+    console.log('DOM загружен, планируем инициализацию фильтров');
+    scheduleInit();
+});
+
+// Инициализация при навигации (для браузеров с поддержкой pageshow)
+window.addEventListener('pageshow', function (event) {
+    // Восстанавливаем фильтры только если страница не из кэша
+    if (!event.persisted) {
+        console.log('Страница загружена, планируем инициализацию фильтров');
+        scheduleInit();
+    }
+});

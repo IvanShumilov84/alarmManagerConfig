@@ -6,16 +6,24 @@ class AlarmTable(models.Model):
     """Модель для таблиц тревог"""
 
     table_number = models.IntegerField(
-        unique=True, 
+        unique=True,
         verbose_name="Номер таблицы",
         help_text="Уникальный номер таблицы. При создании автоматически подставляется следующий доступный номер.",
-        validators=[MinValueValidator(0, message="Номер таблицы не может быть меньше 0")]
+        validators=[
+            MinValueValidator(0, message="Номер таблицы не может быть меньше 0")
+        ],
     )
     name = models.CharField(
-        max_length=100, unique=True, verbose_name="Название таблицы",
-        help_text="Укажите уникальное название для таблицы тревог."
+        max_length=100,
+        unique=True,
+        verbose_name="Название таблицы",
+        help_text="Укажите уникальное название для таблицы тревог.",
     )
-    description = models.TextField(blank=True, verbose_name="Описание", help_text="Описание поможет понять назначение таблицы.")
+    description = models.TextField(
+        blank=True,
+        verbose_name="Описание",
+        help_text="Описание поможет понять назначение таблицы.",
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
 
@@ -26,23 +34,34 @@ class AlarmTable(models.Model):
 
     def __str__(self):
         return f"Таблица {self.table_number}: {self.name}"
-    
+
     def can_be_deleted(self):
         """Проверяет, можно ли удалить таблицу"""
         return self.alarms.count() == 0
-    
+
     def get_alarms_count(self):
         """Возвращает количество тревог в таблице"""
         return self.alarms.count()
-    
+
     @classmethod
     def get_next_available_number(cls):
         """Возвращает следующий доступный номер таблицы"""
-        existing_numbers = set(cls.objects.values_list('table_number', flat=True))
+        existing_numbers = set(cls.objects.values_list("table_number", flat=True))
         next_number = 1
         while next_number in existing_numbers:
             next_number += 1
         return next_number
+
+    @classmethod
+    def get_min_table_number(cls):
+        """Возвращает минимальное допустимое значение для номера таблицы"""
+        # Получаем валидатор MinValueValidator из поля table_number
+        field = cls._meta.get_field("table_number")
+        for validator in field.validators:
+            if isinstance(validator, MinValueValidator):
+                return validator.limit_value
+        # Fallback значение, если валидатор не найден
+        return 0
 
 
 class AlarmConfig(models.Model):
@@ -133,6 +152,7 @@ class AlarmConfig(models.Model):
 
 class AlarmClass(models.Model):
     """Модель для класса тревоги"""
+
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -147,6 +167,7 @@ class AlarmClass(models.Model):
 
 class Logic(models.Model):
     """Модель для способа наблюдения"""
+
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -161,6 +182,7 @@ class Logic(models.Model):
 
 class ConfirmMethod(models.Model):
     """Модель для способа подтверждения"""
+
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -175,6 +197,7 @@ class ConfirmMethod(models.Model):
 
 class LimitType(models.Model):
     """Модель для типа ограничения"""
+
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
@@ -189,6 +212,7 @@ class LimitType(models.Model):
 
 class LimitConfigType(models.Model):
     """Модель для типа настройки пределов"""
+
     name = models.CharField(max_length=32, unique=True)
     verbose_name_ru = models.CharField(max_length=64)
 
