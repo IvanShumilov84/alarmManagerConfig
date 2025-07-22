@@ -76,7 +76,7 @@
         }
         for (let i = 0; i < values.length; i++) {
             const fieldDiv = document.createElement('div');
-            fieldDiv.className = 'col-md-3 mb-2';
+            fieldDiv.className = 'col-md-3 mb-0';
             let options = `<option value="">Выберите поле</option>`;
             for (const f of fields) {
                 options += `<option value="${f.value}" ${values[i].field === f.value ? 'selected' : ''}>${f.label}</option>`;
@@ -85,7 +85,7 @@
                 <select name="sort_${i}" class="form-select form-select-sm sort-field">${options}</select>
             `;
             const orderDiv = document.createElement('div');
-            orderDiv.className = 'col-md-3 mb-2';
+            orderDiv.className = 'col-md-3 mb-0';
             orderDiv.innerHTML = `
                 <select name="order_${i}" class="form-select form-select-sm sort-order">
                     <option value="asc" ${values[i].order === 'asc' ? 'selected' : ''}>По возрастанию</option>
@@ -93,14 +93,14 @@
                 </select>
             `;
             const removeBtn = document.createElement('div');
-            removeBtn.className = 'col-md-3 mb-2';
+            removeBtn.className = 'col-md-3 mb-0';
             removeBtn.innerHTML = `
                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="window.sortModule.removeSortField(${i})" title="Удалить сортировку">
                     <i class="bi bi-trash"></i>
                 </button>
             `;
             const spacer = document.createElement('div');
-            spacer.className = 'col-md-3 mb-2';
+            spacer.className = 'col-md-3 mb-0';
             container.appendChild(fieldDiv);
             container.appendChild(orderDiv);
             container.appendChild(removeBtn);
@@ -108,7 +108,7 @@
         }
         // Кнопки управления
         const btnGroup = document.createElement('div');
-        btnGroup.className = 'd-flex mb-2';
+        btnGroup.className = 'd-flex mb-0';
         const clearBtn = document.createElement('div');
         clearBtn.innerHTML = `
             <button type="button" class="btn btn-sm btn-outline-danger me-2" id="clearSortBtn">
@@ -124,7 +124,7 @@
         const applyBtn = document.createElement('div');
         applyBtn.innerHTML = `
             <button type="button" class="btn btn-sm btn-outline-primary" id="applySortBtn">
-                <i class="bi bi-check"></i> Применить сортировку
+                <i class="bi bi-check"></i> Применить
             </button>
         `;
         btnGroup.appendChild(clearBtn);

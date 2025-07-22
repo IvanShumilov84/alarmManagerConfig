@@ -1,0 +1,13 @@
+<!-- Универсальный include для сортировки. Ожидает параметры: sort_fields, storage_key, display_mode. -->
+{{ sort_fields|json_script:"sort-fields-data" }}
+<div class="row" id="sortFields"
+     data-sort-fields='{{ sort_fields|safe }}'
+     data-storage-key="{{ storage_key }}">
+    <!-- JS вставит поля сортировки -->
+</div>
+
+<div class="mt-0">
+    <small class="text-muted">
+        <strong>Текущая сортировка:</strong> <span id="currentSortDisplay">Настроена</span>
+    </small>
+</div> 

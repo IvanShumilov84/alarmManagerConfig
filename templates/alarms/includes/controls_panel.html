@@ -1,0 +1,472 @@
+{% load static %}
+
+<style>
+/* Уменьшаем отступы в табах */
+.tab-pane {
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+}
+
+.tab-pane .row {
+    margin-bottom: 0.25rem !important;
+}
+
+.tab-pane .form-select,
+.tab-pane .form-control {
+    margin-bottom: 0.125rem !important;
+}
+
+.tab-content {
+    padding: 0.5rem !important;
+}
+
+/* Убираем отступы у элементов сортировки */
+#sortFields .row {
+    margin-bottom: 0.125rem !important;
+}
+
+#sortFields .col-md-3 {
+    margin-bottom: 0.125rem !important;
+}
+
+/* Уменьшаем отступы у кнопок */
+.d-flex.mb-1 {
+    margin-bottom: 0.25rem !important;
+}
+
+/* Уменьшаем отступы у статуса сортировки */
+.mt-1 {
+    margin-top: 0.25rem !important;
+}
+</style>
+
+<div class="controls-panel mb-3">
+    <!-- Навигация табов -->
+    <ul class="nav nav-tabs" id="controlsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="filters-tab" data-bs-toggle="tab" data-bs-target="#filters-content" type="button" role="tab" aria-controls="filters-content" aria-selected="true">
+                <i class="fas fa-filter me-1"></i>Фильтры
+                <span id="activeFiltersCount" class="badge bg-primary ms-1" style="display: none;">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sort-tab" data-bs-toggle="tab" data-bs-target="#sort-content" type="button" role="tab" aria-controls="sort-content" aria-selected="false">
+                <i class="fas fa-sort me-1"></i>Сортировка
+                <span id="activeSortsCount" class="badge bg-success ms-1" style="display: none;">0</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-content" type="button" role="tab" aria-controls="settings-content" aria-selected="false">
+                <i class="fas fa-cog me-1"></i>Настройки
+            </button>
+        </li>
+        <!-- Кнопка сворачивания в шапке -->
+        <li class="nav-item ms-auto" role="presentation">
+            <button class="nav-link border-0 toggle-controls-btn" id="toggleControlsBtn" onclick="toggleControls()" type="button" title="Свернуть панель управления">
+                <span class="toggle-text">−</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Содержимое табов -->
+    <div class="tab-content border border-top-0 rounded-bottom p-3" id="controlsTabContent">
+        <!-- Таб фильтров -->
+        <div class="tab-pane fade show active" id="filters-content" role="tabpanel" aria-labelledby="filters-tab">
+            <input type="hidden" name="page" value="1">
+            {% include 'alarms/includes/filter_form_simple.html' %}
+        </div>
+
+        <!-- Таб сортировки -->
+        <div class="tab-pane fade" id="sort-content" role="tabpanel" aria-labelledby="sort-tab">
+            <form method="get" id="sortForm" class="mb-0">
+                <input type="hidden" name="display_mode" value="{{ display_mode }}">
+                <input type="hidden" name="page" value="1">
+                {% include 'alarms/includes/sort_form_simple.html' %}
+            </form>
+        </div>
+
+        <!-- Таб настроек -->
+        <div class="tab-pane fade" id="settings-content" role="tabpanel" aria-labelledby="settings-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="mb-3">Настройки отображения</h6>
+                    <div class="mb-3">
+                        <label for="recordsPerPage" class="form-label">Записей на странице:</label>
+                        <select class="form-select form-select-sm" id="recordsPerPage" name="paginate_by">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showTooltips" checked>
+                            <label class="form-check-label" for="showTooltips">
+                                Показывать подсказки
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="mb-3">Быстрые действия</h6>
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="saveCurrentSettings()">
+                            <i class="fas fa-save me-1"></i>Сохранить настройки
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetToDefaults()">
+                            <i class="fas fa-undo me-1"></i>Сбросить к умолчаниям
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+</div>
+
+<script>
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Загружаем сохраненный активный таб
+    const savedTab = localStorage.getItem('activeControlsTab') || 'filters-tab';
+    const tab = new bootstrap.Tab(document.getElementById(savedTab));
+    tab.show();
+    
+    // Загружаем сохраненные настройки
+    loadSavedSettings();
+    
+    // Инициализируем счетчики
+    updateCounters();
+});
+
+// Сохранение активного таба
+document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', function (event) {
+        localStorage.setItem('activeControlsTab', event.target.id);
+    });
+});
+
+// Сворачивание/разворачивание панели
+function toggleControls() {
+    const content = document.getElementById('controlsTabContent');
+    const toggleText = document.querySelector('#toggleControlsBtn .toggle-text');
+    const btn = document.getElementById('toggleControlsBtn');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggleText.textContent = '−';
+        btn.title = 'Свернуть панель управления';
+    } else {
+        content.style.display = 'none';
+        toggleText.textContent = '+';
+        btn.title = 'Развернуть панель управления';
+    }
+}
+
+
+
+
+
+// Загрузка сохраненных настроек
+function loadSavedSettings() {
+    const savedSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
+    
+    if (savedSettings.recordsPerPage) {
+        document.getElementById('recordsPerPage').value = savedSettings.recordsPerPage;
+    }
+    
+    if (savedSettings.showTooltips !== undefined) {
+        document.getElementById('showTooltips').checked = savedSettings.showTooltips;
+    }
+}
+
+// Сохранение настроек
+function saveCurrentSettings() {
+    const settings = {
+        recordsPerPage: document.getElementById('recordsPerPage').value,
+        showTooltips: document.getElementById('showTooltips').checked
+    };
+    
+    localStorage.setItem('alarmListSettings', JSON.stringify(settings));
+    
+    // Показываем уведомление
+    showNotification('Настройки сохранены!', 'success');
+}
+
+// Сброс к умолчаниям
+function resetToDefaults() {
+    document.getElementById('recordsPerPage').value = '20';
+    document.getElementById('showTooltips').checked = true;
+    
+    localStorage.removeItem('alarmListSettings');
+    
+    showNotification('Настройки сброшены к умолчаниям!', 'info');
+}
+
+// Обновление счетчиков
+function updateCounters() {
+    // Счетчик активных фильтров
+    const activeFilters = document.querySelectorAll('#filterFields .filter-row').length;
+    const filtersCount = document.getElementById('activeFiltersCount');
+    if (filtersCount) {
+        if (activeFilters > 0) {
+            filtersCount.textContent = activeFilters;
+            filtersCount.style.display = 'inline';
+        } else {
+            filtersCount.style.display = 'none';
+        }
+    }
+    
+    // Счетчик активных сортировок
+    const activeSorts = document.querySelectorAll('#sortFields .sort-row').length;
+    const sortsCount = document.getElementById('activeSortsCount');
+    if (sortsCount) {
+        if (activeSorts > 0) {
+            sortsCount.textContent = activeSorts;
+            sortsCount.style.display = 'inline';
+        } else {
+            sortsCount.style.display = 'none';
+        }
+    }
+}
+
+
+
+// Уведомления
+function showNotification(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Автоматически скрываем через 3 секунды
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 3000);
+}
+
+// Подключаем внешние JavaScript файлы
+document.addEventListener('DOMContentLoaded', function() {
+    // Подключаем filters.js
+    if (!document.querySelector('script[src*="filters.js"]')) {
+        const filtersScript = document.createElement('script');
+        filtersScript.src = '{% static "js/filters.js" %}';
+        document.head.appendChild(filtersScript);
+    }
+    
+    // Подключаем sort.js
+    if (!document.querySelector('script[src*="sort.js"]')) {
+        const sortScript = document.createElement('script');
+        sortScript.src = '{% static "js/sort.js" %}';
+        document.head.appendChild(sortScript);
+    }
+});
+
+// Функции для работы с фильтрами
+function addFilterField() {
+    const filterFields = document.getElementById('filterFields');
+    const filterRow = document.createElement('div');
+    filterRow.className = 'filter-row row mb-2';
+    
+    // Определяем тип страницы
+    const displayMode = document.querySelector('input[name="display_mode"]')?.value || 'alarms';
+    const isTables = displayMode === 'tables';
+    
+    // Поля для таблиц
+    const tableFields = `
+        <option value="">Выберите поле</option>
+        <option value="table_number">Номер таблицы</option>
+        <option value="name">Название</option>
+        <option value="description">Описание</option>
+        <option value="alarms_count">Количество тревог</option>
+        <option value="created_at">Дата создания</option>
+        <option value="updated_at">Дата обновления</option>
+    `;
+    
+    // Поля для аварий
+    const alarmFields = `
+        <option value="">Выберите поле</option>
+        <option value="alarm_class">Класс аварии</option>
+        <option value="logic">Логика</option>
+        <option value="limit_type">Тип лимита</option>
+        <option value="limit_config_type">Тип конфигурации лимита</option>
+        <option value="confirm_method">Метод подтверждения</option>
+        <option value="table_number">Таблица</option>
+        <option value="channel">Канал</option>
+        <option value="message">Сообщение</option>
+    `;
+    
+    filterRow.innerHTML = `
+        <div class="col-md-3">
+            <select class="form-select form-select-sm" name="filter_field[]">
+                ${isTables ? tableFields : alarmFields}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select form-select-sm" name="filter_operator[]">
+                <option value="exact">Точно</option>
+                <option value="contains">Содержит</option>
+                <option value="startswith">Начинается с</option>
+                <option value="endswith">Заканчивается на</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <input type="text" class="form-control form-control-sm" name="filter_value[]" placeholder="Значение">
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFilterField(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    filterFields.appendChild(filterRow);
+    updateCounters();
+}
+
+function removeFilterField(button) {
+    button.closest('.filter-row').remove();
+    updateCounters();
+}
+
+function clearFilters() {
+    const filterFields = document.getElementById('filterFields');
+    filterFields.innerHTML = '';
+    updateCounters();
+}
+
+function applyFilters() {
+    // Собираем данные фильтров
+    const filterData = {};
+    const filterRows = document.querySelectorAll('#filterFields .filter-row');
+    
+    filterRows.forEach((row, index) => {
+        const field = row.querySelector('select[name="filter_field[]"]').value;
+        const operator = row.querySelector('select[name="filter_operator[]"]').value;
+        const value = row.querySelector('input[name="filter_value[]"]').value;
+        
+        if (field && value) {
+            filterData[`filter_field_${index}`] = field;
+            filterData[`filter_operator_${index}`] = operator;
+            filterData[`filter_value_${index}`] = value;
+        }
+    });
+    
+    // Добавляем базовые параметры
+    filterData.page = '1';
+    
+    // Формируем URL с параметрами
+    const url = new URL(window.location);
+    Object.keys(filterData).forEach(key => {
+        url.searchParams.set(key, filterData[key]);
+    });
+    
+    // Переходим на новую страницу
+    window.location.href = url.toString();
+}
+
+// Функции для работы с сортировкой
+function addSortField() {
+    const sortFields = document.getElementById('sortFields');
+    const sortRow = document.createElement('div');
+    sortRow.className = 'sort-row row mb-0';
+    
+    // Определяем тип страницы
+    const displayMode = document.querySelector('input[name="display_mode"]')?.value || 'alarms';
+    const isTables = displayMode === 'tables';
+    
+    // Поля для таблиц
+    const tableFields = `
+        <option value="">Выберите поле</option>
+        <option value="table_number">Номер таблицы</option>
+        <option value="name">Название</option>
+        <option value="description">Описание</option>
+        <option value="alarms_count">Количество тревог</option>
+        <option value="created_at">Дата создания</option>
+        <option value="updated_at">Дата обновления</option>
+    `;
+    
+    // Поля для аварий
+    const alarmFields = `
+        <option value="">Выберите поле</option>
+        <option value="alarm_class">Класс аварии</option>
+        <option value="logic">Логика</option>
+        <option value="limit_type">Тип лимита</option>
+        <option value="limit_config_type">Тип конфигурации лимита</option>
+        <option value="confirm_method">Метод подтверждения</option>
+        <option value="table_number">Таблица</option>
+        <option value="channel">Канал</option>
+        <option value="message">Сообщение</option>
+        <option value="created_at">Дата создания</option>
+        <option value="updated_at">Дата обновления</option>
+    `;
+    
+    sortRow.innerHTML = `
+        <div class="col-md-4">
+            <select class="form-select form-select-sm sort-field" name="sort_field[]">
+                ${isTables ? tableFields : alarmFields}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <select class="form-select form-select-sm sort-order" name="sort_order[]">
+                <option value="asc">По возрастанию</option>
+                <option value="desc">По убыванию</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSortField(this)">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+    `;
+    sortFields.appendChild(sortRow);
+    updateCounters();
+}
+
+function removeSortField(button) {
+    button.closest('.sort-row').remove();
+    updateCounters();
+}
+
+function clearAllSorts() {
+    const sortFields = document.getElementById('sortFields');
+    sortFields.innerHTML = '';
+    updateCounters();
+}
+
+function applySorts() {
+    // Собираем данные сортировки
+    const sortData = {};
+    const sortRows = document.querySelectorAll('#sortFields .sort-row');
+    
+    sortRows.forEach((row, index) => {
+        const field = row.querySelector('.sort-field').value;
+        const order = row.querySelector('.sort-order').value;
+        
+        if (field) {
+            sortData[`sort_${index}`] = field;
+            sortData[`order_${index}`] = order;
+        }
+    });
+    
+    // Добавляем базовые параметры
+    sortData.page = '1';
+    
+    // Формируем URL с параметрами
+    const url = new URL(window.location);
+    Object.keys(sortData).forEach(key => {
+        url.searchParams.set(key, sortData[key]);
+    });
+    
+    // Переходим на новую страницу
+    window.location.href = url.toString();
+}
+</script> 

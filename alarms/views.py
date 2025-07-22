@@ -96,6 +96,9 @@ class AlarmTableListView(FilterMixin, ListView):
         context["sort_fields"] = get_sort_fields("tables")
         context["storage_key"] = "tablesSortFields"
 
+        # Добавляем поля фильтров для таблиц
+        context["filter_fields"] = get_filter_fields("tables")
+
         # Получаем параметры сортировки
         sort_fields = []
         sort_orders = []
@@ -122,6 +125,9 @@ class AlarmTableListView(FilterMixin, ListView):
 
         context["current_sort"] = self.request.GET.get("sort", "table_number")
         context["current_order"] = self.request.GET.get("order", "asc")
+
+        # Добавляем display_mode для controls_panel
+        context["display_mode"] = "tables"
 
         return context
 
@@ -312,6 +318,9 @@ class AlarmConfigListView(FilterMixin, ListView):
         # Добавляем поля сортировки для тревог
         context["sort_fields"] = get_sort_fields("alarms")
         context["storage_key"] = "alarmsSortFields"
+
+        # Добавляем поля фильтров для тревог
+        context["filter_config"] = get_filter_fields("alarms")
 
         # Для обратной совместимости
         context["sort_orders"] = sort_orders[: len(sort_fields)]
@@ -683,45 +692,148 @@ def api_used_table_numbers(request):
 FIELDS_CONFIG = {
     "tables": [
         # {"value": "id", "label": "ID", "type": "number"},
-        {"value": "table_number", "label": "Номер таблицы", "type": "number"},
-        {"value": "name", "label": "Название", "type": "text"},
-        {"value": "description", "label": "Описание", "type": "text"},
-        {"value": "alarms_count", "label": "Количество тревог", "type": "number"},
-        {"value": "created_at", "label": "Дата создания", "type": "date"},
-        {"value": "updated_at", "label": "Дата обновления", "type": "date"},
+        {
+            "value": "table_number",
+            "label": "Номер таблицы",
+            "short_label": "Номер",
+            "type": "number",
+        },
+        {
+            "value": "name",
+            "label": "Название",
+            "short_label": "Название",
+            "type": "text",
+        },
+        {
+            "value": "description",
+            "label": "Описание",
+            "short_label": "Описание",
+            "type": "text",
+        },
+        {
+            "value": "alarms_count",
+            "label": "Количество тревог",
+            "short_label": "Кол-во",
+            "type": "number",
+        },
+        {
+            "value": "created_at",
+            "label": "Дата создания",
+            "short_label": "Создано",
+            "type": "date",
+        },
+        {
+            "value": "updated_at",
+            "label": "Дата обновления",
+            "short_label": "Обновлено",
+            "type": "date",
+        },
     ],
     "alarms": [
-        {"value": "id", "label": "ID", "type": "number"},
-        {"value": "alarm_class", "label": "Класс тревоги", "type": "select"},
-        {"value": "table", "label": "Таблица", "type": "select"},
-        {"value": "logic", "label": "Способ наблюдения", "type": "select"},
-        {"value": "channel", "label": "Канал", "type": "text"},
-        {"value": "msg", "label": "Сообщение", "type": "text"},
-        {"value": "prior", "label": "Приоритет", "type": "number"},
-        {"value": "confirm_method", "label": "Способ подтверждения", "type": "select"},
-        {"value": "limit_type", "label": "Тип ограничения", "type": "select"},
+        {"value": "id", "label": "ID", "short_label": "ID", "type": "number"},
+        {
+            "value": "alarm_class",
+            "label": "Класс тревоги",
+            "short_label": "Класс",
+            "type": "select",
+        },
+        {
+            "value": "table",
+            "label": "Таблица",
+            "short_label": "Таблица",
+            "type": "select",
+        },
+        {
+            "value": "logic",
+            "label": "Способ наблюдения",
+            "short_label": "Логика",
+            "type": "select",
+        },
+        {"value": "channel", "label": "Канал", "short_label": "Канал", "type": "text"},
+        {
+            "value": "msg",
+            "label": "Сообщение",
+            "short_label": "Сообщение",
+            "type": "text",
+        },
+        {
+            "value": "prior",
+            "label": "Приоритет",
+            "short_label": "Приоритет",
+            "type": "number",
+        },
+        {
+            "value": "confirm_method",
+            "label": "Способ подтверждения",
+            "short_label": "Подтверждение",
+            "type": "select",
+        },
+        {
+            "value": "limit_type",
+            "label": "Тип ограничения",
+            "short_label": "Лимит",
+            "type": "select",
+        },
         {
             "value": "limit_config_type",
             "label": "Тип настройки пределов",
+            "short_label": "Тип лимита",
             "type": "select",
         },
-        {"value": "low", "label": "Нижний предел", "type": "number"},
-        {"value": "high", "label": "Верхний предел", "type": "number"},
-        {"value": "hyst_low", "label": "Гистерезис нижнего предела", "type": "number"},
+        {
+            "value": "low",
+            "label": "Нижний предел",
+            "short_label": "Мин",
+            "type": "number",
+        },
+        {
+            "value": "high",
+            "label": "Верхний предел",
+            "short_label": "Макс",
+            "type": "number",
+        },
+        {
+            "value": "hyst_low",
+            "label": "Гистерезис нижнего предела",
+            "short_label": "Гист мин",
+            "type": "number",
+        },
         {
             "value": "hyst_high",
             "label": "Гистерезис верхнего предела",
+            "short_label": "Гист макс",
             "type": "number",
         },
-        {"value": "ch_low", "label": "Канал нижнего предела", "type": "text"},
-        {"value": "ch_high", "label": "Канал верхнего предела", "type": "text"},
+        {
+            "value": "ch_low",
+            "label": "Канал нижнего предела",
+            "short_label": "Канал мин",
+            "type": "text",
+        },
+        {
+            "value": "ch_high",
+            "label": "Канал верхнего предела",
+            "short_label": "Канал макс",
+            "type": "text",
+        },
         {
             "value": "discrete_val",
             "label": "Значение предела для дискретного сигнала",
+            "short_label": "Дискрет",
             "type": "number",
         },
-        {"value": "created_at", "label": "Дата создания", "type": "date"},
-        {"value": "updated_at", "label": "Дата обновления", "type": "date"},
+        {
+            "value": "created_at",
+            "label": "Дата создания",
+            "short_label": "Создано",
+            "type": "date",
+        },
+        {
+            "value": "updated_at",
+            "label": "Дата обновления",
+            "short_label": "Обновлено",
+            "type": "date",
+        },
     ],
 }
 
@@ -734,7 +846,10 @@ def get_filter_fields(page_type):
 def get_sort_fields(page_type):
     """Возвращает поля для сортировки без типов"""
     fields = FIELDS_CONFIG.get(page_type, [])
-    return [{"value": f["value"], "label": f["label"]} for f in fields]
+    return [
+        {"value": f["value"], "label": f["label"], "short_label": f["short_label"]}
+        for f in fields
+    ]
 
 
 @require_GET

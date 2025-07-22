@@ -26,39 +26,8 @@
     </div>
 </div>
 
-<!-- ФИЛЬТРЫ -->
-{% include 'alarms/includes/filter_form.html' %}
-
-<!-- СОРТИРОВКА -->
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" onclick="toggleSortSettings()">
-        <div class="d-flex align-items-center">
-            <h6 class="mb-0">
-                <i class="bi bi-sort-down"></i> Настройка сортировки
-            </h6>
-            <span id="sortActiveNotice" class="badge bg-danger ms-2" style="display:none">Сортировка активна</span>
-        </div>
-        <i class="bi bi-chevron-down" id="sortToggleIcon"></i>
-    </div>
-    <div class="card-body" id="sortSettingsBody">
-        <form method="get" id="sortForm">
-            <input type="hidden" name="display_mode" value="{{ display_mode }}">
-            {{ sort_fields|json_script:"sort-fields-data" }}
-            <div class="row" id="sortFields"
-                 data-storage-key="{{ storage_key }}">
-                <!-- JS вставит поля сортировки -->
-            </div>
-            
-            {% if sort_fields %}
-            <div class="mt-2">
-                <small class="text-muted">
-                    <strong>Текущая сортировка:</strong> <span id="currentSortDisplay">Настроена</span>
-                </small>
-            </div>
-            {% endif %}
-        </form>
-    </div>
-</div>
+<!-- ПАНЕЛЬ УПРАВЛЕНИЯ (ФИЛЬТРЫ + СОРТИРОВКА) -->
+{% include 'alarms/includes/controls_panel.html' %}
 
 <div class="card">
     <div class="card-body">
@@ -94,20 +63,20 @@
                                         <i class="bi bi-arrow-{% if sort_indicators.table == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Класс тревоги
+                                <th title="Класс тревоги">
+                                    Класс
                                     {% if 'alarm_class' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.alarm_class == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Способ наблюдения
+                                <th title="Способ наблюдения">
+                                    Логика
                                     {% if 'logic' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.logic == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Способ подтверждения
+                                <th title="Способ подтверждения">
+                                    Подтверждение
                                     {% if 'confirm_method' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.confirm_method == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
@@ -118,68 +87,68 @@
                                         <i class="bi bi-arrow-{% if sort_indicators.prior == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Тип ограничения
+                                <th title="Тип ограничения">
+                                    Лимит
                                     {% if 'limit_type' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.limit_type == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Тип настройки пределов
+                                <th title="Тип настройки пределов">
+                                    Тип лимита
                                     {% if 'limit_config_type' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.limit_config_type == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Нижний предел
+                                <th title="Нижний предел">
+                                    Мин
                                     {% if 'low' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.low == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Верхний предел
+                                <th title="Верхний предел">
+                                    Макс
                                     {% if 'high' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.high == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Канал нижнего предела
+                                <th title="Канал нижнего предела">
+                                    Канал мин
                                     {% if 'ch_low' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.ch_low == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Канал верхнего предела
+                                <th title="Канал верхнего предела">
+                                    Канал макс
                                     {% if 'ch_high' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.ch_high == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Гистерезис нижнего предела
+                                <th title="Гистерезис нижнего предела">
+                                    Гист мин
                                     {% if 'hyst_low' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.hyst_low == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Гистерезис верхнего предела
+                                <th title="Гистерезис верхнего предела">
+                                    Гист макс
                                     {% if 'hyst_high' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.hyst_high == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Значение предела для дискретного сигнала
+                                <th title="Значение предела для дискретного сигнала">
+                                    Дискрет
                                     {% if 'discrete_val' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.discrete_val == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Дата создания
+                                <th title="Дата создания">
+                                    Создано
                                     {% if 'created_at' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.created_at == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
                                 </th>
-                                <th>
-                                    Дата обновления
+                                <th title="Дата обновления">
+                                    Обновлено
                                     {% if 'updated_at' in sort_indicators %}
                                         <i class="bi bi-arrow-{% if sort_indicators.updated_at == 'asc' %}up{% else %}down{% endif %}"></i>
                                     {% endif %}
