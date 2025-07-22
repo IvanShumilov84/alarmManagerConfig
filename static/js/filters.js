@@ -686,4 +686,4 @@ window.addEventListener('pageshow', function (event) {
         console.log('Страница загружена, планируем инициализацию фильтров');
         scheduleInit();
     }
-});
+}); 

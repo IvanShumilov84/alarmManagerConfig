@@ -236,3 +236,270 @@
 [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
     background: #777;
 }
+
+/* Фиксированные размеры столбцов в таблице тревог */
+.table.alarm-table th:nth-child(3),
+.table.alarm-table td:nth-child(3) {
+    width: 90px !important;
+    /* Канал */
+    min-width: 90px !important;
+    max-width: 90px !important;
+}
+
+.table.alarm-table th:nth-child(4),
+.table.alarm-table td:nth-child(4) {
+    width: auto !important;
+    /* Сообщение - адаптивная ширина */
+    min-width: 100px !important;
+    max-width: 250px !important;
+}
+
+.table.alarm-table th:nth-child(5),
+.table.alarm-table td:nth-child(5) {
+    width: 200px !important;
+    /* Таблица - уменьшил */
+    min-width: 150px !important;
+    max-width: 200px !important;
+}
+
+/* Стили для переноса текста в ячейках таблицы */
+.table.alarm-table td {
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    vertical-align: middle !important;
+}
+
+/* Специальные стили для столбца Сообщение */
+.table.alarm-table td:nth-child(4) {
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+}
+
+
+
+/* Кастомные бейджи для способов наблюдения */
+.badge.bg-discrete {
+    background-color: #10B981 !important;
+    /* Зеленый */
+    color: white !important;
+}
+
+.badge.bg-analog {
+    background-color: #3B82F6 !important;
+    /* Синий */
+    color: white !important;
+}
+
+.badge.bg-change {
+    background-color: #F59E0B !important;
+    /* Оранжевый */
+    color: white !important;
+}
+
+/* Градиентные варианты */
+.badge.bg-discrete-gradient {
+    background: linear-gradient(45deg, #10B981, #34D399) !important;
+    color: white !important;
+}
+
+.badge.bg-analog-gradient {
+    background: linear-gradient(45deg, #3B82F6, #60A5FA) !important;
+    color: white !important;
+}
+
+.badge.bg-change-gradient {
+    background: linear-gradient(45deg, #F59E0B, #FBBF24) !important;
+    color: white !important;
+}
+
+/* Бейджи с иконками */
+.badge.bg-discrete-icon::before {
+    content: "●";
+    margin-right: 0.25rem;
+}
+
+.badge.bg-analog-icon::before {
+    content: "📊";
+    margin-right: 0.25rem;
+}
+
+.badge.bg-change-icon::before {
+    content: "🔄";
+    margin-right: 0.25rem;
+}
+
+/* Градиентные бейджи для типов ограничений */
+.badge.bg-limit-low {
+    background: linear-gradient(45deg, #10B981, #34D399) !important;
+    /* Зеленый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-limit-low:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4) !important;
+}
+
+.badge.bg-limit-high {
+    background: linear-gradient(45deg, #EF4444, #F87171) !important;
+    /* Красный градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-limit-high:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4) !important;
+}
+
+.badge.bg-limit-low-high {
+    background: linear-gradient(45deg, #8B5CF6, #A855F7) !important;
+    /* Фиолетовый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-limit-low-high:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.4) !important;
+}
+
+/* Градиентные бейджи для типов настройки пределов */
+.badge.bg-config-values {
+    background: linear-gradient(45deg, #F59E0B, #FBBF24) !important;
+    /* Золотой градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-config-values:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+.badge.bg-config-channels {
+    background: linear-gradient(45deg, #EC4899, #F472B6) !important;
+    /* Розовый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(236, 72, 153, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-config-channels:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(236, 72, 153, 0.4) !important;
+}
+
+/* Градиентные бейджи для классов тревог */
+.badge.bg-alarm-error {
+    background: linear-gradient(45deg, #DC2626, #EF4444) !important;
+    /* Красный градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-alarm-error:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4) !important;
+}
+
+.badge.bg-alarm-warn {
+    background: linear-gradient(45deg, #F59E0B, #FBBF24) !important;
+    /* Желтый/оранжевый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-alarm-warn:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+.badge.bg-alarm-info {
+    background: linear-gradient(45deg, #06B6D4, #22D3EE) !important;
+    /* Голубой градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-alarm-info:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(6, 182, 212, 0.4) !important;
+}
+
+/* Градиентные бейджи для способов наблюдения */
+.badge.bg-logic-discrete {
+    background: linear-gradient(45deg, #10B981, #34D399) !important;
+    /* Зеленый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-logic-discrete:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.4) !important;
+}
+
+.badge.bg-logic-analog {
+    background: linear-gradient(45deg, #3B82F6, #60A5FA) !important;
+    /* Синий градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-logic-analog:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4) !important;
+}
+
+.badge.bg-logic-change {
+    background: linear-gradient(45deg, #F59E0B, #FBBF24) !important;
+    /* Желтый/оранжевый градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-logic-change:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.4) !important;
+}
+
+/* Градиентные бейджи для способов подтверждения */
+.badge.bg-confirm-rep-ack {
+    background: linear-gradient(45deg, #06B6D4, #22D3EE) !important;
+    /* Голубой градиент */
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(6, 182, 212, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.badge.bg-confirm-rep-ack:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(6, 182, 212, 0.4) !important;
+}
