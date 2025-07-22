@@ -1,5 +1,19 @@
 // Универсальный JS-модуль фильтрации для таблиц аварий
 
+// Глобальные переменные
+let isInitialized = false;
+let preventAutoRestore = false;
+let initTimeout = null;
+
+// Кэш для полей фильтров
+const filterFieldsCache = {};
+
+// Поля фильтров по умолчанию
+const FILTER_FIELDS = {
+    tables: [],
+    alarms: []
+};
+
 function applyFilters() {
     // Сбрасываем флаг блокировки восстановления
     preventAutoRestore = false;
@@ -310,13 +324,13 @@ function updateFilterValueType(index) {
 }
 
 // Наборы полей для фильтрации (теперь загружаются динамически)
-let FILTER_FIELDS = {
-    tables: [],
-    alarms: []
-};
+// let FILTER_FIELDS = { // Уже объявлено в начале файла
+//     tables: [],
+//     alarms: []
+// };
 
 // Кэш для загруженных полей
-let filterFieldsCache = {};
+// let filterFieldsCache = {}; // Уже объявлено в начале файла
 
 /**
  * Загружает поля фильтров с сервера
@@ -558,9 +572,9 @@ function removeFilter(button) {
 }
 
 // Флаг для предотвращения автоматического восстановления фильтров
-let preventAutoRestore = false;
+// let preventAutoRestore = false; // Уже объявлено в начале файла
 // Флаг для предотвращения множественной инициализации
-let isInitialized = false;
+// let isInitialized = false; // Уже объявлено в начале файла
 
 // Функция для получения правильного ключа localStorage в зависимости от страницы
 function getStorageKey() {
@@ -659,7 +673,6 @@ async function restoreFiltersUniversal() {
 }
 
 // Единая функция инициализации
-let initTimeout = null;
 
 function scheduleInit() {
     if (initTimeout) {
@@ -685,5 +698,16 @@ window.addEventListener('pageshow', function (event) {
     if (!event.persisted) {
         console.log('Страница загружена, планируем инициализацию фильтров');
         scheduleInit();
+    }
+});
+
+// Добавляем обработчик для кнопки применения фильтров
+document.addEventListener('DOMContentLoaded', function () {
+    const applyFiltersBtn = document.getElementById('applyFiltersBtn');
+    if (applyFiltersBtn) {
+        applyFiltersBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            applyFilters();
+        });
     }
 }); 

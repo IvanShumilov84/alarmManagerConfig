@@ -59,13 +59,13 @@ urlpatterns = [
         name="api_used_table_numbers",
     ),
     path(
-        "api/filter-fields/",
-        views.api_filter_fields,
-        name="api_filter_fields",
-    ),
-    path(
         "api/sort-fields/",
         views.api_sort_fields,
         name="api_sort_fields",
+    ),
+    path(
+        "api/filter-fields/",
+        views.api_filter_fields,
+        name="api_filter_fields",
     ),
 ]
