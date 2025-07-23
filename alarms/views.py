@@ -150,6 +150,7 @@ class AlarmTableCreateView(CreateView):
         """Добавляем минимальное значение номера таблицы в контекст"""
         context = super().get_context_data(**kwargs)
         context["min_table_number"] = AlarmTable.get_min_table_number()
+
         return context
 
 
@@ -165,6 +166,7 @@ class AlarmTableUpdateView(UpdateView):
         """Добавляем минимальное значение номера таблицы в контекст"""
         context = super().get_context_data(**kwargs)
         context["min_table_number"] = AlarmTable.get_min_table_number()
+
         return context
 
 
@@ -296,9 +298,8 @@ class AlarmConfigListView(FilterMixin, ListView):
         return queryset
 
     def get_context_data(self, **kwargs):
-        """Добавляем режим отображения и параметры сортировки в контекст"""
+        """Добавляем параметры сортировки в контекст"""
         context = super().get_context_data(**kwargs)
-        context["display_mode"] = self.request.GET.get("display_mode", "compact")
 
         # Получаем параметры сортировки
         sort_fields = []
@@ -356,10 +357,6 @@ class AlarmConfigListView(FilterMixin, ListView):
         context["filter_ops"] = filter_ops
         context["filter_values"] = filter_values
 
-        # Получаем общее количество аварий (без фильтров)
-        total_queryset = AlarmConfig.objects.all()
-        context["total_count"] = total_queryset.count()
-
         # Получаем отфильтрованный queryset для подсчета
         filtered_queryset = AlarmConfig.objects.all()
         filtered_queryset = self.apply_filters(filtered_queryset)
@@ -403,10 +400,10 @@ class AlarmTableDetailView(ListView):
         return queryset.order_by("alarm_class_display", "prior", "channel_lower")
 
     def get_context_data(self, **kwargs):
-        """Добавляем информацию о таблице и режим отображения в контекст"""
+        """Добавляем информацию о таблице в контекст"""
         context = super().get_context_data(**kwargs)
         context["table"] = self.table
-        context["display_mode"] = self.request.GET.get("display_mode", "compact")
+
         return context
 
 
@@ -467,25 +464,43 @@ class AlarmConfigDeleteView(View):
         return HttpResponseRedirect(reverse_lazy("alarms:alarm_list"))
 
 
-def dashboard(request):
-    """Главная страница приложения"""
+def get_tables_count():
+    """Возвращает количество таблиц тревог"""
+    return AlarmTable.objects.all().count()
+
+
+def get_alarms_count():
+    """Возвращает количество тревог"""
+    return AlarmConfig.objects.all().count()
+
+
+def get_recent_alarms():
+    """Возвращает последние 5 тревог"""
     from django.db.models.functions import Lower
 
-    tables_count = AlarmTable.objects.all().count()
-    alarms_count = AlarmConfig.objects.all().count()
-
-    # Получаем последние аварии с групповой сортировкой
-    recent_alarms = (
+    return (
         AlarmConfig.objects.all()
         .select_related("alarm_class")
         .annotate(alarm_class_display=Lower("alarm_class__verbose_name_ru"))
         .order_by("-created_at", "alarm_class_display", "prior")[:5]
     )
 
+
+def sidebar_data(request):
+    """Возвращает данные для сайдбара"""
     context = {
-        "tables_count": tables_count,
-        "alarms_count": alarms_count,
-        "recent_alarms": recent_alarms,
+        "sidebar_tables_count": get_tables_count(),
+        "sidebar_alarms_count": get_alarms_count(),
+    }
+    return render(request, "base.html", context)
+
+
+def dashboard(request):
+    """Главная страница приложения"""
+    context = {
+        "tables_count": get_tables_count(),
+        "alarms_count": get_alarms_count(),
+        "recent_alarms": get_recent_alarms(),
     }
     return render(request, "alarms/dashboard.html", context)
 

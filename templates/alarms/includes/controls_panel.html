@@ -38,35 +38,51 @@
 .mt-1 {
     margin-top: 0.25rem !important;
 }
+
+
+
+/* Стили для кнопки действия в панели */
+.controls-panel .btn-primary {
+    white-space: nowrap;
+}
 </style>
 
-<div class="controls-panel mb-3">
+<div class="controls-panel mb-3 mt-0">
     <!-- Навигация табов -->
-    <ul class="nav nav-tabs" id="controlsTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="filters-tab" data-bs-toggle="tab" data-bs-target="#filters-content" type="button" role="tab" aria-controls="filters-content" aria-selected="true">
-                <i class="fas fa-filter me-1"></i>Фильтры
-                <span id="activeFiltersCount" class="badge bg-primary ms-1" style="display: none;">0</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="sort-tab" data-bs-toggle="tab" data-bs-target="#sort-content" type="button" role="tab" aria-controls="sort-content" aria-selected="false">
-                <i class="fas fa-sort me-1"></i>Сортировка
-                <span id="activeSortsCount" class="badge bg-success ms-1" style="display: none;">0</span>
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-content" type="button" role="tab" aria-controls="settings-content" aria-selected="false">
-                <i class="fas fa-cog me-1"></i>Настройки
-            </button>
-        </li>
-        <!-- Кнопка сворачивания в шапке -->
-        <li class="nav-item ms-auto" role="presentation">
-            <button class="nav-link border-0 toggle-controls-btn" id="toggleControlsBtn" onclick="toggleControls()" type="button" title="Свернуть панель управления">
-                <span class="toggle-text">−</span>
-            </button>
-        </li>
-    </ul>
+    <div class="d-flex align-items-center justify-content-between">
+        <ul class="nav nav-tabs flex-grow-1" id="controlsTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="filters-tab" data-bs-toggle="tab" data-bs-target="#filters-content" type="button" role="tab" aria-controls="filters-content" aria-selected="true" title="Фильтры &#10;• Клик - развернуть панель &#10;• Двойной клик - свернуть панель">
+                    <i class="fas fa-filter me-1"></i>Фильтры
+                    <span id="activeFiltersCount" class="badge bg-primary ms-1" style="display: none;">0</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="sort-tab" data-bs-toggle="tab" data-bs-target="#sort-content" type="button" role="tab" aria-controls="sort-content" aria-selected="false" title="Сортировка &#10;• Клик - развернуть панель &#10;• Двойной клик - свернуть панель">
+                    <i class="fas fa-sort me-1"></i>Сортировка
+                    <span id="activeSortsCount" class="badge bg-success ms-1" style="display: none;">0</span>
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="settings-tab" data-bs-toggle="tab" data-bs-target="#settings-content" type="button" role="tab" aria-controls="settings-content" aria-selected="false" title="Настройки &#10;• Клик - развернуть панель &#10;• Двойной клик - свернуть панель">
+                    <i class="fas fa-cog me-1"></i>Настройки
+                </button>
+            </li>
+        </ul>
+        
+        <!-- Кнопка действия (создать/добавить) -->
+        <div class="ms-3">
+            {% if page_type == 'alarms' %}
+                <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Добавить тревогу
+                </a>
+            {% elif page_type == 'tables' %}
+                <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Создать таблицу
+                </a>
+            {% endif %}
+        </div>
+    </div>
 
     <!-- Содержимое табов -->
     <div class="tab-content border border-top-0 rounded-bottom p-3" id="controlsTabContent">
@@ -137,31 +153,68 @@ document.addEventListener('DOMContentLoaded', function() {
     // Загружаем сохраненные настройки
     loadSavedSettings();
     
+    // Загружаем состояние панели управления
+    loadControlsPanelState();
+    
     // Инициализируем счетчики
     updateCounters();
 });
 
-// Сохранение активного таба
+// Переменная для отслеживания последнего клика
+let lastClickedTab = null;
+let lastClickTime = 0;
+
+// Функция для обработки клика по табу
+function handleTabClick(event) {
+    const currentTime = Date.now();
+    const clickedTab = event.target;
+    
+    // Проверяем, был ли это клик по активному табу в течение 500ms
+    if (clickedTab === lastClickedTab && 
+        clickedTab.classList.contains('active') && 
+        currentTime - lastClickTime < 500) {
+        
+        // Двойной клик по активному табу - сворачиваем панель
+        event.preventDefault();
+        event.stopPropagation();
+        toggleControls();
+        return false;
+    }
+    
+    // Обычный клик - сохраняем информацию для следующего клика
+    lastClickedTab = clickedTab;
+    lastClickTime = currentTime;
+    
+    // Если панель свернута, разворачиваем её при клике на любой таб
+    const content = document.getElementById('controlsTabContent');
+    if (content.style.display === 'none') {
+        toggleControls();
+    }
+}
+
+// Сохранение активного таба и добавление обработчиков кликов
 document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+    // Обработчик для двойного клика
+    tab.addEventListener('click', handleTabClick);
+    
+    // Сохраняем активный таб при переключении
     tab.addEventListener('shown.bs.tab', function (event) {
         localStorage.setItem('activeControlsTab', event.target.id);
     });
 });
 
+
+
 // Сворачивание/разворачивание панели
 function toggleControls() {
     const content = document.getElementById('controlsTabContent');
-    const toggleText = document.querySelector('#toggleControlsBtn .toggle-text');
-    const btn = document.getElementById('toggleControlsBtn');
     
     if (content.style.display === 'none') {
         content.style.display = 'block';
-        toggleText.textContent = '−';
-        btn.title = 'Свернуть панель управления';
+        localStorage.setItem('controlsPanelCollapsed', 'false');
     } else {
         content.style.display = 'none';
-        toggleText.textContent = '+';
-        btn.title = 'Развернуть панель управления';
+        localStorage.setItem('controlsPanelCollapsed', 'true');
     }
 }
 
@@ -179,6 +232,18 @@ function loadSavedSettings() {
     
     if (savedSettings.showTooltips !== undefined) {
         document.getElementById('showTooltips').checked = savedSettings.showTooltips;
+    }
+}
+
+// Загрузка состояния панели управления
+function loadControlsPanelState() {
+    const isCollapsed = localStorage.getItem('controlsPanelCollapsed') === 'true';
+    const content = document.getElementById('controlsTabContent');
+    
+    if (isCollapsed) {
+        content.style.display = 'none';
+    } else {
+        content.style.display = 'block';
     }
 }
 

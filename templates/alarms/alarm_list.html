@@ -3,38 +3,71 @@
 
 {% block title %}{% include 'alarms/includes/page_title.html' with page_title="Тревоги" %}{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
-                        <i class="bi bi-exclamation-triangle"></i> Тревоги
-        <span class="badge bg-secondary ms-2">
-            Всего: {{ total_count }}
-        </span>
-    </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2" role="group">
-            <a href="?display_mode=compact{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}" class="btn btn-outline-secondary keep-filters {% if display_mode == 'compact' %}active{% endif %}">
-                <i class="bi bi-list"></i> Компактно
-            </a>
-            <a href="?display_mode=full{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}" class="btn btn-outline-secondary keep-filters {% if display_mode == 'full' %}active{% endif %}">
-                <i class="bi bi-card-text"></i> Полно
-            </a>
-        </div>
-        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Добавить тревогу
-        </a>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+    /* Центрирование всех ячеек таблицы тревог */
+    .alarm-table td,
+    .alarm-table th {
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    /* Исключение для столбца действий - оставляем выравнивание по левому краю */
+    .alarm-table td:first-child {
+        text-align: left;
+    }
+    
+    /* Убираем горизонтальную прокрутку страницы */
+    body {
+        overflow-x: hidden;
+    }
+    
+    /* Ограничиваем ширину таблицы */
+    .table-responsive {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    
+    /* Ограничиваем ширину ячеек таблицы */
+    .alarm-table th,
+    .alarm-table td {
+        max-width: 150px;
+        word-wrap: break-word;
+        white-space: normal;
+    }
+    
+    /* Специальные ограничения для длинных столбцов */
+    .alarm-table th:nth-child(4), /* Сообщение */
+    .alarm-table td:nth-child(4) {
+        max-width: 200px;
+    }
+</style>
+{% endblock %}
 
+{% block content %}
 <!-- ПАНЕЛЬ УПРАВЛЕНИЯ (ФИЛЬТРЫ + СОРТИРОВКА) -->
-{% include 'alarms/includes/controls_panel.html' %}
+{% include 'alarms/includes/controls_panel.html' with page_type='alarms' %}
 
 <div class="card">
     <div class="card-body">
         {% if alarms %}
-            {% if display_mode == 'compact' %}
-                <!-- Компактное отображение -->
-                <div class="table-responsive">
+            <!-- Ползунок скролла сверху таблицы -->
+            <div class="table-scroll-controls mb-2">
+                <div class="d-flex align-items-center">
+                    <label for="tableScrollSlider" class="form-label me-2 mb-0">
+                        <i class="fas fa-arrows-alt-h"></i> Горизонтальный скролл:
+                    </label>
+                    <input type="range" 
+                           class="form-range flex-grow-1" 
+                           id="tableScrollSlider" 
+                           min="0" 
+                           max="100" 
+                           value="0"
+                           style="max-width: 300px;">
+                    <span class="ms-2 text-muted small" id="scrollPosition">0%</span>
+                </div>
+            </div>
+            <div class="table-responsive" id="alarmTableContainer">
                     <table class="table table-hover alarm-table">
                         <thead class="table-light">
                             <tr>
@@ -273,78 +306,6 @@
                         </tbody>
                     </table>
                 </div>
-            {% else %}
-                <!-- Полное отображение -->
-                <div class="row">
-                    {% for alarm in alarms %}
-                    <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">
-                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}alarm-error{% elif alarm.alarm_class.name == 'warn' %}alarm-warn{% elif alarm.alarm_class.name == 'info' %}alarm-info{% else %}secondary{% endif %} me-2">
-                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
-                                    </span>
-                                    ID: {{ alarm.id }}
-                                </h6>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
-                                       class="btn btn-sm btn-outline-primary" 
-                                       title="Редактировать">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
-                                       class="btn btn-sm btn-outline-danger" 
-                                       title="Удалить"
-                                       onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Таблица:</strong></div>
-                                    <div class="col-8">{{ alarm.table.name }}</div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Логика:</strong></div>
-                                    <div class="col-8">
-                                        <span class="badge bg-{% if alarm.logic.name == 'discrete' %}logic-discrete{% elif alarm.logic.name == 'analog' %}logic-analog{% elif alarm.logic.name == 'change' %}logic-change{% else %}secondary{% endif %}">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
-                                    </div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Канал:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.channel %}
-                                            <code>{{ alarm.channel }}</code>
-                                        {% else %}
-                                            <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Сообщение:</strong></div>
-                                    <div class="col-8">{{ alarm.msg }}</div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Приоритет:</strong></div>
-                                    <div class="col-8">
-                                        <span class="badge bg-secondary">{{ alarm.prior }}</span>
-                                    </div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Создан:</strong></div>
-                                    <div class="col-8">{{ alarm.created_at|date:"d.m.Y H:i" }}</div>
-                                </div>
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Обновлен:</strong></div>
-                                    <div class="col-8">{{ alarm.updated_at|date:"d.m.Y H:i" }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
             
             <!-- Пагинация -->
             {% if is_paginated %}
@@ -352,12 +313,12 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
                                 <i class="bi bi-chevron-double-left"></i>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
                         </li>
@@ -371,12 +332,12 @@
                     
                     {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
                                 <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}&display_mode={{ display_mode }}">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
                                 <i class="bi bi-chevron-double-right"></i>
                             </a>
                         </li>
@@ -404,4 +365,43 @@
 <script src="{% static 'js/filters.js' %}"></script>
 <script src="{% static 'js/sort.js' %}"></script>
 <script src="{% static 'js/dynamic_filters.js' %}"></script>
+
+<script>
+// Управление ползунком горизонтального скролла
+document.addEventListener('DOMContentLoaded', function() {
+    const slider = document.getElementById('tableScrollSlider');
+    const tableContainer = document.getElementById('alarmTableContainer');
+    const scrollPosition = document.getElementById('scrollPosition');
+    
+    if (slider && tableContainer) {
+        // Обновление ползунка при скролле таблицы
+        tableContainer.addEventListener('scroll', function() {
+            const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+            const currentScroll = tableContainer.scrollLeft;
+            const percentage = maxScroll > 0 ? Math.round((currentScroll / maxScroll) * 100) : 0;
+            
+            slider.value = percentage;
+            scrollPosition.textContent = percentage + '%';
+        });
+        
+        // Обновление скролла таблицы при изменении ползунка
+        slider.addEventListener('input', function() {
+            const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+            const newScrollLeft = (slider.value / 100) * maxScroll;
+            
+            tableContainer.scrollLeft = newScrollLeft;
+            scrollPosition.textContent = slider.value + '%';
+        });
+        
+        // Инициализация позиции
+        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
+        if (maxScroll > 0) {
+            scrollPosition.textContent = '0%';
+        } else {
+            // Скрываем элементы управления, если скролл не нужен
+            document.querySelector('.table-scroll-controls').style.display = 'none';
+        }
+    }
+});
+</script>
 {% endblock %}

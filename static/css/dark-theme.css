@@ -238,28 +238,43 @@
 }
 
 /* Фиксированные размеры столбцов в таблице тревог */
+/* Столбец Действия */
+.table.alarm-table th:nth-child(1),
+.table.alarm-table td:nth-child(1) {
+    width: 80px !important;
+    min-width: 80px !important;
+    max-width: 80px !important;
+}
+
+/* Столбец ID */
+.table.alarm-table th:nth-child(2),
+.table.alarm-table td:nth-child(2) {
+    width: 60px !important;
+    min-width: 60px !important;
+    max-width: 60px !important;
+}
+
+/* Столбец Канал */
 .table.alarm-table th:nth-child(3),
 .table.alarm-table td:nth-child(3) {
-    width: 90px !important;
-    /* Канал */
-    min-width: 90px !important;
-    max-width: 90px !important;
+    width: 100px !important;
+    min-width: 100px !important;
+    max-width: 100px !important;
 }
 
 .table.alarm-table th:nth-child(4),
 .table.alarm-table td:nth-child(4) {
     width: auto !important;
-    /* Сообщение - адаптивная ширина */
+    /* Сообщение - фиксированная ширина */
     min-width: 100px !important;
     max-width: 250px !important;
 }
 
 .table.alarm-table th:nth-child(5),
 .table.alarm-table td:nth-child(5) {
-    width: 200px !important;
-    /* Таблица - уменьшил */
-    min-width: 150px !important;
-    max-width: 200px !important;
+    width: auto !important;
+    min-width: 100px !important;
+    max-width: 250px !important;
 }
 
 /* Стили для переноса текста в ячейках таблицы */
@@ -270,13 +285,70 @@
     vertical-align: middle !important;
 }
 
-/* Специальные стили для столбца Сообщение */
-.table.alarm-table td:nth-child(4) {
+/* Специальные стили для столбцов с адаптивной шириной */
+.table.alarm-table td:nth-child(4),
+.table.alarm-table td:nth-child(5) {
+    white-space: normal !important;
     word-wrap: break-word !important;
     word-break: break-word !important;
-    white-space: normal !important;
-    overflow-wrap: break-word !important;
+    min-width: 100px !important;
 }
+
+/* Обеспечиваем горизонтальную прокрутку таблицы */
+.table-responsive {
+    overflow-x: auto;
+    min-width: 100%;
+    max-width: 100%;
+}
+
+/* Закрепление столбцов для горизонтального скроллинга */
+.table.alarm-table th:nth-child(1),
+.table.alarm-table td:nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 10;
+    background-color: var(--bs-body-bg);
+    border-right: none;
+}
+
+.table.alarm-table th:nth-child(2),
+.table.alarm-table td:nth-child(2) {
+    position: sticky;
+    left: 80px;
+    /* Ширина столбца Действия */
+    z-index: 10;
+    background-color: var(--bs-body-bg);
+    border-right: none;
+}
+
+.table.alarm-table th:nth-child(3),
+.table.alarm-table td:nth-child(3) {
+    position: sticky;
+    left: 140px;
+    /* Ширина столбцов Действия + ID */
+    z-index: 10;
+    background-color: var(--bs-body-bg);
+    border-right: none;
+}
+
+/* Темная тема для закрепленных столбцов */
+[data-bs-theme="dark"] .table.alarm-table th:nth-child(1),
+[data-bs-theme="dark"] .table.alarm-table td:nth-child(1),
+[data-bs-theme="dark"] .table.alarm-table th:nth-child(2),
+[data-bs-theme="dark"] .table.alarm-table td:nth-child(2),
+[data-bs-theme="dark"] .table.alarm-table th:nth-child(3),
+[data-bs-theme="dark"] .table.alarm-table td:nth-child(3) {
+    background-color: var(--bs-dark);
+    border-right: none;
+}
+
+/* Настройка авторасширения таблицы */
+.table.alarm-table {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+
 
 
 
@@ -730,4 +802,160 @@
 [data-bs-theme="dark"] .toggle-controls-btn:hover {
     color: var(--bs-primary);
     background-color: rgba(var(--bs-primary-rgb), 0.2);
+}
+
+/* Стили для колонок с датами в таблице тревог */
+.table.alarm-table th:last-child,
+.table.alarm-table th:nth-last-child(2) {
+    min-width: 90px;
+    white-space: nowrap;
+}
+
+.table.alarm-table td:last-child,
+.table.alarm-table td:nth-last-child(2) {
+    min-width: 90px;
+    white-space: nowrap;
+    font-size: 0.85em;
+}
+
+/* Уменьшение высоты заголовков таблицы */
+.table.alarm-table th {
+    padding: 0.25rem 0.75rem;
+    vertical-align: middle;
+    font-size: 0.9em;
+    font-weight: 600;
+}
+
+.table.alarm-table td {
+    padding: 0.25rem 0.75rem;
+    vertical-align: middle;
+    position: relative;
+}
+
+/* Стили для заголовков с составными названиями */
+.table.alarm-table th[title="Канал нижнего предела"],
+.table.alarm-table th[title="Канал верхнего предела"],
+.table.alarm-table th[title="Гистерезис нижнего предела"],
+.table.alarm-table th[title="Гистерезис верхнего предела"] {
+    white-space: nowrap;
+    word-break: keep-all;
+    line-height: 1.2;
+}
+
+/* Заголовок "Действия" в одну строку */
+.table.alarm-table th:first-child {
+    white-space: nowrap;
+    word-break: keep-all;
+}
+
+/* Заголовки столбцов без вертикальных линий */
+.table.alarm-table th {
+    border-right: none;
+    position: relative;
+    text-align: center;
+}
+
+
+
+/* Убираем вертикальные линии из заголовков */
+.table.alarm-table th::after {
+    display: none;
+}
+
+
+
+/* Убираем вертикальные линии у закрепленных столбцов в области значений */
+.table.alarm-table td:nth-child(1)::after,
+.table.alarm-table td:nth-child(2)::after,
+.table.alarm-table td:nth-child(3)::after {
+    display: none;
+}
+
+/* Убираем вертикальные линии в области значений */
+.table.alarm-table td::after {
+    display: none;
+}
+
+/* Убираем вертикальные линии у последнего столбца в области значений */
+.table.alarm-table td:last-child::after {
+    display: none;
+}
+
+/* Темная тема для заголовков */
+[data-bs-theme="dark"] .table.alarm-table th {
+    border-right: none;
+}
+
+[data-bs-theme="dark"] .table.alarm-table th::after {
+    display: none;
+}
+
+
+
+/* Стили для ползунка горизонтального скролла */
+.table-scroll-controls {
+    background-color: var(--bs-light);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    padding: 0.75rem;
+}
+
+.table-scroll-controls .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--bs-body-color);
+}
+
+.table-scroll-controls .form-range {
+    height: 6px;
+    background-color: var(--bs-secondary-bg);
+    border-radius: 3px;
+}
+
+.table-scroll-controls .form-range::-webkit-slider-thumb {
+    background-color: var(--bs-primary);
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.table-scroll-controls .form-range::-webkit-slider-thumb:hover {
+    background-color: var(--bs-primary);
+    transform: scale(1.1);
+}
+
+.table-scroll-controls .form-range::-moz-range-thumb {
+    background-color: var(--bs-primary);
+    border: none;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.table-scroll-controls .form-range::-moz-range-thumb:hover {
+    background-color: var(--bs-primary);
+    transform: scale(1.1);
+}
+
+/* Темная тема для ползунка */
+[data-bs-theme="dark"] .table-scroll-controls {
+    background-color: var(--bs-dark);
+    border-color: var(--bs-border-color);
+}
+
+[data-bs-theme="dark"] .table-scroll-controls .form-range {
+    background-color: var(--bs-secondary-bg);
+}
+
+[data-bs-theme="dark"] .table-scroll-controls .form-range::-webkit-slider-thumb {
+    background-color: var(--bs-primary);
+}
+
+[data-bs-theme="dark"] .table-scroll-controls .form-range::-moz-range-thumb {
+    background-color: var(--bs-primary);
 }

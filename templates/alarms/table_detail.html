@@ -8,14 +8,6 @@
         <i class="bi bi-table"></i> {{ table.name }}
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2" role="group">
-            <a href="?display_mode=compact" class="btn btn-outline-secondary {% if display_mode == 'compact' %}active{% endif %}">
-                <i class="bi bi-list"></i> Компактно
-            </a>
-            <a href="?display_mode=full" class="btn btn-outline-secondary {% if display_mode == 'full' %}active{% endif %}">
-                <i class="bi bi-card-text"></i> Полно
-            </a>
-        </div>
         <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
             <i class="bi bi-plus-circle"></i> Добавить тревогу
         </a>
@@ -71,9 +63,7 @@
     </div>
     <div class="card-body">
         {% if alarms %}
-            {% if display_mode == 'compact' %}
-                <!-- Компактное отображение -->
-                <div class="table-responsive">
+            <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="table-light">
                             <tr>
@@ -129,110 +119,6 @@
                         </tbody>
                     </table>
                 </div>
-            {% else %}
-                <!-- Полное отображение -->
-                <div class="row">
-                    {% for alarm in alarms %}
-                    <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card h-100">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h6 class="mb-0">
-                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}danger{% elif alarm.alarm_class.name == 'warn' %}warning{% elif alarm.alarm_class.name == 'info' %}info{% else %}secondary{% endif %} me-2">
-                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
-                                    </span>
-                                    ID: {{ alarm.id }}
-                                </h6>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
-                                       class="btn btn-sm btn-outline-primary" 
-                                       title="Редактировать">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
-                                       class="btn btn-sm btn-outline-danger" 
-                                       title="Удалить"
-                                       onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Логика:</strong></div>
-                                    <div class="col-8">
-                                        <span class="badge bg-primary">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
-                                    </div>
-                                </div>
-                                {% if alarm.channel %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Канал:</strong></div>
-                                    <div class="col-8"><code>{{ alarm.channel }}</code></div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.limit_type %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Тип лимита:</strong></div>
-                                    <div class="col-8">{{ alarm.limit_type.verbose_name_ru }}</div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.low or alarm.high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Лимиты:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.low %}<div>Низкий: {{ alarm.low }}</div>{% endif %}
-                                        {% if alarm.high %}<div>Высокий: {{ alarm.high }}</div>{% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.discrete_val %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Дискретное значение:</strong></div>
-                                    <div class="col-8">{{ alarm.discrete_val }}</div>
-                                </div>
-                                {% endif %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Сообщение:</strong></div>
-                                    <div class="col-8">{{ alarm.msg }}</div>
-                                </div>
-                                {% if alarm.ch_low or alarm.ch_high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Каналы пределов:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.ch_low %}<div>Низкий: {{ alarm.ch_low }}</div>{% endif %}
-                                        {% if alarm.ch_high %}<div>Высокий: {{ alarm.ch_high }}</div>{% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.hyst_low or alarm.hyst_high %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Гистерезис:</strong></div>
-                                    <div class="col-8">
-                                        {% if alarm.hyst_low and alarm.hyst_low != 0 %}<div>Низкий: {{ alarm.hyst_low }}</div>{% endif %}
-                                        {% if alarm.hyst_high and alarm.hyst_high != 0 %}<div>Высокий: {{ alarm.hyst_high }}</div>{% endif %}
-                                    </div>
-                                </div>
-                                {% endif %}
-                                {% if alarm.confirm_method %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Подтверждение:</strong></div>
-                                    <div class="col-8">{{ alarm.confirm_method.verbose_name_ru }}</div>
-                                </div>
-                                {% endif %}
-                                <div class="row mb-2">
-                                    <div class="col-4"><strong>Приоритет:</strong></div>
-                                    <div class="col-8">
-                                        <span class="badge bg-secondary">{{ alarm.prior }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-footer text-muted">
-                                <small>Создан: {{ alarm.created_at|date:"d.m.Y H:i" }}</small>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
             
             <!-- Пагинация -->
             {% if is_paginated %}
@@ -240,10 +126,10 @@
                 <ul class="pagination justify-content-center">
                     {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1&display_mode={{ display_mode }}">&laquo; Первая</a>
+                            <a class="page-link" href="?page=1">&laquo; Первая</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&display_mode={{ display_mode }}">Предыдущая</a>
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Предыдущая</a>
                         </li>
                     {% endif %}
                     
@@ -255,10 +141,10 @@
                     
                     {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}&display_mode={{ display_mode }}">Следующая</a>
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Следующая</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&display_mode={{ display_mode }}">Последняя &raquo;</a>
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Последняя &raquo;</a>
                         </li>
                     {% endif %}
                 </ul>

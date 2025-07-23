@@ -51,15 +51,11 @@
             Всего: {{ total_count }}
         </span>
     </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Создать таблицу
-        </a>
     </div>
 </div>
 
 <!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
-{% include 'alarms/includes/controls_panel.html' %}
+{% include 'alarms/includes/controls_panel.html' with page_type='tables' %}
 
 <div class="card">
     <div class="card-body">
