@@ -5,24 +5,68 @@
 
 {% block extra_css %}
 <style>
+    /* CSS ПЕРЕМЕННЫЕ ДЛЯ АДАПТИВНОЙ ВЫСОТЫ */
+    :root {
+        --controls-panel-height: 120px; /* Примерная высота панели управления */
+        --table-scroll-height: 60px; /* Высота ползунка горизонтального скролла */
+        --page-padding: 1rem; /* Минимальные отступы страницы */
+        --header-height: 0px; /* Высота заголовка страницы (если есть) */
+    }
+    
     /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
     
-    /* Панель управления - автоматическая подстройка под ширину с учетом сайдбара */
+    /* Панель управления - зафиксирована сверху + автоматическая подстройка ширины */
     .controls-panel {
         width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
         max-width: 100%;
         transition: width 0.3s ease;
         margin-left: 0;
         margin-right: 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: var(--bs-body-bg);
+        border-bottom: 1px solid var(--bs-border-color);
+        padding-bottom: 0.5rem;
     }
     
-    /* Таблица тревог - автоматическая подстройка под ширину с учетом сайдбара */
+    /* Таблица тревог - адаптивная ширина и высота, занимает всё доступное пространство */
     .card {
         width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
         max-width: 100%;
         transition: width 0.3s ease;
         margin-left: 0;
         margin-right: 0;
+        margin-bottom: 0; /* Убираем нижний отступ */
+        display: flex;
+        flex-direction: column;
+        /* Максимальная высота: занимаем всё пространство до конца экрана */
+        height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
+        min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
+    }
+    
+    /* Заголовок таблицы - зафиксирован */
+    .alarm-table thead th {
+        position: sticky;
+        top: 0;
+        background-color: var(--bs-light);
+        z-index: 10;
+        border-bottom: 2px solid var(--bs-border-color);
+    }
+    
+    /* Темная тема для заголовка */
+    [data-bs-theme="dark"] .alarm-table thead th {
+        background-color: var(--bs-dark);
+    }
+    
+    /* Контейнер таблицы - занимает всё доступное пространство */
+    .table-responsive {
+        flex-grow: 1;
+        overflow-y: auto;
+        overflow-x: auto;
+        /* Занимаем всё оставшееся пространство в карточке */
+        height: 100%;
+        min-height: 300px; /* Минимальная высота для удобства использования */
     }
     
     /* Адаптация для минимизированного сайдбара */
@@ -34,11 +78,65 @@
         width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
     }
     
-    /* Адаптивность для мобильных устройств */
+    /* Адаптивность для разных размеров экрана */
+    
+    /* Планшеты и маленькие экраны */
+    @media (max-width: 1200px) {
+        :root {
+            --controls-panel-height: 140px; /* Увеличенная высота на средних экранах */
+            --table-scroll-height: 65px;
+        }
+    }
+    
+    /* Мобильные устройства */
     @media (max-width: 768px) {
+        :root {
+            --controls-panel-height: 180px; /* Еще больше высота на мобильных */
+            --table-scroll-height: 70px;
+            --page-padding: 0.5rem; /* Минимальные отступы на мобильных */
+        }
+        
         .controls-panel,
         .card {
             width: calc(100vw - 1rem) !important; /* На мобильных полная ширина */
+        }
+        
+        .table-responsive {
+            min-height: 250px; /* Уменьшенная минимальная высота на мобильных */
+        }
+        
+        .container-fluid {
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            padding-top: 0.5rem;
+        }
+    }
+    
+    /* Очень маленькие экраны */
+    @media (max-width: 480px) {
+        :root {
+            --controls-panel-height: 220px; /* Максимальная высота на очень маленьких экранах */
+            --page-padding: 0.25rem; /* Минимальные отступы */
+        }
+        
+        .table-responsive {
+            min-height: 200px; /* Еще меньше на очень маленьких экранах */
+        }
+        
+        .container-fluid {
+            padding: 0.25rem;
+        }
+    }
+    
+    /* Большие экраны */
+    @media (min-width: 1400px) {
+        :root {
+            --controls-panel-height: 100px; /* Компактная высота на больших экранах */
+            --table-scroll-height: 55px;
+        }
+        
+        .table-responsive {
+            min-height: 500px; /* Увеличенная минимальная высота на больших экранах */
         }
     }
     
@@ -61,11 +159,15 @@
         overflow-x: hidden;
     }
     
-    /* Ограничиваем ширину таблицы */
-    .table-responsive {
-        max-width: 100%;
-        overflow-x: auto;
-        width: 100%;
+    /* Ползунок горизонтального скролла - зафиксирован */
+    .table-scroll-controls {
+        position: sticky;
+        top: 0;
+        background-color: var(--bs-body-bg);
+        z-index: 5;
+        border-bottom: 1px solid var(--bs-border-color);
+        margin-bottom: 0 !important;
+        padding-bottom: 0.5rem;
     }
     
     /* Ограничиваем ширину ячеек таблицы */
@@ -82,19 +184,157 @@
         max-width: 200px;
     }
     
-    /* Адаптивная таблица под разные размеры сайдбара */
-    .table-responsive {
+    /* Контейнер карточки таблицы */
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        padding-bottom: 0;
+        overflow: hidden;
+        /* Плавная адаптация при изменении высоты */
         transition: all 0.3s ease;
     }
     
-    /* Контейнер основного контента с правильными отступами */
+    /* Стили для пустого состояния */
+    .empty-state {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+        min-height: 300px;
+    }
+    
+    /* Контейнер основного контента - убираем лишние отступы */
     .container-fluid {
         padding-left: 1rem;
         padding-right: 1rem;
+        padding-top: 1rem;
+        padding-bottom: 0; /* Убираем нижний отступ */
         max-width: none;
         width: 100%;
+        height: calc(100vh - var(--page-padding)); /* Занимаем всю высоту экрана */
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* Основной контент - убираем отступы */
+    .main-content {
+        padding-top: 0;
+        padding-bottom: 0; /* Убираем нижний отступ */
+        height: 100vh; /* Полная высота экрана */
+        display: flex;
+        flex-direction: column;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Функция для динамической адаптации высоты таблицы
+function adaptTableHeight() {
+    // Получаем реальные высоты элементов
+    const controlsPanel = document.querySelector('.controls-panel');
+    const tableScrollControls = document.querySelector('.table-scroll-controls');
+    const containerFluid = document.querySelector('.container-fluid');
+    
+    if (controlsPanel) {
+        // Измеряем фактические высоты
+        const controlsPanelHeight = controlsPanel.offsetHeight;
+        let tableScrollHeight = 0;
+        
+        if (tableScrollControls) {
+            tableScrollHeight = tableScrollControls.offsetHeight;
+        }
+        
+        // Вычисляем общую высоту всех фиксированных элементов
+        const totalFixedHeight = controlsPanelHeight + tableScrollHeight;
+        
+        // Получаем реальные отступы контейнера
+        let containerPadding = 16; // по умолчанию 1rem
+        if (containerFluid) {
+            const computedStyle = window.getComputedStyle(containerFluid);
+            containerPadding = parseFloat(computedStyle.paddingTop) + parseFloat(computedStyle.paddingBottom);
+        }
+        
+        // Обновляем CSS переменные с реальными значениями
+        document.documentElement.style.setProperty('--controls-panel-height', `${totalFixedHeight}px`);
+        document.documentElement.style.setProperty('--page-padding', `${containerPadding}px`);
+        
+        console.log(`Адаптивная высота: фиксированные элементы ${totalFixedHeight}px, отступы ${containerPadding}px`);
+    }
+}
+
+// Адаптация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Небольшая задержка для полной загрузки CSS
+    setTimeout(adaptTableHeight, 100);
+    
+    // Повторная адаптация через секунду для учета динамических изменений
+    setTimeout(adaptTableHeight, 1000);
+});
+
+// Адаптация при изменении размера окна
+window.addEventListener('resize', function() {
+    // Дебаунсинг для производительности
+    clearTimeout(window.resizeTimeout);
+    window.resizeTimeout = setTimeout(adaptTableHeight, 150);
+});
+
+// Адаптация при переключении сайдбара
+document.addEventListener('click', function(event) {
+    // Если кликнули по кнопке переключения сайдбара
+    if (event.target.closest('button[onclick*="toggleSidebar"]')) {
+        // Задержка для завершения анимации сайдбара
+        setTimeout(adaptTableHeight, 350);
+    }
+});
+
+// Наблюдатель за изменениями в панели управления
+if (window.ResizeObserver) {
+    const resizeObserver = new ResizeObserver(function(entries) {
+        adaptTableHeight();
+    });
+    
+    // Наблюдаем за панелью управления
+    const controlsPanel = document.querySelector('.controls-panel');
+    if (controlsPanel) {
+        resizeObserver.observe(controlsPanel);
+    }
+    
+    // Наблюдаем за ползунком горизонтального скролла
+    const tableScrollControls = document.querySelector('.table-scroll-controls');
+    if (tableScrollControls) {
+        resizeObserver.observe(tableScrollControls);
+    }
+}
+
+// Наблюдатель за изменениями в DOM (например, при сворачивании/разворачивании табов)
+if (window.MutationObserver) {
+    const mutationObserver = new MutationObserver(function(mutations) {
+        let shouldUpdate = false;
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && 
+                (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                shouldUpdate = true;
+            }
+        });
+        
+        if (shouldUpdate) {
+            setTimeout(adaptTableHeight, 100);
+        }
+    });
+    
+    // Наблюдаем за изменениями в панели управления
+    const controlsPanel = document.querySelector('.controls-panel');
+    if (controlsPanel) {
+        mutationObserver.observe(controlsPanel, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -399,17 +639,19 @@
             </nav>
             {% endif %}
         {% else %}
-            <div class="text-center py-5">
-                {% if has_active_filters %}
-                    {% include 'alarms/includes/empty_filtered.html' %}
-                {% else %}
-                    <i class="bi bi-exclamation-triangle fs-1"></i>
-                                            <h4>Тревоги не найдены</h4>
-                    <p>Создайте первую тревогу для начала работы</p>
-                    <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Создать первую тревогу
-                    </a>
-                {% endif %}
+            <div class="empty-state text-center">
+                <div>
+                    {% if has_active_filters %}
+                        {% include 'alarms/includes/empty_filtered.html' %}
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle fs-1 text-muted"></i>
+                        <h4 class="mt-3">Тревоги не найдены</h4>
+                        <p class="text-muted">Создайте первую тревогу для начала работы</p>
+                        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Создать первую тревогу
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         {% endif %}
     </div>
