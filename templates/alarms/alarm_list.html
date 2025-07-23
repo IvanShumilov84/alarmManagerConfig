@@ -45,21 +45,65 @@
         min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
     }
     
-    /* Заголовок таблицы - зафиксирован */
+    /* Заголовок таблицы - полностью зафиксирован и непрокручиваемый */
+    .alarm-table thead {
+        position: sticky;
+        top: 0;
+        z-index: 15;
+        background-color: var(--bs-body-bg);
+    }
+    
     .alarm-table thead th {
         position: sticky;
         top: 0;
         background-color: var(--bs-light);
-        z-index: 10;
+        z-index: 20;
         border-bottom: 2px solid var(--bs-border-color);
+        /* Дополнительные стили для надежной фиксации */
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        /* Убираем возможность прокрутки заголовков */
+        will-change: transform;
+        transform: translateZ(0);
+        white-space: nowrap;
+        /* Минимальная высота для стабильности */
+        min-height: 40px;
+        height: auto;
+        line-height: 1.2;
+        vertical-align: middle;
+        /* Принудительная фиксация */
+        position: -webkit-sticky; /* Safari support */
+        position: sticky;
+        /* Убираем любые margin/padding которые могут мешать */
+        margin: 0;
+        /* Гарантируем непрозрачность фона */
+        background-clip: padding-box;
+    }
+    
+    /* Тело таблицы - прокручиваемое */
+    .alarm-table tbody {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .alarm-table tbody tr {
+        /* Оптимизация отрисовки строк */
+        will-change: auto;
+        transform: translateZ(0);
     }
     
     /* Темная тема для заголовка */
-    [data-bs-theme="dark"] .alarm-table thead th {
-        background-color: var(--bs-dark);
+    [data-bs-theme="dark"] .alarm-table thead {
+        background-color: var(--bs-body-bg);
     }
     
-    /* Контейнер таблицы - занимает всё доступное пространство */
+    [data-bs-theme="dark"] .alarm-table thead th {
+        background-color: var(--bs-dark);
+        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+    }
+    
+    /* Контейнер таблицы - занимает всё доступное пространство с фиксированной шапкой */
     .table-responsive {
         flex-grow: 1;
         overflow-y: auto;
@@ -67,6 +111,12 @@
         /* Занимаем всё оставшееся пространство в карточке */
         height: 100%;
         min-height: 300px; /* Минимальная высота для удобства использования */
+        /* Улучшенная фиксация для sticky элементов */
+        position: relative;
+        contain: layout style paint;
+        /* Оптимизация прокрутки */
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
     }
     
     /* Адаптация для минимизированного сайдбара */
@@ -159,15 +209,18 @@
         overflow-x: hidden;
     }
     
-    /* Ползунок горизонтального скролла - зафиксирован */
+    /* Ползунок горизонтального скролла - зафиксирован выше заголовка таблицы */
     .table-scroll-controls {
         position: sticky;
         top: 0;
         background-color: var(--bs-body-bg);
-        z-index: 5;
+        z-index: 25; /* Выше заголовка таблицы */
         border-bottom: 1px solid var(--bs-border-color);
         margin-bottom: 0 !important;
         padding-bottom: 0.5rem;
+        /* Дополнительная фиксация */
+        will-change: transform;
+        transform: translateZ(0);
     }
     
     /* Ограничиваем ширину ячеек таблицы */
@@ -230,20 +283,26 @@
 
 {% block extra_js %}
 <script>
-// Функция для динамической адаптации высоты таблицы
+// Функция для динамической адаптации высоты таблицы с учетом зафиксированного заголовка
 function adaptTableHeight() {
     // Получаем реальные высоты элементов
     const controlsPanel = document.querySelector('.controls-panel');
     const tableScrollControls = document.querySelector('.table-scroll-controls');
+    const tableHeader = document.querySelector('.alarm-table thead');
     const containerFluid = document.querySelector('.container-fluid');
     
     if (controlsPanel) {
         // Измеряем фактические высоты
         const controlsPanelHeight = controlsPanel.offsetHeight;
         let tableScrollHeight = 0;
+        let tableHeaderHeight = 0;
         
         if (tableScrollControls) {
             tableScrollHeight = tableScrollControls.offsetHeight;
+        }
+        
+        if (tableHeader) {
+            tableHeaderHeight = tableHeader.offsetHeight;
         }
         
         // Вычисляем общую высоту всех фиксированных элементов
@@ -260,7 +319,52 @@ function adaptTableHeight() {
         document.documentElement.style.setProperty('--controls-panel-height', `${totalFixedHeight}px`);
         document.documentElement.style.setProperty('--page-padding', `${containerPadding}px`);
         
-        console.log(`Адаптивная высота: фиксированные элементы ${totalFixedHeight}px, отступы ${containerPadding}px`);
+        // Принудительно обновляем sticky позиционирование заголовка
+        if (tableHeader) {
+            tableHeader.style.position = 'sticky';
+            tableHeader.style.top = '0';
+            tableHeader.style.zIndex = '15';
+            
+            // Обновляем стили для каждого th в заголовке
+            const headerCells = tableHeader.querySelectorAll('th');
+            headerCells.forEach(th => {
+                th.style.position = 'sticky';
+                th.style.top = '0';
+                th.style.zIndex = '20';
+            });
+        }
+        
+        console.log(`Адаптивная высота: фиксированные элементы ${totalFixedHeight}px, заголовок ${tableHeaderHeight}px, отступы ${containerPadding}px`);
+    }
+}
+
+// Функция для принудительной фиксации заголовка таблицы
+function enforceTableHeaderSticky() {
+    const tableHeader = document.querySelector('.alarm-table thead');
+    const tableContainer = document.querySelector('.table-responsive');
+    
+    if (tableHeader && tableContainer) {
+        // Проверяем, действительно ли заголовок зафиксирован
+        const headerRect = tableHeader.getBoundingClientRect();
+        const containerRect = tableContainer.getBoundingClientRect();
+        
+        // Если заголовок находится вне видимой области контейнера
+        if (headerRect.top < containerRect.top || headerRect.top > containerRect.bottom) {
+            // Принудительно применяем sticky стили
+            tableHeader.style.position = 'sticky';
+            tableHeader.style.top = '0px';
+            tableHeader.style.zIndex = '15';
+            
+            const headerCells = tableHeader.querySelectorAll('th');
+            headerCells.forEach(th => {
+                th.style.position = 'sticky';
+                th.style.top = '0px';
+                th.style.zIndex = '20';
+                th.style.backgroundColor = getComputedStyle(th).backgroundColor;
+            });
+            
+            console.log('Принудительно применена фиксация заголовка таблицы');
+        }
     }
 }
 
@@ -268,16 +372,21 @@ function adaptTableHeight() {
 document.addEventListener('DOMContentLoaded', function() {
     // Небольшая задержка для полной загрузки CSS
     setTimeout(adaptTableHeight, 100);
+    setTimeout(enforceTableHeaderSticky, 200);
     
     // Повторная адаптация через секунду для учета динамических изменений
     setTimeout(adaptTableHeight, 1000);
+    setTimeout(enforceTableHeaderSticky, 1100);
 });
 
 // Адаптация при изменении размера окна
 window.addEventListener('resize', function() {
     // Дебаунсинг для производительности
     clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(adaptTableHeight, 150);
+    window.resizeTimeout = setTimeout(function() {
+        adaptTableHeight();
+        enforceTableHeaderSticky();
+    }, 150);
 });
 
 // Адаптация при переключении сайдбара
@@ -285,14 +394,28 @@ document.addEventListener('click', function(event) {
     // Если кликнули по кнопке переключения сайдбара
     if (event.target.closest('button[onclick*="toggleSidebar"]')) {
         // Задержка для завершения анимации сайдбара
-        setTimeout(adaptTableHeight, 350);
+        setTimeout(function() {
+            adaptTableHeight();
+            enforceTableHeaderSticky();
+        }, 350);
     }
 });
+
+// Проверка фиксации заголовка при прокрутке таблицы
+const tableContainer = document.querySelector('.table-responsive');
+if (tableContainer) {
+    tableContainer.addEventListener('scroll', function() {
+        // Периодическая проверка фиксации при прокрутке
+        clearTimeout(window.scrollTimeout);
+        window.scrollTimeout = setTimeout(enforceTableHeaderSticky, 50);
+    });
+}
 
 // Наблюдатель за изменениями в панели управления
 if (window.ResizeObserver) {
     const resizeObserver = new ResizeObserver(function(entries) {
         adaptTableHeight();
+        setTimeout(enforceTableHeaderSticky, 100);
     });
     
     // Наблюдаем за панелью управления
@@ -305,6 +428,12 @@ if (window.ResizeObserver) {
     const tableScrollControls = document.querySelector('.table-scroll-controls');
     if (tableScrollControls) {
         resizeObserver.observe(tableScrollControls);
+    }
+    
+    // Наблюдаем за заголовком таблицы
+    const tableHeader = document.querySelector('.alarm-table thead');
+    if (tableHeader) {
+        resizeObserver.observe(tableHeader);
     }
 }
 
@@ -320,7 +449,10 @@ if (window.MutationObserver) {
         });
         
         if (shouldUpdate) {
-            setTimeout(adaptTableHeight, 100);
+            setTimeout(function() {
+                adaptTableHeight();
+                enforceTableHeaderSticky();
+            }, 100);
         }
     });
     
@@ -328,6 +460,16 @@ if (window.MutationObserver) {
     const controlsPanel = document.querySelector('.controls-panel');
     if (controlsPanel) {
         mutationObserver.observe(controlsPanel, {
+            attributes: true,
+            subtree: true,
+            attributeFilter: ['style', 'class']
+        });
+    }
+    
+    // Наблюдаем за изменениями в таблице
+    const alarmTable = document.querySelector('.alarm-table');
+    if (alarmTable) {
+        mutationObserver.observe(alarmTable, {
             attributes: true,
             subtree: true,
             attributeFilter: ['style', 'class']
