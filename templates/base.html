@@ -57,11 +57,16 @@
         }
 
         .sidebar {
-            min-height: 100vh;
+            height: 100vh;
             background: var(--sidebar-bg);
             transition: all 0.3s ease;
             width: 250px;
             flex-shrink: 0;
+            overflow: hidden;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1000;
         }
         
         /* Предотвращаем flash при загрузке */
@@ -223,7 +228,13 @@
         .main-content {
             background-color: var(--main-bg);
             min-height: 100vh;
-            flex-grow: 1;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        /* Автоматическое управление отступом через CSS */
+        body.sidebar-minimized .main-content {
+            margin-left: 70px;
         }
         
         .card {
@@ -410,10 +421,11 @@
                         const isMinimized = localStorage.getItem('sidebarMinimized') === 'true';
                         if (isMinimized) {
                             document.currentScript.parentElement.classList.add('minimized');
+                            document.body.classList.add('sidebar-minimized');
                         }
                     })();
                 </script>
-                <div class="position-sticky pt-3">
+                <div class="pt-3">
                     <div class="sidebar-title">
                         <h4 class="text-white">
                             <i class="bi bi-shield-exclamation sidebar-logo"></i>
@@ -707,6 +719,7 @@
             const titleText = document.querySelector('.sidebar-title-text');
             
             sidebar.classList.toggle('minimized');
+            document.body.classList.toggle('sidebar-minimized');
             
             // Меняем иконку и tooltip
             if (sidebar.classList.contains('minimized')) {
@@ -755,8 +768,10 @@
             // Состояние уже применено inline скриптами, просто включаем transitions
             const isMinimized = localStorage.getItem('sidebarMinimized') === 'true';
             if (isMinimized) {
+                document.body.classList.add('sidebar-minimized');
                 enableTooltips();
             } else {
+                document.body.classList.remove('sidebar-minimized');
                 disableTooltips();
             }
         }
