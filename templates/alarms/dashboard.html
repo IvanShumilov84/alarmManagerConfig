@@ -2,6 +2,67 @@
 
 {% block title %}{% include 'alarms/includes/page_title.html' with page_title="Главная" %}{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
+    
+    /* Карточки статистики - автоматическая подстройка под ширину с учетом сайдбара */
+    .row {
+        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
+        max-width: 100%;
+        transition: width 0.3s ease;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Карточки - автоматическая подстройка под ширину с учетом сайдбара */
+    .card {
+        transition: all 0.3s ease;
+    }
+    
+    /* Адаптация для минимизированного сайдбара */
+    body.sidebar-minimized .row {
+        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    }
+    
+    /* Адаптивность для мобильных устройств */
+    @media (max-width: 768px) {
+        .row {
+            width: calc(100vw - 1rem) !important; /* На мобильных полная ширина */
+        }
+    }
+    
+    /* Контейнер основного контента с правильными отступами */
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        max-width: none;
+        width: 100%;
+    }
+    
+    /* Заголовок страницы */
+    .d-flex.justify-content-between {
+        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
+        max-width: 100%;
+        transition: width 0.3s ease;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Адаптация заголовка для минимизированного сайдбара */
+    body.sidebar-minimized .d-flex.justify-content-between {
+        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    }
+    
+    /* Адаптивность заголовка для мобильных устройств */
+    @media (max-width: 768px) {
+        .d-flex.justify-content-between {
+            width: calc(100vw - 1rem) !important;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">

@@ -5,6 +5,45 @@
 
 {% block extra_css %}
 <style>
+    /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
+    
+    /* Панель управления - автоматическая подстройка под ширину с учетом сайдбара */
+    .controls-panel {
+        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
+        max-width: 100%;
+        transition: width 0.3s ease;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Таблица тревог - автоматическая подстройка под ширину с учетом сайдбара */
+    .card {
+        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
+        max-width: 100%;
+        transition: width 0.3s ease;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    /* Адаптация для минимизированного сайдбара */
+    body.sidebar-minimized .controls-panel {
+        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    }
+    
+    body.sidebar-minimized .card {
+        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    }
+    
+    /* Адаптивность для мобильных устройств */
+    @media (max-width: 768px) {
+        .controls-panel,
+        .card {
+            width: calc(100vw - 1rem) !important; /* На мобильных полная ширина */
+        }
+    }
+    
+    /* СТИЛИ ТАБЛИЦЫ */
+    
     /* Центрирование всех ячеек таблицы тревог */
     .alarm-table td,
     .alarm-table th {
@@ -26,6 +65,7 @@
     .table-responsive {
         max-width: 100%;
         overflow-x: auto;
+        width: 100%;
     }
     
     /* Ограничиваем ширину ячеек таблицы */
@@ -40,6 +80,19 @@
     .alarm-table th:nth-child(4), /* Сообщение */
     .alarm-table td:nth-child(4) {
         max-width: 200px;
+    }
+    
+    /* Адаптивная таблица под разные размеры сайдбара */
+    .table-responsive {
+        transition: all 0.3s ease;
+    }
+    
+    /* Контейнер основного контента с правильными отступами */
+    .container-fluid {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        max-width: none;
+        width: 100%;
     }
 </style>
 {% endblock %}
