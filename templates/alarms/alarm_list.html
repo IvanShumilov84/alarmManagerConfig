@@ -230,44 +230,40 @@
     
     .alarm-table th,
     .alarm-table td {
-        min-width: 120px; /* Минимальная ширина ячеек */
-        max-width: 250px; /* Максимальная ширина ячеек */
         white-space: nowrap; /* Предотвращение переноса текста */
         overflow: hidden;
         text-overflow: ellipsis; /* Троеточие для длинного текста */
         padding: 8px 12px; /* Увеличенные отступы для лучшего вида */
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     /* Специальные настройки для отдельных столбцов */
     .alarm-table th:nth-child(1), /* Действия */
     .alarm-table td:nth-child(1) {
-        min-width: 100px;
-        max-width: 120px;
         white-space: normal; /* Разрешаем перенос для кнопок */
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     .alarm-table th:nth-child(2), /* ID */
     .alarm-table td:nth-child(2) {
-        min-width: 60px;
-        max-width: 80px;
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     .alarm-table th:nth-child(3), /* Канал */
     .alarm-table td:nth-child(3) {
-        min-width: 100px;
-        max-width: 150px;
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     .alarm-table th:nth-child(4), /* Сообщение */
     .alarm-table td:nth-child(4) {
-        min-width: 200px;
-        max-width: 300px;
+        max-width: 250px; /* Ограничение максимальной ширины */
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     .alarm-table th:nth-child(5), /* Таблица */
     .alarm-table td:nth-child(5) {
-        min-width: 120px;
-        max-width: 180px;
+        max-width: 250px; /* Ограничение максимальной ширины */
+        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     /* Контейнер карточки таблицы */

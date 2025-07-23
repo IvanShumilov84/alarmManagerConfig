@@ -237,61 +237,69 @@
     background: #777;
 }
 
-/* Фиксированные размеры столбцов в таблице тревог */
+/* Автоматические размеры столбцов в таблице тревог */
 /* Столбец Действия */
 .table.alarm-table th:nth-child(1),
 .table.alarm-table td:nth-child(1) {
-    width: 80px !important;
-    min-width: 80px !important;
-    max-width: 80px !important;
+    width: auto !important;
+    min-width: unset !important;
+    max-width: unset !important;
 }
 
 /* Столбец ID */
 .table.alarm-table th:nth-child(2),
 .table.alarm-table td:nth-child(2) {
-    width: 60px !important;
-    min-width: 60px !important;
-    max-width: 60px !important;
+    width: auto !important;
+    min-width: unset !important;
+    max-width: unset !important;
 }
 
 /* Столбец Канал */
 .table.alarm-table th:nth-child(3),
 .table.alarm-table td:nth-child(3) {
-    width: 100px !important;
-    min-width: 100px !important;
-    max-width: 100px !important;
+    width: auto !important;
+    min-width: unset !important;
+    max-width: unset !important;
 }
 
+/* Столбец Сообщение */
 .table.alarm-table th:nth-child(4),
 .table.alarm-table td:nth-child(4) {
     width: auto !important;
-    /* Сообщение - фиксированная ширина */
-    min-width: 100px !important;
+    min-width: unset !important;
     max-width: 250px !important;
 }
 
+/* Столбец Таблица */
 .table.alarm-table th:nth-child(5),
 .table.alarm-table td:nth-child(5) {
     width: auto !important;
-    min-width: 100px !important;
+    min-width: unset !important;
     max-width: 250px !important;
 }
 
-/* Стили для переноса текста в ячейках таблицы */
+/* Стили для автоматической ширины ячеек таблицы */
+.table.alarm-table th,
 .table.alarm-table td {
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    white-space: normal !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     vertical-align: middle !important;
+    width: auto !important;
 }
 
-/* Специальные стили для столбцов с адаптивной шириной */
+/* Специальные стили для столбца действий - разрешаем перенос для кнопок */
+.table.alarm-table th:nth-child(1),
+.table.alarm-table td:nth-child(1) {
+    white-space: normal !important;
+}
+
+/* Специальные стили для столбцов с ограничением ширины */
 .table.alarm-table td:nth-child(4),
 .table.alarm-table td:nth-child(5) {
-    white-space: normal !important;
-    word-wrap: break-word !important;
-    word-break: break-word !important;
-    min-width: 100px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
 }
 
 /* Обеспечиваем горизонтальную прокрутку таблицы */
@@ -301,51 +309,42 @@
     max-width: 100%;
 }
 
-/* Закрепление столбцов для горизонтального скроллинга */
+/* Убираем закрепление столбцов, так как ширина теперь автоматическая */
+/* Закрепление первого столбца (Действия) для удобства */
 .table.alarm-table th:nth-child(1),
 .table.alarm-table td:nth-child(1) {
     position: sticky;
     left: 0;
     z-index: 10;
     background-color: var(--bs-body-bg);
-    border-right: none;
+    border-right: 1px solid var(--bs-border-color);
 }
 
+/* Убираем sticky для остальных столбцов для корректной автоматической ширины */
 .table.alarm-table th:nth-child(2),
-.table.alarm-table td:nth-child(2) {
-    position: sticky;
-    left: 80px;
-    /* Ширина столбца Действия */
-    z-index: 10;
-    background-color: var(--bs-body-bg);
-    border-right: none;
-}
-
+.table.alarm-table td:nth-child(2),
 .table.alarm-table th:nth-child(3),
 .table.alarm-table td:nth-child(3) {
-    position: sticky;
-    left: 140px;
-    /* Ширина столбцов Действия + ID */
-    z-index: 10;
-    background-color: var(--bs-body-bg);
-    border-right: none;
+    position: static;
+    left: unset;
+    z-index: unset;
+    background-color: unset;
+    border-right: unset;
 }
 
-/* Темная тема для закрепленных столбцов */
+/* Темная тема для закрепленного столбца */
 [data-bs-theme="dark"] .table.alarm-table th:nth-child(1),
-[data-bs-theme="dark"] .table.alarm-table td:nth-child(1),
-[data-bs-theme="dark"] .table.alarm-table th:nth-child(2),
-[data-bs-theme="dark"] .table.alarm-table td:nth-child(2),
-[data-bs-theme="dark"] .table.alarm-table th:nth-child(3),
-[data-bs-theme="dark"] .table.alarm-table td:nth-child(3) {
+[data-bs-theme="dark"] .table.alarm-table td:nth-child(1) {
     background-color: var(--bs-dark);
-    border-right: none;
+    border-right: 1px solid var(--bs-border-color);
 }
 
-/* Настройка авторасширения таблицы */
+/* Настройка авторасширения таблицы для автоматической ширины столбцов */
 .table.alarm-table {
     table-layout: auto !important;
-    width: 100% !important;
+    width: max-content !important;
+    min-width: 1800px !important;
+    /* Минимальная ширина для горизонтального скролла */
 }
 
 
