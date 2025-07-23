@@ -8,18 +8,14 @@
     /* CSS ПЕРЕМЕННЫЕ ДЛЯ АДАПТИВНОЙ ВЫСОТЫ */
     :root {
         --controls-panel-height: 120px; /* Примерная высота панели управления */
-        --table-scroll-height: 60px; /* Высота ползунка горизонтального скролла */
         --page-padding: 1rem; /* Минимальные отступы страницы */
         --header-height: 0px; /* Высота заголовка страницы (если есть) */
     }
     
     /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
     
-    /* Панель управления - зафиксирована сверху + автоматическая подстройка ширины */
+    /* Панель управления - зафиксирована сверху */
     .controls-panel {
-        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
-        max-width: 100%;
-        transition: width 0.3s ease;
         margin-left: 0;
         margin-right: 0;
         position: sticky;
@@ -28,13 +24,13 @@
         background-color: var(--bs-body-bg);
         border-bottom: 1px solid var(--bs-border-color);
         padding-bottom: 0.5rem;
+        /* Убираем ограничения ширины для горизонтального скролла */
+        width: 100%;
+        overflow-x: auto; /* Горизонтальный скролл для панели управления */
     }
     
-    /* Таблица тревог - адаптивная ширина и высота, занимает всё доступное пространство */
+    /* Таблица тревог - адаптивная высота, занимает всё доступное пространство */
     .card {
-        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
-        max-width: 100%;
-        transition: width 0.3s ease;
         margin-left: 0;
         margin-right: 0;
         margin-bottom: 0; /* Убираем нижний отступ */
@@ -43,6 +39,9 @@
         /* Максимальная высота: занимаем всё пространство до конца экрана */
         height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
         min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
+        /* Убираем ограничения ширины для горизонтального скролла */
+        width: 100%;
+        overflow: hidden; /* Скрываем переполнение карточки */
     }
     
     /* Заголовок таблицы - полностью зафиксирован и непрокручиваемый */
@@ -106,27 +105,44 @@
     /* Контейнер таблицы - занимает всё доступное пространство с фиксированной шапкой */
     .table-responsive {
         flex-grow: 1;
-        overflow-y: auto;
-        overflow-x: auto;
+        overflow-y: auto; /* Вертикальная прокрутка */
+        overflow-x: auto; /* Горизонтальная прокрутка */
         /* Занимаем всё оставшееся пространство в карточке */
         height: 100%;
         min-height: 300px; /* Минимальная высота для удобства использования */
+        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 40px); /* Ограничиваем максимальную высоту */
         /* Улучшенная фиксация для sticky элементов */
         position: relative;
         contain: layout style paint;
         /* Оптимизация прокрутки */
         scroll-behavior: smooth;
         -webkit-overflow-scrolling: touch;
+        /* Принудительное отображение скроллбаров */
+        scrollbar-width: auto; /* Firefox */
+        -ms-overflow-style: auto; /* IE */
     }
     
-    /* Адаптация для минимизированного сайдбара */
-    body.sidebar-minimized .controls-panel {
-        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    /* Обеспечиваем видимость скроллбаров в Webkit браузерах */
+    .table-responsive::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
     }
     
-    body.sidebar-minimized .card {
-        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
+    .table-responsive::-webkit-scrollbar-track {
+        background: var(--bs-secondary-bg);
+        border-radius: 6px;
     }
+    
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: var(--bs-secondary);
+        border-radius: 6px;
+    }
+    
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: var(--bs-secondary-color);
+    }
+    
+    /* Адаптация для минимизированного сайдбара - убрана для горизонтального скролла */
     
     /* Адаптивность для разных размеров экрана */
     
@@ -134,7 +150,6 @@
     @media (max-width: 1200px) {
         :root {
             --controls-panel-height: 140px; /* Увеличенная высота на средних экранах */
-            --table-scroll-height: 65px;
         }
     }
     
@@ -142,13 +157,7 @@
     @media (max-width: 768px) {
         :root {
             --controls-panel-height: 180px; /* Еще больше высота на мобильных */
-            --table-scroll-height: 70px;
             --page-padding: 0.5rem; /* Минимальные отступы на мобильных */
-        }
-        
-        .controls-panel,
-        .card {
-            width: calc(100vw - 1rem) !important; /* На мобильных полная ширина */
         }
         
         .table-responsive {
@@ -182,7 +191,6 @@
     @media (min-width: 1400px) {
         :root {
             --controls-panel-height: 100px; /* Компактная высота на больших экранах */
-            --table-scroll-height: 55px;
         }
         
         .table-responsive {
@@ -190,7 +198,15 @@
         }
     }
     
-    /* СТИЛИ ТАБЛИЦЫ */
+    /* СТИЛИ СТРАНИЦЫ И ТАБЛИЦЫ */
+    
+    /* Убираем прокрутку всей страницы - только внутренняя прокрутка таблицы */
+    html, body {
+        overflow: hidden; /* Полностью убираем прокрутку страницы */
+        height: 100vh; /* Фиксированная высота */
+        margin: 0;
+        padding: 0;
+    }
     
     /* Центрирование всех ячеек таблицы тревог */
     .alarm-table td,
@@ -204,37 +220,54 @@
         text-align: left;
     }
     
-    /* Убираем горизонтальную прокрутку страницы */
-    body {
-        overflow-x: hidden;
+
+    
+    /* Настройки для горизонтального скролла таблицы */
+    .alarm-table {
+        min-width: 1800px; /* Минимальная ширина таблицы для принудительного горизонтального скролла */
+        width: max-content; /* Автоматическая ширина на основе содержимого */
     }
     
-    /* Ползунок горизонтального скролла - зафиксирован выше заголовка таблицы */
-    .table-scroll-controls {
-        position: sticky;
-        top: 0;
-        background-color: var(--bs-body-bg);
-        z-index: 25; /* Выше заголовка таблицы */
-        border-bottom: 1px solid var(--bs-border-color);
-        margin-bottom: 0 !important;
-        padding-bottom: 0.5rem;
-        /* Дополнительная фиксация */
-        will-change: transform;
-        transform: translateZ(0);
-    }
-    
-    /* Ограничиваем ширину ячеек таблицы */
     .alarm-table th,
     .alarm-table td {
-        max-width: 150px;
-        word-wrap: break-word;
-        white-space: normal;
+        min-width: 120px; /* Минимальная ширина ячеек */
+        max-width: 250px; /* Максимальная ширина ячеек */
+        white-space: nowrap; /* Предотвращение переноса текста */
+        overflow: hidden;
+        text-overflow: ellipsis; /* Троеточие для длинного текста */
+        padding: 8px 12px; /* Увеличенные отступы для лучшего вида */
     }
     
-    /* Специальные ограничения для длинных столбцов */
+    /* Специальные настройки для отдельных столбцов */
+    .alarm-table th:nth-child(1), /* Действия */
+    .alarm-table td:nth-child(1) {
+        min-width: 100px;
+        max-width: 120px;
+        white-space: normal; /* Разрешаем перенос для кнопок */
+    }
+    
+    .alarm-table th:nth-child(2), /* ID */
+    .alarm-table td:nth-child(2) {
+        min-width: 60px;
+        max-width: 80px;
+    }
+    
+    .alarm-table th:nth-child(3), /* Канал */
+    .alarm-table td:nth-child(3) {
+        min-width: 100px;
+        max-width: 150px;
+    }
+    
     .alarm-table th:nth-child(4), /* Сообщение */
     .alarm-table td:nth-child(4) {
-        max-width: 200px;
+        min-width: 200px;
+        max-width: 300px;
+    }
+    
+    .alarm-table th:nth-child(5), /* Таблица */
+    .alarm-table td:nth-child(5) {
+        min-width: 120px;
+        max-width: 180px;
     }
     
     /* Контейнер карточки таблицы */
@@ -257,7 +290,7 @@
         min-height: 300px;
     }
     
-    /* Контейнер основного контента - убираем лишние отступы */
+    /* Контейнер основного контента - точная высота без прокрутки */
     .container-fluid {
         padding-left: 1rem;
         padding-right: 1rem;
@@ -265,18 +298,31 @@
         padding-bottom: 0; /* Убираем нижний отступ */
         max-width: none;
         width: 100%;
-        height: calc(100vh - var(--page-padding)); /* Занимаем всю высоту экрана */
+        height: 100%; /* Занимаем всю доступную высоту */
+        max-height: 100%; /* Не превышаем доступную высоту */
         display: flex;
         flex-direction: column;
+        overflow: hidden; /* Убираем прокрутку контейнера, но разрешаем для таблицы */
     }
     
-    /* Основной контент - убираем отступы */
+    /* Основной контент - адаптивная высота с учетом сайдбара */
     .main-content {
         padding-top: 0;
         padding-bottom: 0; /* Убираем нижний отступ */
-        height: 100vh; /* Полная высота экрана */
+        /* Адаптивная высота с учетом того, что сайдбар занимает место слева */
+        height: 100vh; 
+        max-height: 100vh; 
         display: flex;
         flex-direction: column;
+        overflow: hidden; /* Убираем прокрутку основного контента */
+        /* Отступ слева под сайдбар */
+        margin-left: 250px; /* Ширина развернутого сайдбара */
+        transition: margin-left 0.3s ease;
+    }
+    
+    /* Адаптация основного контента для минимизированного сайдбара */
+    body.sidebar-minimized .main-content {
+        margin-left: 70px; /* Ширина минимизированного сайдбара */
     }
 </style>
 {% endblock %}
@@ -287,26 +333,19 @@
 function adaptTableHeight() {
     // Получаем реальные высоты элементов
     const controlsPanel = document.querySelector('.controls-panel');
-    const tableScrollControls = document.querySelector('.table-scroll-controls');
     const tableHeader = document.querySelector('.alarm-table thead');
     const containerFluid = document.querySelector('.container-fluid');
+    const tableContainer = document.querySelector('.table-responsive');
+    const card = document.querySelector('.card');
     
-    if (controlsPanel) {
+    if (controlsPanel && card && tableContainer) {
         // Измеряем фактические высоты
         const controlsPanelHeight = controlsPanel.offsetHeight;
-        let tableScrollHeight = 0;
         let tableHeaderHeight = 0;
-        
-        if (tableScrollControls) {
-            tableScrollHeight = tableScrollControls.offsetHeight;
-        }
         
         if (tableHeader) {
             tableHeaderHeight = tableHeader.offsetHeight;
         }
-        
-        // Вычисляем общую высоту всех фиксированных элементов
-        const totalFixedHeight = controlsPanelHeight + tableScrollHeight;
         
         // Получаем реальные отступы контейнера
         let containerPadding = 16; // по умолчанию 1rem
@@ -315,8 +354,16 @@ function adaptTableHeight() {
             containerPadding = parseFloat(computedStyle.paddingTop) + parseFloat(computedStyle.paddingBottom);
         }
         
+        // Рассчитываем доступную высоту для таблицы
+        const viewportHeight = window.innerHeight;
+        const availableHeight = viewportHeight - controlsPanelHeight - containerPadding - 40; // 40px запас
+        
+        // Устанавливаем максимальную высоту для контейнера таблицы
+        tableContainer.style.maxHeight = `${availableHeight}px`;
+        tableContainer.style.height = `${availableHeight}px`;
+        
         // Обновляем CSS переменные с реальными значениями
-        document.documentElement.style.setProperty('--controls-panel-height', `${totalFixedHeight}px`);
+        document.documentElement.style.setProperty('--controls-panel-height', `${controlsPanelHeight}px`);
         document.documentElement.style.setProperty('--page-padding', `${containerPadding}px`);
         
         // Принудительно обновляем sticky позиционирование заголовка
@@ -334,7 +381,7 @@ function adaptTableHeight() {
             });
         }
         
-        console.log(`Адаптивная высота: фиксированные элементы ${totalFixedHeight}px, заголовок ${tableHeaderHeight}px, отступы ${containerPadding}px`);
+        console.log(`Адаптивная высота: viewport ${viewportHeight}px, панель ${controlsPanelHeight}px, доступно для таблицы ${availableHeight}px`);
     }
 }
 
@@ -424,12 +471,6 @@ if (window.ResizeObserver) {
         resizeObserver.observe(controlsPanel);
     }
     
-    // Наблюдаем за ползунком горизонтального скролла
-    const tableScrollControls = document.querySelector('.table-scroll-controls');
-    if (tableScrollControls) {
-        resizeObserver.observe(tableScrollControls);
-    }
-    
     // Наблюдаем за заголовком таблицы
     const tableHeader = document.querySelector('.alarm-table thead');
     if (tableHeader) {
@@ -486,22 +527,6 @@ if (window.MutationObserver) {
 <div class="card">
     <div class="card-body">
         {% if alarms %}
-            <!-- Ползунок скролла сверху таблицы -->
-            <div class="table-scroll-controls mb-2">
-                <div class="d-flex align-items-center">
-                    <label for="tableScrollSlider" class="form-label me-2 mb-0">
-                        <i class="fas fa-arrows-alt-h"></i> Горизонтальный скролл:
-                    </label>
-                    <input type="range" 
-                           class="form-range flex-grow-1" 
-                           id="tableScrollSlider" 
-                           min="0" 
-                           max="100" 
-                           value="0"
-                           style="max-width: 300px;">
-                    <span class="ms-2 text-muted small" id="scrollPosition">0%</span>
-                </div>
-            </div>
             <div class="table-responsive" id="alarmTableContainer">
                     <table class="table table-hover alarm-table">
                         <thead class="table-light">
@@ -804,41 +829,6 @@ if (window.MutationObserver) {
 <script src="{% static 'js/dynamic_filters.js' %}"></script>
 
 <script>
-// Управление ползунком горизонтального скролла
-document.addEventListener('DOMContentLoaded', function() {
-    const slider = document.getElementById('tableScrollSlider');
-    const tableContainer = document.getElementById('alarmTableContainer');
-    const scrollPosition = document.getElementById('scrollPosition');
-    
-    if (slider && tableContainer) {
-        // Обновление ползунка при скролле таблицы
-        tableContainer.addEventListener('scroll', function() {
-            const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
-            const currentScroll = tableContainer.scrollLeft;
-            const percentage = maxScroll > 0 ? Math.round((currentScroll / maxScroll) * 100) : 0;
-            
-            slider.value = percentage;
-            scrollPosition.textContent = percentage + '%';
-        });
-        
-        // Обновление скролла таблицы при изменении ползунка
-        slider.addEventListener('input', function() {
-            const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
-            const newScrollLeft = (slider.value / 100) * maxScroll;
-            
-            tableContainer.scrollLeft = newScrollLeft;
-            scrollPosition.textContent = slider.value + '%';
-        });
-        
-        // Инициализация позиции
-        const maxScroll = tableContainer.scrollWidth - tableContainer.clientWidth;
-        if (maxScroll > 0) {
-            scrollPosition.textContent = '0%';
-        } else {
-            // Скрываем элементы управления, если скролл не нужен
-            document.querySelector('.table-scroll-controls').style.display = 'none';
-        }
-    }
-});
+
 </script>
 {% endblock %}
