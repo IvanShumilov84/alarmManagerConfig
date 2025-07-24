@@ -84,12 +84,11 @@
     .alarm-table thead th.sticky-column {
         position: sticky !important;
         top: 0 !important;
-        background-color: var(--bs-light) !important;
+        left: var(--sticky-left, 0) !important; /* Фиксированная позиция */
+        background-color: #f8f9fa !important; /* Полностью непрозрачный светлый фон */
         z-index: 30 !important;
         border-bottom: 2px solid var(--bs-border-color) !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-        backdrop-filter: blur(5px) !important;
-        -webkit-backdrop-filter: blur(5px) !important;
+        /* Убираем вертикальные границы и тени */
         will-change: transform !important;
         transform: translateZ(0) !important;
         white-space: nowrap !important;
@@ -104,18 +103,22 @@
     /* Стили для закрепленных столбцов - ячейки тела таблицы */
     .alarm-table tbody td.sticky-column {
         position: sticky !important;
-        background-color: var(--bs-body-bg) !important;
+        left: var(--sticky-left, 0) !important; /* Фиксированная позиция */
+        background-color: #ffffff !important; /* Полностью непрозрачный белый фон */
         z-index: 25 !important;
-        border-right: 2px solid var(--bs-border-color) !important;
-        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
-        backdrop-filter: blur(3px) !important;
-        -webkit-backdrop-filter: blur(3px) !important;
+        /* Убираем вертикальные границы и тени */
         will-change: transform !important;
         transform: translateZ(0) !important;
         white-space: nowrap !important;
         vertical-align: middle !important;
         background-clip: padding-box !important;
+        /* Дополнительная защита от просвечивания */
+        overflow: hidden !important;
     }
+    
+
+    
+
     
     /* Тело таблицы - прокручиваемое */
     .alarm-table tbody {
@@ -136,17 +139,16 @@
 
     /* Темная тема для закрепленных столбцов - заголовки */
     [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
-        background-color: var(--bs-dark) !important;
-        border-bottom-color: var(--bs-border-color-translucent) !important;
-        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+        background-color: #343a40 !important; /* Полностью непрозрачный темный фон */
+        border-bottom-color: #495057 !important;
     }
 
     /* Темная тема для закрепленных столбцов - ячейки тела */
     [data-bs-theme="dark"] .alarm-table tbody td.sticky-column {
-        background-color: var(--bs-body-bg) !important;
-        border-right-color: var(--bs-border-color-translucent) !important;
-        box-shadow: 2px 0 4px rgba(255, 255, 255, 0.1) !important;
+        background-color: #212529 !important; /* Полностью непрозрачный темный фон */
     }
+    
+
     
     [data-bs-theme="dark"] .alarm-table thead th:not(.sticky-column) {
         background-color: var(--bs-dark);
@@ -176,6 +178,34 @@
         /* Принудительное отображение скроллбаров */
         scrollbar-width: auto; /* Firefox */
         -ms-overflow-style: auto; /* IE */
+    }
+    
+    /* Фиксированная вертикальная граница для закрепленных столбцов */
+    .card-body {
+        position: relative; /* Для позиционирования границы */
+    }
+    
+    .sticky-column-border {
+        position: absolute;
+        top: var(--sticky-border-top, 0);
+        height: var(--sticky-border-height, 0);
+        left: var(--sticky-border-left, 0);
+        width: 2px;
+        background-color: var(--bs-primary);
+        z-index: 40;
+        pointer-events: none;
+        display: none; /* Скрыта по умолчанию */
+        margin: 0;
+        padding: 0;
+    }
+    
+    .sticky-column-border.visible {
+        display: block;
+    }
+    
+    /* Тёмная тема для фиксированной границы */
+    [data-bs-theme="dark"] .sticky-column-border {
+        background-color: var(--bs-primary);
     }
     
     /* Обеспечиваем видимость скроллбаров в Webkit браузерах */
@@ -429,6 +459,8 @@ window.addEventListener('resize', function() {
 <div class="card">
     <div class="card-body">
         {% if alarms %}
+            <!-- Фиксированная граница для закрепленных столбцов -->
+            <div class="sticky-column-border" id="stickyBorder"></div>
             <div class="table-responsive" id="alarmTableContainer">
                     <table class="table table-hover alarm-table">
                         <thead class="table-light">

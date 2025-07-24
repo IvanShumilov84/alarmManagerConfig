@@ -73,28 +73,7 @@
     box-shadow: 2px 0 6px rgba(255, 255, 255, 0.15) !important;
 }
 
-/* Дополнительное выделение для группы закрепленных столбцов */
-.table.alarm-table .sticky-column::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, 
-        rgba(13, 110, 253, 0.03) 0%, 
-        rgba(13, 110, 253, 0.02) 50%, 
-        rgba(13, 110, 253, 0.01) 100%);
-    pointer-events: none;
-    z-index: -1;
-}
 
-[data-bs-theme="dark"] .table.alarm-table .sticky-column::before {
-    background: linear-gradient(90deg, 
-        rgba(13, 110, 253, 0.05) 0%, 
-        rgba(13, 110, 253, 0.03) 50%, 
-        rgba(13, 110, 253, 0.02) 100%);
-}
 
 /* Индикатор закрепления для заголовков */
 .table.alarm-table th.sticky-column {
@@ -681,6 +660,7 @@ function applyStickyColumn(columnIndex = null) {
 // Функция для очистки всех sticky стилей
 function clearAllSticky() {
     const table = document.querySelector('.alarm-table');
+    const stickyBorder = document.getElementById('stickyBorder');
     if (!table) return;
     
     // Убираем sticky стили со всех столбцов
@@ -689,16 +669,22 @@ function clearAllSticky() {
         const cells = table.querySelectorAll(`td:nth-child(${i})`);
         
         [...headers, ...cells].forEach(element => {
+            element.style.removeProperty('--sticky-left');
             element.style.left = '';
-            element.style.borderRight = '';
             element.classList.remove('sticky-column');
         });
+    }
+    
+    // Скрываем фиксированную границу
+    if (stickyBorder) {
+        stickyBorder.classList.remove('visible');
     }
 }
 
 // Функция для установки sticky для определенного столбца и всех столбцов слева
 function setStickyColumn(columnIndex) {
     const table = document.querySelector('.alarm-table');
+    const stickyBorder = document.getElementById('stickyBorder');
     if (!table) return;
     
     let cumulativeWidth = 0;
@@ -713,7 +699,8 @@ function setStickyColumn(columnIndex) {
         
         // Применяем sticky стили к текущему столбцу
         [...headers, ...cells].forEach(element => {
-            element.style.left = `${cumulativeWidth}px`;
+            // Устанавливаем позицию через CSS переменную для надёжности
+            element.style.setProperty('--sticky-left', `${cumulativeWidth}px`);
             element.classList.add('sticky-column');
         });
         
@@ -725,17 +712,36 @@ function setStickyColumn(columnIndex) {
         }
     }
     
-    // Выделяем последний закрепленный столбец
-    if (columnIndex > 0) {
-        const lastStickyHeaders = table.querySelectorAll(`th:nth-child(${columnIndex})`);
-        const lastStickyCells = table.querySelectorAll(`td:nth-child(${columnIndex})`);
-        
-        [...lastStickyHeaders, ...lastStickyCells].forEach(element => {
-            element.style.borderRight = '2px solid var(--bs-primary)';
-        });
+    // Управляем фиксированной границей
+    if (stickyBorder) {
+        if (columnIndex > 0 && cumulativeWidth > 0) {
+            // Получаем позиции и размеры элементов
+            const tableContainer = document.querySelector('.table-responsive');
+            const cardBody = document.querySelector('.card-body');
+            
+            if (tableContainer && cardBody) {
+                const tableRect = tableContainer.getBoundingClientRect();
+                const cardRect = cardBody.getBoundingClientRect();
+                const tableHeight = table.offsetHeight;
+                
+                // Рассчитываем позицию относительно card-body
+                const containerOffsetLeft = tableRect.left - cardRect.left;
+                const containerOffsetTop = tableRect.top - cardRect.top;
+                
+                // Позиционируем границу
+                const totalLeft = containerOffsetLeft + cumulativeWidth;
+                stickyBorder.style.setProperty('--sticky-border-left', `${totalLeft}px`);
+                stickyBorder.style.setProperty('--sticky-border-top', `${containerOffsetTop}px`);
+                stickyBorder.style.setProperty('--sticky-border-height', `${tableHeight}px`);
+                stickyBorder.classList.add('visible');
+            }
+        } else {
+            // Скрываем границу если нет закрепленных столбцов
+            stickyBorder.classList.remove('visible');
+        }
     }
     
-    console.log(`Закреплено столбцов: ${stickyColumnsCount} (от 1 до ${columnIndex})`);
+    console.log(`Закреплено столбцов: ${stickyColumnsCount} (от 1 до ${columnIndex}), граница на ${cumulativeWidth}px`);
 }
 
 // Функция для пересчета позиций sticky столбцов при изменении размеров
@@ -744,13 +750,25 @@ function recalculateStickyPositions() {
     const selectedColumn = stickySelect?.value;
     
     if (selectedColumn && selectedColumn !== '') {
+        // Полный пересчёт с новыми размерами
         setStickyColumn(parseInt(selectedColumn));
     }
 }
 
-// Простое отслеживание изменений размера окна
+// Отслеживание изменений размера окна и прокрутки
 window.addEventListener('resize', function() {
     clearTimeout(window.stickyRecalcTimeout);
     window.stickyRecalcTimeout = setTimeout(recalculateStickyPositions, 500);
+});
+
+// Отслеживание прокрутки для обновления позиции границы
+document.addEventListener('DOMContentLoaded', function() {
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.addEventListener('scroll', function() {
+            // При прокрутке таблицы позиция границы не должна изменяться,
+            // но если нужно - можно добавить дополнительную логику
+        });
+    }
 });
 </script> 
