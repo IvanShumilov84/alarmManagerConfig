@@ -57,7 +57,7 @@
         top: 0;
         background-color: var(--bs-light);
         z-index: 20;
-        border-bottom: 2px solid var(--bs-border-color);
+        /* border-bottom убран - используются общие стили таблицы */
         /* Дополнительные стили для надежной фиксации */
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         backdrop-filter: blur(5px);
@@ -87,7 +87,7 @@
         left: var(--sticky-left, 0) !important; /* Фиксированная позиция */
         background-color: #f8f9fa !important; /* Полностью непрозрачный светлый фон */
         z-index: 30 !important;
-        border-bottom: 2px solid var(--bs-border-color) !important;
+        /* border-bottom убран - используются общие стили таблицы */
         /* Убираем вертикальные границы и тени */
         will-change: transform !important;
         transform: translateZ(0) !important;
@@ -97,7 +97,29 @@
         line-height: 1.2 !important;
         vertical-align: middle !important;
         margin: 0 !important;
-        background-clip: padding-box !important;
+        background-clip: border-box !important; /* Фон покрывает границы ячеек */
+        /* Создаем новый stacking context для полной изоляции */
+        isolation: isolate !important;
+        /* МОЩНАЯ МАСКИРОВКА: создаем дополнительные слои перекрытия */
+        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
+        /* box-shadow убран для предотвращения визуального утолщения границ */
+        /* Убираем backdrop-filter для предотвращения прозрачности */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        /* border-right восстановлена через общие стили ячеек */
+    }
+    
+    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для sticky заголовков */
+    .alarm-table thead th.sticky-column::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -1000px;
+        bottom: 0;
+        width: 1000px;
+        background-color: #f8f9fa;
+        z-index: -1;
+        pointer-events: none;
     }
 
     /* Стили для закрепленных столбцов - ячейки тела таблицы */
@@ -111,9 +133,31 @@
         transform: translateZ(0) !important;
         white-space: nowrap !important;
         vertical-align: middle !important;
-        background-clip: padding-box !important;
+        background-clip: border-box !important; /* Фон покрывает границы ячеек */
+        /* Создаем новый stacking context для полной изоляции */
+        isolation: isolate !important;
+        /* МОЩНАЯ МАСКИРОВКА: создаем дополнительные слои перекрытия */
+        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
+        /* box-shadow убран для предотвращения визуального утолщения границ */
         /* Дополнительная защита от просвечивания */
         overflow: hidden !important;
+        /* Убираем backdrop-filter для предотвращения прозрачности */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        /* border-right восстановлена через общие стили ячеек */
+    }
+    
+    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для sticky ячеек тела */
+    .alarm-table tbody td.sticky-column::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -1000px;
+        bottom: 0;
+        width: 1000px;
+        background-color: #ffffff;
+        z-index: -1;
+        pointer-events: none;
     }
     
 
@@ -140,12 +184,59 @@
     /* Темная тема для закрепленных столбцов - заголовки */
     [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
         background-color: #343a40 !important; /* Полностью непрозрачный темный фон */
-        border-bottom-color: #495057 !important;
+        background-clip: border-box !important; /* Фон покрывает границы ячеек */
+        isolation: isolate !important; /* Создаем новый stacking context */
+        /* МОЩНАЯ МАСКИРОВКА для темной темы */
+        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
+        /* box-shadow убран для предотвращения визуального утолщения границ */
+        /* ТОЛЬКО дополнительные границы для темной темы - заголовки */
+        border-left-width: 1px !important;
+        border-top-width: 1px !important;
+        border-left-style: solid !important;
+        border-top-style: solid !important;
+        border-left-color: var(--border-color) !important;
+        border-top-color: var(--border-color) !important;
+        /* Убираем любые дополнительные эффекты для темной темы - заголовки */
+        box-shadow: none !important;
+        outline: none !important;
+        text-shadow: none !important;
+        /* Убираем backdrop-filter для предотвращения прозрачности */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для темной темы - заголовки */
+    [data-bs-theme="dark"] .alarm-table thead th.sticky-column::after {
+        background-color: #343a40 !important;
     }
 
     /* Темная тема для закрепленных столбцов - ячейки тела */
     [data-bs-theme="dark"] .alarm-table tbody td.sticky-column {
         background-color: #212529 !important; /* Полностью непрозрачный темный фон */
+        background-clip: border-box !important; /* Фон покрывает границы ячеек */
+        isolation: isolate !important; /* Создаем новый stacking context */
+        /* МОЩНАЯ МАСКИРОВКА для темной темы */
+        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
+        /* box-shadow убран для предотвращения визуального утолщения границ */
+        /* ТОЛЬКО дополнительные границы для темной темы - ячейки тела */
+        border-left-width: 1px !important;
+        border-top-width: 1px !important;
+        border-left-style: solid !important;
+        border-top-style: solid !important;
+        border-left-color: var(--border-color) !important;
+        border-top-color: var(--border-color) !important;
+        /* Убираем любые дополнительные эффекты для темной темы - ячейки тела */
+        box-shadow: none !important;
+        outline: none !important;
+        text-shadow: none !important;
+        /* Убираем backdrop-filter для предотвращения прозрачности */
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для темной темы - ячейки тела */
+    [data-bs-theme="dark"] .alarm-table tbody td.sticky-column::after {
+        background-color: #212529 !important;
     }
     
 
@@ -155,9 +246,70 @@
         box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
     }
     
-    [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
-        background-color: var(--bs-dark) !important;
-        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+
+
+    
+    /* РАДИКАЛЬНОЕ ИСПРАВЛЕНИЕ: Изменяем border-collapse для решения проблемы прозрачности */
+    .alarm-table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+    
+    /* Восстанавливаем границы между ячейками при border-collapse: separate */
+    .alarm-table th,
+    .alarm-table td {
+        border-right-width: 1px !important;
+        border-bottom-width: 1px !important;
+        border-right-style: solid !important;
+        border-bottom-style: solid !important;
+        border-right-color: var(--bs-border-color) !important;
+        border-bottom-color: var(--bs-border-color) !important;
+    }
+    
+    /* Убираем правую границу с последнего столбца */
+    .alarm-table th:last-child,
+    .alarm-table td:last-child {
+        border-right: none !important;
+    }
+    
+    /* ИСПРАВЛЕНИЕ ПРОБЛЕМЫ С ЭЛЕМЕНТАМИ CODE В STICKY СТОЛБЦАХ */
+    /* Bootstrap стили для code могут конфликтовать со sticky столбцами */
+    .alarm-table .sticky-column code {
+        border: none !important; /* Убираем границы у элементов code */
+        padding: 0.125rem 0.25rem !important; /* Стандартный padding без влияния на границы */
+        margin: 0 !important; /* Убираем margin */
+        display: inline !important; /* Принудительно inline */
+        box-sizing: border-box !important; /* Правильный box-sizing */
+        background-color: inherit !important; /* Наследуем цвет фона от родителя */
+        box-shadow: none !important; /* Убираем тени */
+        outline: none !important; /* Убираем outline */
+        line-height: inherit !important; /* Наследуем line-height */
+        vertical-align: baseline !important; /* Базовое выравнивание */
+    }
+    
+    /* ДОПОЛНИТЕЛЬНОЕ ИСПРАВЛЕНИЕ: убираем псевдоэлементы у code в sticky столбцах */
+    .alarm-table .sticky-column code::before,
+    .alarm-table .sticky-column code::after {
+        display: none !important;
+    }
+    
+    /* ИСПРАВЛЕНИЕ СМЕЩЕНИЯ: только дополнительные границы для sticky столбцов */
+    .alarm-table .sticky-column {
+        /* ТОЛЬКО дополнительные границы (left и top) */
+        /* right и bottom наследуются от общих стилей ячеек */
+        border-left-width: 1px !important;
+        border-top-width: 1px !important;
+        border-left-style: solid !important;
+        border-top-style: solid !important;
+        border-left-color: var(--bs-border-color) !important;
+        border-top-color: var(--bs-border-color) !important;
+        /* Убираем любые дополнительные эффекты, которые могут влиять на визуальную толщину */
+        box-shadow: none !important;
+        outline: none !important;
+        text-shadow: none !important;
+        /* Дополнительная защита от дрожания границ */
+        -webkit-transform: translateZ(0) !important;
+        transform: translateZ(0) !important;
     }
     
     /* Контейнер таблицы - занимает всё доступное пространство с фиксированной шапкой */
@@ -323,33 +475,25 @@
         width: auto; /* Автоматическая ширина под содержимое */
     }
     
-    /* Специальные настройки для отдельных столбцов */
-    .alarm-table th:nth-child(1), /* Действия */
-    .alarm-table td:nth-child(1) {
+    /* Общие настройки для всех столбцов (заменяет старые жестко закодированные стили) */
+    .alarm-table th,
+    .alarm-table td {
+        white-space: nowrap; /* Запрещаем перенос по умолчанию */
+        width: auto; /* Автоматическая ширина под содержимое */
+    }
+    
+    /* Исключения для столбцов с кнопками - разрешаем перенос */
+    .alarm-table th:first-child,
+    .alarm-table td:first-child {
         white-space: normal; /* Разрешаем перенос для кнопок */
-        width: auto; /* Автоматическая ширина под содержимое */
     }
     
-    .alarm-table th:nth-child(2), /* ID */
-    .alarm-table td:nth-child(2) {
-        width: auto; /* Автоматическая ширина под содержимое */
-    }
-    
-    .alarm-table th:nth-child(3), /* Канал */
-    .alarm-table td:nth-child(3) {
-        width: auto; /* Автоматическая ширина под содержимое */
-    }
-    
+    /* Ограничения ширины для длинных текстовых столбцов */
     .alarm-table th:nth-child(4), /* Сообщение */
-    .alarm-table td:nth-child(4) {
-        max-width: 250px; /* Ограничение максимальной ширины */
-        width: auto; /* Автоматическая ширина под содержимое */
-    }
-    
+    .alarm-table td:nth-child(4),
     .alarm-table th:nth-child(5), /* Таблица */
     .alarm-table td:nth-child(5) {
         max-width: 250px; /* Ограничение максимальной ширины */
-        width: auto; /* Автоматическая ширина под содержимое */
     }
     
     /* Контейнер карточки таблицы */
