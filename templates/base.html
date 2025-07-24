@@ -132,10 +132,17 @@
             display: flex !important;
             align-items: center;
             justify-content: center;
-            background-color: #dc3545 !important;
-            color: white !important;
+            /* Используем цвета как в развёрнутом виде - светлый фон, тёмный текст */
+            background-color: #f8f9fa !important;
+            color: #212529 !important;
             border: 2px solid var(--sidebar-bg);
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        /* Для тёмной темы используем тёмный фон и светлый текст */
+        [data-bs-theme="dark"] .sidebar.minimized .badge {
+            background-color: #495057 !important;
+            color: #f8f9fa !important;
         }
         
         .sidebar.minimized .nav-link {
