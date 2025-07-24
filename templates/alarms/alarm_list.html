@@ -7,9 +7,11 @@
 <style>
     /* CSS ПЕРЕМЕННЫЕ ДЛЯ АДАПТИВНОЙ ВЫСОТЫ */
     :root {
-        --controls-panel-height: 120px; /* Примерная высота панели управления */
-        --page-padding: 1rem; /* Минимальные отступы страницы */
+        --controls-panel-height: 120px; /* Динамически обновляется через JavaScript */
+        --page-padding: 40px; /* Буфер для отступов и пагинации */
         --header-height: 0px; /* Высота заголовка страницы (если есть) */
+        --sidebar-width: 250px; /* Ширина развернутого сайдбара */
+        --sidebar-width-minimized: 70px; /* Ширина минимизированного сайдбара */
     }
     
     /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
@@ -36,12 +38,15 @@
         margin-bottom: 0; /* Убираем нижний отступ */
         display: flex;
         flex-direction: column;
-        /* Максимальная высота: занимаем всё пространство до конца экрана */
+        /* Динамическая высота: обновляется через JavaScript */
         height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
         min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
+        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
         /* Убираем ограничения ширины для горизонтального скролла */
         width: 100%;
         overflow: hidden; /* Скрываем переполнение карточки */
+        /* Плавная анимация при изменении высоты */
+        transition: height 0.3s ease, min-height 0.3s ease, max-height 0.3s ease;
     }
     
     /* Заголовок таблицы - полностью зафиксирован и непрокручиваемый */
@@ -239,6 +244,279 @@
         background-color: #212529 !important;
     }
     
+    /* ===== СИНХРОНИЗАЦИЯ HOVER ЭФФЕКТОВ ДЛЯ STICKY СТОЛБЦОВ ===== */
+    
+    /* Hover эффекты для sticky столбцов - светлая тема */
+    .alarm-table.table-hover tbody tr:hover td.sticky-column {
+        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.075)) !important; /* Bootstrap официальный hover цвет с fallback */
+        /* Сохраняем остальные важные стили */
+        position: sticky !important;
+        left: var(--sticky-left, 0) !important;
+        z-index: 25 !important;
+        background-clip: border-box !important;
+        isolation: isolate !important;
+        contain: strict !important;
+        will-change: transform !important;
+        transform: translateZ(0) !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        overflow: hidden !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+    
+    /* Hover эффекты для псевдоэлементов sticky столбцов - светлая тема */
+    .alarm-table.table-hover tbody tr:hover td.sticky-column::after {
+        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.075)) !important; /* Синхронизируем с основным цветом */
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -1000px;
+        bottom: 0;
+        width: 1000px;
+        z-index: -1;
+        pointer-events: none;
+    }
+    
+    /* Hover эффекты для sticky столбцов - темная тема */
+    [data-bs-theme="dark"] .alarm-table.table-hover tbody tr:hover td.sticky-column {
+        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.125)) !important; /* Bootstrap официальный hover цвет с fallback для темной темы */
+        /* Сохраняем остальные важные стили */
+        position: sticky !important;
+        left: var(--sticky-left, 0) !important;
+        z-index: 25 !important;
+        background-clip: border-box !important;
+        isolation: isolate !important;
+        contain: strict !important;
+        will-change: transform !important;
+        transform: translateZ(0) !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        overflow: hidden !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        /* Границы для темной темы */
+        border-left-width: 1px !important;
+        border-top-width: 1px !important;
+        border-left-style: solid !important;
+        border-top-style: solid !important;
+        border-left-color: var(--border-color) !important;
+        border-top-color: var(--border-color) !important;
+        box-shadow: none !important;
+        outline: none !important;
+        text-shadow: none !important;
+    }
+    
+    /* Hover эффекты для псевдоэлементов sticky столбцов - темная тема */
+    [data-bs-theme="dark"] .alarm-table.table-hover tbody tr:hover td.sticky-column::after {
+        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.125)) !important; /* Синхронизируем с основным цветом с fallback */
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -1000px;
+        bottom: 0;
+        width: 1000px;
+        z-index: -1;
+        pointer-events: none;
+    }
+    
+    /* Дополнительная поддержка для заголовков sticky столбцов при hover (если потребуется) */
+    .alarm-table.table-hover thead tr:hover th.sticky-column {
+        /* Заголовки обычно не имеют hover эффектов, но добавляем для консистентности */
+        background-color: #f8f9fa !important; /* Сохраняем оригинальный цвет заголовка */
+    }
+    
+    [data-bs-theme="dark"] .alarm-table.table-hover thead tr:hover th.sticky-column {
+        background-color: #343a40 !important; /* Сохраняем оригинальный цвет заголовка для темной темы */
+    }
+    
+    /* ===== СТРОКА УПРАВЛЕНИЯ СТОЛБЦАМИ ===== */
+    
+    /* Контейнер для строки управления */
+    .table-controls-row {
+        background-color: var(--bs-light);
+        border-bottom: 1px solid var(--bs-border-color);
+        position: sticky;
+        top: 0;
+        z-index: 35; /* Выше чем обычные заголовки, но ниже sticky столбцов */
+    }
+    
+    [data-bs-theme="dark"] .table-controls-row {
+        background-color: var(--bs-gray-800);
+    }
+    
+    /* Ячейки управления */
+    .control-cell {
+        padding: 4px 8px !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        border-right: 1px solid var(--bs-border-color) !important;
+        border-bottom: 1px solid var(--bs-border-color) !important;
+        white-space: nowrap !important;
+        background-color: inherit;
+        height: 35px;
+        min-height: 35px;
+        position: relative;
+    }
+    
+    /* Убираем правую границу с последней ячейки */
+    .control-cell:last-child {
+        border-right: none !important;
+    }
+    
+    /* Контейнер элементов управления в ячейке */
+    .control-items {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        height: 100%;
+    }
+    
+    /* Кнопка булавки */
+    .pin-button {
+        background: none;
+        border: none;
+        padding: 2px 4px;
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+        color: var(--bs-gray-600);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+    }
+    
+    .pin-button:hover {
+        background-color: var(--bs-gray-200);
+        color: var(--bs-gray-800);
+        transform: scale(1.1);
+    }
+    
+    .pin-button.active {
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        font-weight: bold;
+    }
+    
+    .pin-button.active:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.2);
+    }
+    
+    /* Темная тема для булавок */
+    [data-bs-theme="dark"] .pin-button {
+        color: var(--bs-gray-400);
+    }
+    
+    [data-bs-theme="dark"] .pin-button:hover {
+        background-color: var(--bs-gray-700);
+        color: var(--bs-gray-200);
+    }
+    
+    [data-bs-theme="dark"] .pin-button.active {
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.2);
+    }
+    
+    /* Кнопка сортировки */
+    .sort-button {
+        background: none;
+        border: none;
+        padding: 2px 4px;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+        color: var(--bs-gray-600);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+    }
+    
+    .sort-button:hover {
+        background-color: var(--bs-gray-200);
+        color: var(--bs-gray-800);
+        transform: scale(1.1);
+    }
+    
+    .sort-button.sort-asc {
+        color: var(--bs-success);
+        background-color: rgba(var(--bs-success-rgb), 0.1);
+    }
+    
+    .sort-button.sort-desc {
+        color: var(--bs-warning);
+        background-color: rgba(var(--bs-warning-rgb), 0.1);
+    }
+    
+    .sort-button.sort-asc:hover,
+    .sort-button.sort-desc:hover {
+        transform: scale(1.1);
+    }
+    
+    /* Темная тема для сортировки */
+    [data-bs-theme="dark"] .sort-button {
+        color: var(--bs-gray-400);
+    }
+    
+    [data-bs-theme="dark"] .sort-button:hover {
+        background-color: var(--bs-gray-700);
+        color: var(--bs-gray-200);
+    }
+    
+    [data-bs-theme="dark"] .sort-button.sort-asc {
+        color: var(--bs-success);
+        background-color: rgba(var(--bs-success-rgb), 0.2);
+    }
+    
+    [data-bs-theme="dark"] .sort-button.sort-desc {
+        color: var(--bs-warning);
+        background-color: rgba(var(--bs-warning-rgb), 0.2);
+    }
+    
+    /* Sticky стили для ячеек управления */
+    .control-cell.sticky-column {
+        position: sticky !important;
+        left: var(--sticky-left, 0) !important;
+        z-index: 40 !important; /* Выше всех других элементов */
+        background-color: var(--bs-light) !important;
+        background-clip: border-box !important;
+        isolation: isolate !important;
+    }
+    
+    [data-bs-theme="dark"] .control-cell.sticky-column {
+        background-color: var(--bs-gray-800) !important;
+    }
+    
+    /* Псевдоэлементы для маскировки управляющих ячеек */
+    .control-cell.sticky-column::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        right: -1000px;
+        bottom: 0;
+        width: 1000px;
+        background-color: var(--bs-light);
+        z-index: -1;
+        pointer-events: none;
+    }
+    
+    [data-bs-theme="dark"] .control-cell.sticky-column::after {
+        background-color: var(--bs-gray-800);
+    }
+    
+    /* Скрываем кнопку сортировки для столбца Действия (сортировка недоступна) */
+    .control-cell.actions-control .sort-button {
+        display: none;
+    }
+    
 
     
     [data-bs-theme="dark"] .alarm-table thead th:not(.sticky-column) {
@@ -394,12 +672,13 @@
     /* Мобильные устройства */
     @media (max-width: 768px) {
         :root {
-            --controls-panel-height: 180px; /* Еще больше высота на мобильных */
-            --page-padding: 0.5rem; /* Минимальные отступы на мобильных */
+            --controls-panel-height: 180px; /* Динамически обновляется */
+            --page-padding: 20px; /* Уменьшенные отступы */
         }
         
         .table-responsive {
             min-height: 250px; /* Уменьшенная минимальная высота на мобильных */
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 40px);
         }
         
         .container-fluid {
@@ -407,32 +686,56 @@
             padding-right: 0.5rem;
             padding-top: 0.5rem;
         }
+        
+        .card {
+            /* Адаптивная высота для мобильных */
+            height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
+            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
+        }
     }
     
     /* Очень маленькие экраны */
     @media (max-width: 480px) {
         :root {
-            --controls-panel-height: 220px; /* Максимальная высота на очень маленьких экранах */
-            --page-padding: 0.25rem; /* Минимальные отступы */
+            --controls-panel-height: 220px; /* Динамически обновляется */
+            --page-padding: 10px; /* Минимальные отступы */
         }
         
         .table-responsive {
             min-height: 200px; /* Еще меньше на очень маленьких экранах */
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 30px);
         }
         
         .container-fluid {
             padding: 0.25rem;
+        }
+        
+        .card {
+            /* Максимальная адаптивность для очень маленьких экранов */
+            height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
+            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
         }
     }
     
     /* Большие экраны */
     @media (min-width: 1400px) {
         :root {
-            --controls-panel-height: 100px; /* Компактная высота на больших экранах */
+            --controls-panel-height: 100px; /* Динамически обновляется */
+            --page-padding: 50px; /* Увеличенные отступы на больших экранах */
         }
         
         .table-responsive {
             min-height: 500px; /* Увеличенная минимальная высота на больших экранах */
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 30px);
+        }
+        
+        .card {
+            /* Оптимальная высота для больших экранов */
+            height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
+            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
+            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
         }
     }
     
@@ -505,6 +808,22 @@
         overflow: hidden;
         /* Плавная адаптация при изменении высоты */
         transition: all 0.3s ease;
+        /* Максимальная высота для предотвращения переполнения */
+        max-height: 100%;
+        height: 100%;
+    }
+    
+    /* Адаптивный контейнер таблицы */
+    .table-responsive {
+        flex-grow: 1;
+        overflow-x: auto;
+        overflow-y: auto;
+        /* Динамическая высота устанавливается через JavaScript */
+        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 20px);
+        /* Плавная анимация высоты */
+        transition: max-height 0.3s ease, min-height 0.3s ease;
+        /* Минимальная высота для стабильности отображения */
+        min-height: 300px;
     }
     
     /* Стили для пустого состояния */
@@ -555,44 +874,375 @@
 
 {% block extra_js %}
 <script>
-// Упрощенная функция для адаптации высоты таблицы
+// Улучшенная функция для адаптации высоты таблицы
 function adaptTableHeight() {
     const controlsPanel = document.querySelector('.controls-panel');
     const tableContainer = document.querySelector('.table-responsive');
+    const card = document.querySelector('.card');
     
-    if (controlsPanel && tableContainer) {
-        const controlsPanelHeight = controlsPanel.offsetHeight;
+    if (controlsPanel && tableContainer && card) {
+        // Получаем реальную высоту панели управления
+        const controlsPanelHeight = controlsPanel.getBoundingClientRect().height;
         const viewportHeight = window.innerHeight;
-        const availableHeight = viewportHeight - controlsPanelHeight - 80; // 80px запас
         
+        // Учитываем отступы и другие элементы страницы
+        const headerHeight = 0; // Если есть заголовок страницы
+        const paddingBuffer = 40; // Буфер для отступов и пагинации
+        const sidebarOffset = document.body.classList.contains('sidebar-minimized') ? 70 : 250;
+        
+        // Вычисляем доступную высоту для таблицы
+        const availableHeight = viewportHeight - controlsPanelHeight - headerHeight - paddingBuffer;
+        
+        // Обновляем CSS переменную для точного расчета
+        document.documentElement.style.setProperty('--controls-panel-height', `${controlsPanelHeight}px`);
+        
+        // Устанавливаем максимальную высоту для контейнера таблицы
         tableContainer.style.maxHeight = `${availableHeight}px`;
+        tableContainer.style.minHeight = `${Math.min(300, availableHeight)}px`;
         
-        // Простое обновление sticky заголовка
+        // Обновляем высоту карточки
+        card.style.height = `calc(100vh - ${controlsPanelHeight}px - ${paddingBuffer}px)`;
+        
+        console.log(`Адаптация высоты: Панель управления=${controlsPanelHeight}px, Таблица=${availableHeight}px`);
+        
+        // Обновляем sticky заголовки
         enforceTableHeaderSticky();
     }
 }
 
-// Упрощенная функция для фиксации заголовка таблицы
+// Улучшенная функция для фиксации заголовка таблицы
 function enforceTableHeaderSticky() {
     const tableHeader = document.querySelector('.alarm-table thead');
     if (tableHeader) {
         tableHeader.style.setProperty('position', 'sticky', 'important');
         tableHeader.style.setProperty('top', '0px', 'important');
+        tableHeader.style.setProperty('z-index', '15', 'important');
     }
 }
 
-// Простая адаптация при загрузке страницы
+// Функция для плавной адаптации с задержкой
+function smoothAdaptTableHeight() {
+    clearTimeout(window.adaptTimeout);
+    window.adaptTimeout = setTimeout(() => {
+        adaptTableHeight();
+    }, 150); // Небольшая задержка для завершения анимаций Bootstrap
+}
+
+// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    adaptTableHeight();
+    // Первоначальная адаптация
+    setTimeout(adaptTableHeight, 100);
+    
+    // Обработчики событий для табов Bootstrap
+    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
+    tabButtons.forEach(tabButton => {
+        // Событие при показе нового таба
+        tabButton.addEventListener('shown.bs.tab', function(event) {
+            console.log('Таб показан:', event.target.id);
+            smoothAdaptTableHeight();
+        });
+        
+        // Событие при скрытии таба
+        tabButton.addEventListener('hidden.bs.tab', function(event) {
+            console.log('Таб скрыт:', event.target.id);
+            smoothAdaptTableHeight();
+        });
+        
+        // Простое событие клика для дополнительной надежности
+        tabButton.addEventListener('click', function() {
+            setTimeout(smoothAdaptTableHeight, 200);
+        });
+    });
+    
+    // Отслеживание изменений размера панели управления
+    const controlsPanel = document.querySelector('.controls-panel');
+    if (controlsPanel && window.ResizeObserver) {
+        // Безопасное использование ResizeObserver с ограничениями
+        let resizeTimeout;
+        const resizeObserver = new ResizeObserver(entries => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                console.log('Размер панели управления изменился');
+                adaptTableHeight();
+            }, 100);
+        });
+        
+        resizeObserver.observe(controlsPanel);
+        
+        // Автоматическое отключение наблюдателя через 30 секунд для безопасности
+        setTimeout(() => {
+            resizeObserver.disconnect();
+            console.log('ResizeObserver отключен для безопасности');
+        }, 30000);
+    }
+    
+    // Дополнительная адаптация при изменении содержимого табов
+    const tabContent = document.querySelector('#controlsTabContent');
+    if (tabContent) {
+        // Наблюдение за изменениями в содержимом табов
+        const contentObserver = new MutationObserver(function(mutations) {
+            let shouldUpdate = false;
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList' || mutation.type === 'attributes') {
+                    shouldUpdate = true;
+                }
+            });
+            
+            if (shouldUpdate) {
+                console.log('Содержимое табов изменилось');
+                smoothAdaptTableHeight();
+            }
+        });
+        
+        contentObserver.observe(tabContent, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style']
+        });
+        
+        // Автоматическое отключение наблюдателя через 30 секунд
+        setTimeout(() => {
+            contentObserver.disconnect();
+            console.log('MutationObserver отключен для безопасности');
+        }, 30000);
+    }
 });
 
-// Простая адаптация при изменении размера окна
+// Адаптация при изменении размера окна
 window.addEventListener('resize', function() {
     clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(adaptTableHeight, 200);
+    window.resizeTimeout = setTimeout(adaptTableHeight, 300);
 });
 
-// Убрали все наблюдатели для устранения зависаний
+// Дополнительная адаптация при изменении ориентации на мобильных устройствах
+window.addEventListener('orientationchange', function() {
+    setTimeout(adaptTableHeight, 500);
+});
+
+// Функция для принудительной адаптации (может быть вызвана извне)
+window.forceTableHeightAdaptation = function() {
+    console.log('Принудительная адаптация высоты таблицы');
+    adaptTableHeight();
+};
+
+// ===== УПРАВЛЕНИЕ СТОЛБЦАМИ ЧЕРЕЗ СТРОКУ УПРАВЛЕНИЯ =====
+
+// Функции управления закреплением столбцов (перенесены из controls_panel)
+function clearAllStickyNew() {
+    const table = document.querySelector('.alarm-table');
+    const stickyBorder = document.getElementById('stickyBorder');
+    if (!table) return;
+    
+    // Убираем sticky стили со всех столбцов (включая строку управления)
+    for (let i = 1; i <= 20; i++) {
+        const headers = table.querySelectorAll(`th:nth-child(${i})`);
+        const cells = table.querySelectorAll(`td:nth-child(${i})`);
+        const controlCells = table.querySelectorAll(`.control-cell:nth-child(${i})`);
+        
+        [...headers, ...cells, ...controlCells].forEach(element => {
+            element.style.removeProperty('--sticky-left');
+            element.style.left = '';
+            element.classList.remove('sticky-column');
+        });
+    }
+    
+    // Скрываем фиксированную границу
+    if (stickyBorder) {
+        stickyBorder.classList.remove('visible');
+    }
+}
+
+function setStickyColumnNew(columnIndex) {
+    const table = document.querySelector('.alarm-table');
+    const stickyBorder = document.getElementById('stickyBorder');
+    if (!table) return;
+    
+    let cumulativeWidth = 0;
+    let stickyColumnsCount = 0;
+    
+    // Закрепляем все столбцы от 1 до выбранного включительно
+    for (let i = 1; i <= columnIndex; i++) {
+        const headers = table.querySelectorAll(`tr:not(.table-controls-row) th:nth-child(${i})`);
+        const cells = table.querySelectorAll(`td:nth-child(${i})`);
+        const controlCells = table.querySelectorAll(`.control-cell:nth-child(${i})`);
+        
+        if (headers.length === 0) continue; // Пропускаем несуществующие столбцы
+        
+        // Применяем sticky стили к текущему столбцу
+        [...headers, ...cells, ...controlCells].forEach(element => {
+            element.style.setProperty('--sticky-left', `${cumulativeWidth}px`);
+            element.classList.add('sticky-column');
+        });
+        
+        // Добавляем ширину текущего столбца к накопительной ширине
+        const currentHeader = table.querySelector(`tr:not(.table-controls-row) th:nth-child(${i})`);
+        if (currentHeader) {
+            cumulativeWidth += currentHeader.offsetWidth;
+            stickyColumnsCount++;
+        }
+    }
+    
+    // Управляем фиксированной границей
+    if (stickyBorder) {
+        if (columnIndex > 0 && cumulativeWidth > 0) {
+            const tableContainer = document.querySelector('.table-responsive');
+            const cardBody = document.querySelector('.card-body');
+            
+            if (tableContainer && cardBody) {
+                const tableRect = tableContainer.getBoundingClientRect();
+                const cardRect = cardBody.getBoundingClientRect();
+                const tableHeight = table.offsetHeight;
+                
+                const containerOffsetLeft = tableRect.left - cardRect.left;
+                const containerOffsetTop = tableRect.top - cardRect.top;
+                
+                const totalLeft = containerOffsetLeft + cumulativeWidth;
+                stickyBorder.style.setProperty('--sticky-border-left', `${totalLeft}px`);
+                stickyBorder.style.setProperty('--sticky-border-top', `${containerOffsetTop}px`);
+                stickyBorder.style.setProperty('--sticky-border-height', `${tableHeight}px`);
+                stickyBorder.classList.add('visible');
+            }
+        } else {
+            stickyBorder.classList.remove('visible');
+        }
+    }
+    
+    console.log(`Закреплено столбцов: ${stickyColumnsCount} (от 1 до ${columnIndex}), граница на ${cumulativeWidth}px`);
+}
+
+// Обработчики событий для элементов управления
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация состояния булавок из localStorage
+    const savedSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
+    const savedStickyColumn = savedSettings.stickyColumn;
+    
+    if (savedStickyColumn) {
+        // Активируем сохраненную булавку
+        const pinButton = document.querySelector(`.pin-button[data-column="${savedStickyColumn}"]`);
+        if (pinButton) {
+            pinButton.classList.add('active');
+            setStickyColumnNew(parseInt(savedStickyColumn));
+        }
+    }
+    
+    // Обработчики кликов по булавкам
+    document.querySelectorAll('.pin-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const columnIndex = parseInt(this.dataset.column);
+            
+            const isCurrentlyActive = this.classList.contains('active');
+            
+            // Убираем активность со всех булавок
+            document.querySelectorAll('.pin-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Очищаем все закрепления
+            clearAllStickyNew();
+            
+            if (!isCurrentlyActive) {
+                // Активируем выбранную булавку
+                this.classList.add('active');
+                setStickyColumnNew(columnIndex);
+                
+                // Сохраняем состояние
+                const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
+                currentSettings.stickyColumn = columnIndex.toString();
+                localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
+                
+                                 // Уведомления о закреплении столбцов убраны
+            } else {
+                                 // Деактивируем закрепление
+                 const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
+                 delete currentSettings.stickyColumn;
+                 localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
+            }
+            
+            // Адаптируем высоту таблицы
+            setTimeout(() => {
+                if (window.forceTableHeightAdaptation) {
+                    window.forceTableHeightAdaptation();
+                }
+            }, 200);
+        });
+    });
+    
+    // Обработчики кликов по кнопкам сортировки
+    document.querySelectorAll('.sort-button').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const field = this.dataset.field;
+            
+            // Игнорируем столбец действий
+            if (field === 'actions') return;
+            
+            const currentSort = this.dataset.currentSort;
+            let newSort = 'asc';
+            
+            // Логика переключения сортировки: none -> asc -> desc -> none
+            if (currentSort === 'asc') {
+                newSort = 'desc';
+            } else if (currentSort === 'desc') {
+                newSort = ''; // Сброс сортировки
+            }
+            
+            // Формируем URL для сортировки
+            const url = new URL(window.location);
+            
+            // Очищаем все параметры сортировки
+            ['sort_0', 'sort_1', 'sort_2', 'sort_3', 'sort_4'].forEach(param => {
+                url.searchParams.delete(param);
+            });
+            ['order_0', 'order_1', 'order_2', 'order_3', 'order_4'].forEach(param => {
+                url.searchParams.delete(param);
+            });
+            
+            // Добавляем новую сортировку если не сброс
+            if (newSort) {
+                url.searchParams.set('sort_0', field);
+                url.searchParams.set('order_0', newSort);
+            }
+            
+            // Сбрасываем на первую страницу
+            url.searchParams.set('page', '1');
+            
+            // Переходим на новую страницу
+            window.location.href = url.toString();
+        });
+    });
+    
+    // Обновляем классы кнопок сортировки на основе текущего состояния
+    document.querySelectorAll('.sort-button').forEach(button => {
+        const currentSort = button.dataset.currentSort;
+        const icon = button.querySelector('i');
+        
+        button.classList.remove('sort-asc', 'sort-desc');
+        
+        if (currentSort === 'asc') {
+            button.classList.add('sort-asc');
+        } else if (currentSort === 'desc') {
+            button.classList.add('sort-desc');
+        }
+    });
+    
+    // Пересчет позиций при изменении размера окна
+    window.addEventListener('resize', function() {
+        clearTimeout(window.stickyRecalcTimeout);
+        window.stickyRecalcTimeout = setTimeout(() => {
+            const activePin = document.querySelector('.pin-button.active');
+            if (activePin) {
+                const columnIndex = parseInt(activePin.dataset.column);
+                setStickyColumnNew(columnIndex);
+            }
+        }, 500);
+    });
+});
 </script>
 {% endblock %}
 
@@ -608,6 +1258,210 @@ window.addEventListener('resize', function() {
             <div class="table-responsive" id="alarmTableContainer">
                     <table class="table table-hover alarm-table">
                         <thead class="table-light">
+                            <!-- Строка управления столбцами -->
+                            <tr class="table-controls-row">
+                                <th class="control-cell actions-control">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="1" title="Закрепить столбец Действия">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="actions" data-current-sort="" title="Сортировка недоступна" style="display: none;">
+                                            <i class="bi bi-arrow-down-up"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="2" title="Закрепить столбец ID">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Сортировать по ID">
+                                            <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="3" title="Закрепить столбец Канал">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Сортировать по каналу">
+                                            <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="4" title="Закрепить столбец Сообщение">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Сортировать по сообщению">
+                                            <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="5" title="Закрепить столбец Таблица">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Сортировать по таблице">
+                                            <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="6" title="Закрепить столбец Класс">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Сортировать по классу тревоги">
+                                            <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="7" title="Закрепить столбец Логика">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="logic" data-current-sort="{% if 'logic' in sort_indicators %}{{ sort_indicators.logic }}{% endif %}" title="Сортировать по логике">
+                                            <i class="bi bi-{% if 'logic' in sort_indicators %}{% if sort_indicators.logic == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="8" title="Закрепить столбец Подтверждение">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="confirm_method" data-current-sort="{% if 'confirm_method' in sort_indicators %}{{ sort_indicators.confirm_method }}{% endif %}" title="Сортировать по способу подтверждения">
+                                            <i class="bi bi-{% if 'confirm_method' in sort_indicators %}{% if sort_indicators.confirm_method == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="9" title="Закрепить столбец Приоритет">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="prior" data-current-sort="{% if 'prior' in sort_indicators %}{{ sort_indicators.prior }}{% endif %}" title="Сортировать по приоритету">
+                                            <i class="bi bi-{% if 'prior' in sort_indicators %}{% if sort_indicators.prior == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="10" title="Закрепить столбец Лимит">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="limit_type" data-current-sort="{% if 'limit_type' in sort_indicators %}{{ sort_indicators.limit_type }}{% endif %}" title="Сортировать по типу ограничения">
+                                            <i class="bi bi-{% if 'limit_type' in sort_indicators %}{% if sort_indicators.limit_type == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="11" title="Закрепить столбец Тип лимита">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="limit_config_type" data-current-sort="{% if 'limit_config_type' in sort_indicators %}{{ sort_indicators.limit_config_type }}{% endif %}" title="Сортировать по типу настройки пределов">
+                                            <i class="bi bi-{% if 'limit_config_type' in sort_indicators %}{% if sort_indicators.limit_config_type == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="12" title="Закрепить столбец Мин">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="low" data-current-sort="{% if 'low' in sort_indicators %}{{ sort_indicators.low }}{% endif %}" title="Сортировать по нижнему пределу">
+                                            <i class="bi bi-{% if 'low' in sort_indicators %}{% if sort_indicators.low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="13" title="Закрепить столбец Макс">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="high" data-current-sort="{% if 'high' in sort_indicators %}{{ sort_indicators.high }}{% endif %}" title="Сортировать по верхнему пределу">
+                                            <i class="bi bi-{% if 'high' in sort_indicators %}{% if sort_indicators.high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="14" title="Закрепить столбец Канал мин">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="ch_low" data-current-sort="{% if 'ch_low' in sort_indicators %}{{ sort_indicators.ch_low }}{% endif %}" title="Сортировать по каналу нижнего предела">
+                                            <i class="bi bi-{% if 'ch_low' in sort_indicators %}{% if sort_indicators.ch_low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="15" title="Закрепить столбец Канал макс">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="ch_high" data-current-sort="{% if 'ch_high' in sort_indicators %}{{ sort_indicators.ch_high }}{% endif %}" title="Сортировать по каналу верхнего предела">
+                                            <i class="bi bi-{% if 'ch_high' in sort_indicators %}{% if sort_indicators.ch_high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="16" title="Закрепить столбец Гист мин">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="hyst_low" data-current-sort="{% if 'hyst_low' in sort_indicators %}{{ sort_indicators.hyst_low }}{% endif %}" title="Сортировать по гистерезису нижнего предела">
+                                            <i class="bi bi-{% if 'hyst_low' in sort_indicators %}{% if sort_indicators.hyst_low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="17" title="Закрепить столбец Гист макс">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="hyst_high" data-current-sort="{% if 'hyst_high' in sort_indicators %}{{ sort_indicators.hyst_high }}{% endif %}" title="Сортировать по гистерезису верхнего предела">
+                                            <i class="bi bi-{% if 'hyst_high' in sort_indicators %}{% if sort_indicators.hyst_high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="18" title="Закрепить столбец Дискрет">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="discrete_val" data-current-sort="{% if 'discrete_val' in sort_indicators %}{{ sort_indicators.discrete_val }}{% endif %}" title="Сортировать по дискретному значению">
+                                            <i class="bi bi-{% if 'discrete_val' in sort_indicators %}{% if sort_indicators.discrete_val == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="19" title="Закрепить столбец Создано">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="created_at" data-current-sort="{% if 'created_at' in sort_indicators %}{{ sort_indicators.created_at }}{% endif %}" title="Сортировать по дате создания">
+                                            <i class="bi bi-{% if 'created_at' in sort_indicators %}{% if sort_indicators.created_at == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                                <th class="control-cell">
+                                    <div class="control-items">
+                                        <button class="pin-button" data-column="20" title="Закрепить столбец Обновлено">
+                                            <i class="bi bi-pin-angle"></i>
+                                        </button>
+                                        <button class="sort-button" data-field="updated_at" data-current-sort="{% if 'updated_at' in sort_indicators %}{{ sort_indicators.updated_at }}{% endif %}" title="Сортировать по дате обновления">
+                                            <i class="bi bi-{% if 'updated_at' in sort_indicators %}{% if sort_indicators.updated_at == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                    </div>
+                                </th>
+                            </tr>
+                            <!-- Основные заголовки таблицы -->
                             <tr>
                                 <th>Действия</th>
                                 <th>

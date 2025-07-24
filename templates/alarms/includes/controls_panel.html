@@ -46,50 +46,7 @@
     white-space: nowrap;
 }
 
-/* Стили для закрепленных столбцов */
-.table.alarm-table .sticky-column {
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
-    transition: all 0.2s ease !important;
-    position: sticky !important;
-}
-
-/* Принудительное переопределение позиционирования для закрепленных столбцов */
-.table.alarm-table th.sticky-column,
-.table.alarm-table td.sticky-column {
-    position: sticky !important;
-}
-
-[data-bs-theme="dark"] .table.alarm-table .sticky-column {
-    box-shadow: 2px 0 4px rgba(255, 255, 255, 0.1) !important;
-}
-
-/* Анимация при наведении на закрепленный столбец */
-.table.alarm-table .sticky-column:hover {
-    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.15) !important;
-    transform: translateZ(1px) !important;
-}
-
-[data-bs-theme="dark"] .table.alarm-table .sticky-column:hover {
-    box-shadow: 2px 0 6px rgba(255, 255, 255, 0.15) !important;
-}
-
-
-
-/* Индикатор закрепления для заголовков */
-.table.alarm-table th.sticky-column {
-    position: sticky !important;
-}
-
-.table.alarm-table th.sticky-column::after {
-    content: '📌';
-    position: absolute;
-    top: 2px;
-    right: 4px;
-    font-size: 10px;
-    opacity: 0.6;
-    pointer-events: none;
-    z-index: 1;
-}
+/* Старые стили sticky столбцов удалены - используется новая система */
 </style>
 
 <div class="controls-panel mb-3 mt-0">
@@ -170,36 +127,7 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <h6 class="mb-3">Закрепление столбцов</h6>
-                    <div class="mb-3">
-                        <label for="stickyColumn" class="form-label">Закрепить столбцы до:</label>
-                        <small class="form-text text-muted d-block mb-2">
-                            При выборе столбца закрепляются все столбцы слева от него включительно
-                        </small>
-                        <select class="form-select form-select-sm" id="stickyColumn" onchange="applyStickyColumn()">
-                            <option value="">Не закреплять</option>
-                            <option value="1" selected>Действия</option>
-                            <option value="2">ID</option>
-                            <option value="3">Канал</option>
-                            <option value="4">Сообщение</option>
-                            <option value="5">Таблица</option>
-                            <option value="6">Класс</option>
-                            <option value="7">Логика</option>
-                            <option value="8">Подтверждение</option>
-                            <option value="9">Приоритет</option>
-                            <option value="10">Лимит</option>
-                            <option value="11">Тип лимита</option>
-                            <option value="12">Мин</option>
-                            <option value="13">Макс</option>
-                            <option value="14">Канал мин</option>
-                            <option value="15">Канал макс</option>
-                            <option value="16">Гист мин</option>
-                            <option value="17">Гист макс</option>
-                            <option value="18">Дискрет</option>
-                            <option value="19">Создано</option>
-                            <option value="20">Обновлено</option>
-                        </select>
-                    </div>
+
                     <h6 class="mb-3">Быстрые действия</h6>
                     <div class="d-grid gap-2">
                         <button type="button" class="btn btn-sm btn-outline-info" onclick="saveCurrentSettings()">
@@ -309,15 +237,7 @@ function loadSavedSettings() {
         document.getElementById('showTooltips').checked = savedSettings.showTooltips;
     }
     
-    // Загружаем настройку закрепленного столбца
-    if (savedSettings.stickyColumn !== undefined) {
-        const stickySelect = document.getElementById('stickyColumn');
-        if (stickySelect) {
-            stickySelect.value = savedSettings.stickyColumn;
-            // Применяем закрепление сразу при загрузке
-            applyStickyColumn(savedSettings.stickyColumn);
-        }
-    }
+    // Старая система закрепления столбцов удалена
 }
 
 // Загрузка состояния панели управления
@@ -336,8 +256,7 @@ function loadControlsPanelState() {
 function saveCurrentSettings() {
     const settings = {
         recordsPerPage: document.getElementById('recordsPerPage').value,
-        showTooltips: document.getElementById('showTooltips').checked,
-        stickyColumn: document.getElementById('stickyColumn').value
+        showTooltips: document.getElementById('showTooltips').checked
     };
     
     localStorage.setItem('alarmListSettings', JSON.stringify(settings));
@@ -621,183 +540,5 @@ function applySorts() {
     window.location.href = url.toString();
 }
 
-// Функция применения закрепления столбца
-function applyStickyColumn(columnIndex = null) {
-    const stickySelect = document.getElementById('stickyColumn');
-    const selectedColumn = columnIndex || stickySelect?.value;
-    
-    // Убираем все предыдущие закрепления
-    clearAllSticky();
-    
-    if (selectedColumn && selectedColumn !== '') {
-        const columnNum = parseInt(selectedColumn);
-        setStickyColumn(columnNum);
-        
-        // Сохраняем выбор
-        const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-        currentSettings.stickyColumn = selectedColumn;
-        localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
-        
-        // Получаем название выбранного столбца для уведомления
-        const stickySelect = document.getElementById('stickyColumn');
-        const selectedOptionText = stickySelect?.options[stickySelect.selectedIndex]?.text || 'столбец';
-        
-        if (columnNum === 1) {
-            showNotification(`Закреплен столбец "${selectedOptionText}"`, 'success');
-        } else {
-            showNotification(`Закреплено ${columnNum} столбцов (от "Действия" до "${selectedOptionText}")`, 'success');
-        }
-    } else {
-        // Убираем сохраненное значение если столбец не выбран
-        const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-        delete currentSettings.stickyColumn;
-        localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
-        
-        showNotification('Закрепление столбцов отключено', 'info');
-    }
-}
-
-// Функция для очистки всех sticky стилей
-function clearAllSticky() {
-    const table = document.querySelector('.alarm-table');
-    const stickyBorder = document.getElementById('stickyBorder');
-    if (!table) return;
-    
-    // Убираем sticky стили со всех столбцов
-    for (let i = 1; i <= 20; i++) {
-        const headers = table.querySelectorAll(`th:nth-child(${i})`);
-        const cells = table.querySelectorAll(`td:nth-child(${i})`);
-        
-        [...headers, ...cells].forEach(element => {
-            element.style.removeProperty('--sticky-left');
-            element.style.left = '';
-            element.classList.remove('sticky-column');
-        });
-    }
-    
-    // Скрываем фиксированную границу
-    if (stickyBorder) {
-        stickyBorder.classList.remove('visible');
-    }
-}
-
-// Функция для установки sticky для определенного столбца и всех столбцов слева
-function setStickyColumn(columnIndex) {
-    const table = document.querySelector('.alarm-table');
-    const stickyBorder = document.getElementById('stickyBorder');
-    if (!table) return;
-    
-    let cumulativeWidth = 0;
-    let stickyColumnsCount = 0;
-    
-    // Закрепляем все столбцы от 1 до выбранного включительно
-    for (let i = 1; i <= columnIndex; i++) {
-        const headers = table.querySelectorAll(`th:nth-child(${i})`);
-        const cells = table.querySelectorAll(`td:nth-child(${i})`);
-        
-        if (headers.length === 0) continue; // Пропускаем несуществующие столбцы
-        
-        // Применяем sticky стили к текущему столбцу
-        [...headers, ...cells].forEach(element => {
-            // Устанавливаем позицию через CSS переменную для надёжности
-            element.style.setProperty('--sticky-left', `${cumulativeWidth}px`);
-            element.classList.add('sticky-column');
-        });
-        
-        // Добавляем ширину текущего столбца к накопительной ширине
-        const currentHeader = table.querySelector(`th:nth-child(${i})`);
-        if (currentHeader) {
-            cumulativeWidth += currentHeader.offsetWidth;
-            stickyColumnsCount++;
-        }
-          }
-  
-      // Управляем фиксированной границей
-    if (stickyBorder) {
-        if (columnIndex > 0 && cumulativeWidth > 0) {
-            // Получаем позиции и размеры элементов
-            const tableContainer = document.querySelector('.table-responsive');
-            const cardBody = document.querySelector('.card-body');
-            
-            if (tableContainer && cardBody) {
-                const tableRect = tableContainer.getBoundingClientRect();
-                const cardRect = cardBody.getBoundingClientRect();
-                const tableHeight = table.offsetHeight;
-                
-                // Рассчитываем позицию относительно card-body
-                const containerOffsetLeft = tableRect.left - cardRect.left;
-                const containerOffsetTop = tableRect.top - cardRect.top;
-                
-                // Позиционируем границу
-                const totalLeft = containerOffsetLeft + cumulativeWidth;
-                stickyBorder.style.setProperty('--sticky-border-left', `${totalLeft}px`);
-                stickyBorder.style.setProperty('--sticky-border-top', `${containerOffsetTop}px`);
-                stickyBorder.style.setProperty('--sticky-border-height', `${tableHeight}px`);
-                stickyBorder.classList.add('visible');
-            }
-        } else {
-            // Скрываем границу если нет закрепленных столбцов
-            stickyBorder.classList.remove('visible');
-        }
-    }
-    
-    console.log(`Закреплено столбцов: ${stickyColumnsCount} (от 1 до ${columnIndex}), граница на ${cumulativeWidth}px`);
-    
-    // ВРЕМЕННО ОТКЛЮЧЕНО: проверяем, не вызывает ли функция стабилизации проблемы
-    // setTimeout(() => {
-    //     stabilizeStickyBorders();
-    // }, 50);
-}
-
-// Функция для пересчета позиций sticky столбцов при изменении размеров
-function recalculateStickyPositions() {
-    const stickySelect = document.getElementById('stickyColumn');
-    const selectedColumn = stickySelect?.value;
-    
-    if (selectedColumn && selectedColumn !== '') {
-        // Полный пересчёт с новыми размерами
-        setStickyColumn(parseInt(selectedColumn));
-    }
-}
-
-// Отслеживание изменений размера окна и прокрутки
-window.addEventListener('resize', function() {
-    clearTimeout(window.stickyRecalcTimeout);
-    window.stickyRecalcTimeout = setTimeout(recalculateStickyPositions, 500);
-});
-
-// Отслеживание прокрутки для стабилизации границ sticky столбцов
-document.addEventListener('DOMContentLoaded', function() {
-    const tableContainer = document.querySelector('.table-responsive');
-    if (tableContainer) {
-        let scrollTimeout;
-        tableContainer.addEventListener('scroll', function() {
-            // ВРЕМЕННО ОТКЛЮЧЕНО: проверяем, не вызывает ли функция стабилизации проблемы
-            // clearTimeout(scrollTimeout);
-            // scrollTimeout = setTimeout(function() {
-            //     stabilizeStickyBorders();
-            // }, 10);
-        });
-    }
-});
-
-// Функция для стабилизации границ sticky столбцов
-function stabilizeStickyBorders() {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    // Находим все sticky столбцы
-    const stickyElements = table.querySelectorAll('.sticky-column');
-    
-    stickyElements.forEach(element => {
-        // Принудительно перерисовываем элемент для стабилизации границ
-        const currentTransform = element.style.transform;
-        element.style.transform = 'translateZ(0.1px)';
-        
-        // Возвращаем обратно через микрозадачу
-        requestAnimationFrame(() => {
-            element.style.transform = currentTransform || 'translateZ(0)';
-        });
-    });
-}
+// Старые функции закрепления столбцов удалены - теперь используется новая система с булавками над таблицей
 </script> 
