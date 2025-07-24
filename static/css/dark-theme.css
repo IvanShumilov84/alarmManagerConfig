@@ -309,34 +309,50 @@
     max-width: 100%;
 }
 
-/* Убираем закрепление столбцов, так как ширина теперь автоматическая */
-/* Закрепление первого столбца (Действия) для удобства */
-.table.alarm-table th:nth-child(1),
-.table.alarm-table td:nth-child(1) {
-    position: sticky;
-    left: 0;
-    z-index: 10;
-    background-color: var(--bs-body-bg);
-    border-right: 1px solid var(--bs-border-color);
+/* Динамическое закрепление столбцов управляется через JavaScript */
+/* Базовые стили для всех потенциально закрепляемых столбцов */
+.table.alarm-table th:not(.sticky-column),
+.table.alarm-table td:not(.sticky-column) {
+    /* Обычное позиционирование для незакрепленных столбцов */
+    position: relative;
 }
 
-/* Убираем sticky для остальных столбцов для корректной автоматической ширины */
-.table.alarm-table th:nth-child(2),
-.table.alarm-table td:nth-child(2),
-.table.alarm-table th:nth-child(3),
-.table.alarm-table td:nth-child(3) {
-    position: static;
-    left: unset;
-    z-index: unset;
-    background-color: unset;
-    border-right: unset;
+/* Стили для закрепленных столбцов */
+.table.alarm-table .sticky-column {
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+    transition: all 0.2s ease !important;
+    position: sticky !important;
 }
 
-/* Темная тема для закрепленного столбца */
-[data-bs-theme="dark"] .table.alarm-table th:nth-child(1),
-[data-bs-theme="dark"] .table.alarm-table td:nth-child(1) {
-    background-color: var(--bs-dark);
-    border-right: 1px solid var(--bs-border-color);
+.table.alarm-table th.sticky-column,
+.table.alarm-table td.sticky-column {
+    position: sticky !important;
+}
+
+/* Темная тема для закрепленных столбцов */
+[data-bs-theme="dark"] .table.alarm-table .sticky-column {
+    box-shadow: 2px 0 4px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Эффекты при наведении */
+.table.alarm-table .sticky-column:hover {
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.1), rgba(13, 110, 253, 0.05)) !important;
+}
+
+[data-bs-theme="dark"] .table.alarm-table .sticky-column:hover {
+    background: linear-gradient(90deg, rgba(13, 110, 253, 0.2), rgba(13, 110, 253, 0.1)) !important;
+}
+
+/* Индикатор закрепления (pin icon) */
+.table.alarm-table th.sticky-column::after {
+    content: '📌';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 1;
 }
 
 /* Настройка авторасширения таблицы для автоматической ширины столбцов */

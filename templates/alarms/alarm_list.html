@@ -52,7 +52,7 @@
         background-color: var(--bs-body-bg);
     }
     
-    .alarm-table thead th {
+    .alarm-table thead th:not(.sticky-column) {
         position: sticky;
         top: 0;
         background-color: var(--bs-light);
@@ -80,6 +80,43 @@
         background-clip: padding-box;
     }
     
+    /* Стили для закрепленных столбцов - заголовки */
+    .alarm-table thead th.sticky-column {
+        position: sticky !important;
+        top: 0 !important;
+        background-color: var(--bs-light) !important;
+        z-index: 30 !important;
+        border-bottom: 2px solid var(--bs-border-color) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        backdrop-filter: blur(5px) !important;
+        -webkit-backdrop-filter: blur(5px) !important;
+        will-change: transform !important;
+        transform: translateZ(0) !important;
+        white-space: nowrap !important;
+        min-height: 40px !important;
+        height: auto !important;
+        line-height: 1.2 !important;
+        vertical-align: middle !important;
+        margin: 0 !important;
+        background-clip: padding-box !important;
+    }
+
+    /* Стили для закрепленных столбцов - ячейки тела таблицы */
+    .alarm-table tbody td.sticky-column {
+        position: sticky !important;
+        background-color: var(--bs-body-bg) !important;
+        z-index: 25 !important;
+        border-right: 2px solid var(--bs-border-color) !important;
+        box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1) !important;
+        backdrop-filter: blur(3px) !important;
+        -webkit-backdrop-filter: blur(3px) !important;
+        will-change: transform !important;
+        transform: translateZ(0) !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+        background-clip: padding-box !important;
+    }
+    
     /* Тело таблицы - прокручиваемое */
     .alarm-table tbody {
         position: relative;
@@ -96,10 +133,29 @@
     [data-bs-theme="dark"] .alarm-table thead {
         background-color: var(--bs-body-bg);
     }
+
+    /* Темная тема для закрепленных столбцов - заголовки */
+    [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
+        background-color: var(--bs-dark) !important;
+        border-bottom-color: var(--bs-border-color-translucent) !important;
+        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
+    }
+
+    /* Темная тема для закрепленных столбцов - ячейки тела */
+    [data-bs-theme="dark"] .alarm-table tbody td.sticky-column {
+        background-color: var(--bs-body-bg) !important;
+        border-right-color: var(--bs-border-color-translucent) !important;
+        box-shadow: 2px 0 4px rgba(255, 255, 255, 0.1) !important;
+    }
     
-    [data-bs-theme="dark"] .alarm-table thead th {
+    [data-bs-theme="dark"] .alarm-table thead th:not(.sticky-column) {
         background-color: var(--bs-dark);
         box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
+    }
+    
+    [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
+        background-color: var(--bs-dark) !important;
+        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1) !important;
     }
     
     /* Контейнер таблицы - занимает всё доступное пространство с фиксированной шапкой */
@@ -325,194 +381,44 @@
 
 {% block extra_js %}
 <script>
-// Функция для динамической адаптации высоты таблицы с учетом зафиксированного заголовка
+// Упрощенная функция для адаптации высоты таблицы
 function adaptTableHeight() {
-    // Получаем реальные высоты элементов
     const controlsPanel = document.querySelector('.controls-panel');
-    const tableHeader = document.querySelector('.alarm-table thead');
-    const containerFluid = document.querySelector('.container-fluid');
     const tableContainer = document.querySelector('.table-responsive');
-    const card = document.querySelector('.card');
     
-    if (controlsPanel && card && tableContainer) {
-        // Измеряем фактические высоты
+    if (controlsPanel && tableContainer) {
         const controlsPanelHeight = controlsPanel.offsetHeight;
-        let tableHeaderHeight = 0;
-        
-        if (tableHeader) {
-            tableHeaderHeight = tableHeader.offsetHeight;
-        }
-        
-        // Получаем реальные отступы контейнера
-        let containerPadding = 16; // по умолчанию 1rem
-        if (containerFluid) {
-            const computedStyle = window.getComputedStyle(containerFluid);
-            containerPadding = parseFloat(computedStyle.paddingTop) + parseFloat(computedStyle.paddingBottom);
-        }
-        
-        // Рассчитываем доступную высоту для таблицы
         const viewportHeight = window.innerHeight;
-        const availableHeight = viewportHeight - controlsPanelHeight - containerPadding - 40; // 40px запас
+        const availableHeight = viewportHeight - controlsPanelHeight - 80; // 80px запас
         
-        // Устанавливаем максимальную высоту для контейнера таблицы
         tableContainer.style.maxHeight = `${availableHeight}px`;
-        tableContainer.style.height = `${availableHeight}px`;
         
-        // Обновляем CSS переменные с реальными значениями
-        document.documentElement.style.setProperty('--controls-panel-height', `${controlsPanelHeight}px`);
-        document.documentElement.style.setProperty('--page-padding', `${containerPadding}px`);
-        
-        // Принудительно обновляем sticky позиционирование заголовка
-        if (tableHeader) {
-            tableHeader.style.position = 'sticky';
-            tableHeader.style.top = '0';
-            tableHeader.style.zIndex = '15';
-            
-            // Обновляем стили для каждого th в заголовке
-            const headerCells = tableHeader.querySelectorAll('th');
-            headerCells.forEach(th => {
-                th.style.position = 'sticky';
-                th.style.top = '0';
-                th.style.zIndex = '20';
-            });
-        }
-        
-        console.log(`Адаптивная высота: viewport ${viewportHeight}px, панель ${controlsPanelHeight}px, доступно для таблицы ${availableHeight}px`);
+        // Простое обновление sticky заголовка
+        enforceTableHeaderSticky();
     }
 }
 
-// Функция для принудительной фиксации заголовка таблицы
+// Упрощенная функция для фиксации заголовка таблицы
 function enforceTableHeaderSticky() {
     const tableHeader = document.querySelector('.alarm-table thead');
-    const tableContainer = document.querySelector('.table-responsive');
-    
-    if (tableHeader && tableContainer) {
-        // Проверяем, действительно ли заголовок зафиксирован
-        const headerRect = tableHeader.getBoundingClientRect();
-        const containerRect = tableContainer.getBoundingClientRect();
-        
-        // Если заголовок находится вне видимой области контейнера
-        if (headerRect.top < containerRect.top || headerRect.top > containerRect.bottom) {
-            // Принудительно применяем sticky стили
-            tableHeader.style.position = 'sticky';
-            tableHeader.style.top = '0px';
-            tableHeader.style.zIndex = '15';
-            
-            const headerCells = tableHeader.querySelectorAll('th');
-            headerCells.forEach(th => {
-                th.style.position = 'sticky';
-                th.style.top = '0px';
-                th.style.zIndex = '20';
-                th.style.backgroundColor = getComputedStyle(th).backgroundColor;
-            });
-            
-            console.log('Принудительно применена фиксация заголовка таблицы');
-        }
-    }
-}
-
-// Адаптация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Небольшая задержка для полной загрузки CSS
-    setTimeout(adaptTableHeight, 100);
-    setTimeout(enforceTableHeaderSticky, 200);
-    
-    // Повторная адаптация через секунду для учета динамических изменений
-    setTimeout(adaptTableHeight, 1000);
-    setTimeout(enforceTableHeaderSticky, 1100);
-});
-
-// Адаптация при изменении размера окна
-window.addEventListener('resize', function() {
-    // Дебаунсинг для производительности
-    clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(function() {
-        adaptTableHeight();
-        enforceTableHeaderSticky();
-    }, 150);
-});
-
-// Адаптация при переключении сайдбара
-document.addEventListener('click', function(event) {
-    // Если кликнули по кнопке переключения сайдбара
-    if (event.target.closest('button[onclick*="toggleSidebar"]')) {
-        // Задержка для завершения анимации сайдбара
-        setTimeout(function() {
-            adaptTableHeight();
-            enforceTableHeaderSticky();
-        }, 350);
-    }
-});
-
-// Проверка фиксации заголовка при прокрутке таблицы
-const tableContainer = document.querySelector('.table-responsive');
-if (tableContainer) {
-    tableContainer.addEventListener('scroll', function() {
-        // Периодическая проверка фиксации при прокрутке
-        clearTimeout(window.scrollTimeout);
-        window.scrollTimeout = setTimeout(enforceTableHeaderSticky, 50);
-    });
-}
-
-// Наблюдатель за изменениями в панели управления
-if (window.ResizeObserver) {
-    const resizeObserver = new ResizeObserver(function(entries) {
-        adaptTableHeight();
-        setTimeout(enforceTableHeaderSticky, 100);
-    });
-    
-    // Наблюдаем за панелью управления
-    const controlsPanel = document.querySelector('.controls-panel');
-    if (controlsPanel) {
-        resizeObserver.observe(controlsPanel);
-    }
-    
-    // Наблюдаем за заголовком таблицы
-    const tableHeader = document.querySelector('.alarm-table thead');
     if (tableHeader) {
-        resizeObserver.observe(tableHeader);
+        tableHeader.style.setProperty('position', 'sticky', 'important');
+        tableHeader.style.setProperty('top', '0px', 'important');
     }
 }
 
-// Наблюдатель за изменениями в DOM (например, при сворачивании/разворачивании табов)
-if (window.MutationObserver) {
-    const mutationObserver = new MutationObserver(function(mutations) {
-        let shouldUpdate = false;
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && 
-                (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
-                shouldUpdate = true;
-            }
-        });
-        
-        if (shouldUpdate) {
-            setTimeout(function() {
-                adaptTableHeight();
-                enforceTableHeaderSticky();
-            }, 100);
-        }
-    });
-    
-    // Наблюдаем за изменениями в панели управления
-    const controlsPanel = document.querySelector('.controls-panel');
-    if (controlsPanel) {
-        mutationObserver.observe(controlsPanel, {
-            attributes: true,
-            subtree: true,
-            attributeFilter: ['style', 'class']
-        });
-    }
-    
-    // Наблюдаем за изменениями в таблице
-    const alarmTable = document.querySelector('.alarm-table');
-    if (alarmTable) {
-        mutationObserver.observe(alarmTable, {
-            attributes: true,
-            subtree: true,
-            attributeFilter: ['style', 'class']
-        });
-    }
-}
+// Простая адаптация при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    adaptTableHeight();
+});
+
+// Простая адаптация при изменении размера окна
+window.addEventListener('resize', function() {
+    clearTimeout(window.resizeTimeout);
+    window.resizeTimeout = setTimeout(adaptTableHeight, 200);
+});
+
+// Убрали все наблюдатели для устранения зависаний
 </script>
 {% endblock %}
 
