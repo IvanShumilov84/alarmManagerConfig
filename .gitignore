@@ -137,4 +137,7 @@ dmypy.json
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Windows-specific issues
+nul 
