@@ -447,17 +447,20 @@
     }
     
     .sort-button.sort-asc {
-        color: var(--bs-success);
-        background-color: rgba(var(--bs-success-rgb), 0.1);
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        font-weight: bold;
     }
     
     .sort-button.sort-desc {
-        color: var(--bs-warning);
-        background-color: rgba(var(--bs-warning-rgb), 0.1);
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.1);
+        font-weight: bold;
     }
     
     .sort-button.sort-asc:hover,
     .sort-button.sort-desc:hover {
+        background-color: rgba(var(--bs-primary-rgb), 0.2);
         transform: scale(1.1);
     }
     
@@ -472,13 +475,15 @@
     }
     
     [data-bs-theme="dark"] .sort-button.sort-asc {
-        color: var(--bs-success);
-        background-color: rgba(var(--bs-success-rgb), 0.2);
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.2);
+        font-weight: bold;
     }
     
     [data-bs-theme="dark"] .sort-button.sort-desc {
-        color: var(--bs-warning);
-        background-color: rgba(var(--bs-warning-rgb), 0.2);
+        color: var(--bs-primary);
+        background-color: rgba(var(--bs-primary-rgb), 0.2);
+        font-weight: bold;
     }
     
     /* Sticky стили для ячеек управления */
@@ -517,52 +522,14 @@
         display: none;
     }
     
-    /* Стили для цветных кнопок сортировки */
-    .sort-button.sort-asc {
-        background-color: var(--bs-success);
-        color: white;
-        border-color: var(--bs-success);
-    }
-    
-    .sort-button.sort-desc {
-        background-color: var(--bs-warning);
-        color: var(--bs-dark);
-        border-color: var(--bs-warning);
-    }
-    
-    [data-bs-theme="dark"] .sort-button.sort-asc {
-        background-color: var(--bs-success);
-        color: white;
-        border-color: var(--bs-success);
-    }
-    
-    [data-bs-theme="dark"] .sort-button.sort-desc {
-        background-color: var(--bs-warning);
-        color: var(--bs-dark);
-        border-color: var(--bs-warning);
-    }
-    
-    /* Hover эффекты для цветных кнопок */
-    .sort-button.sort-asc:hover {
-        background-color: #157347; /* Темнее зелёного */
-        transform: scale(1.05);
-    }
-    
-    .sort-button.sort-desc:hover {
-        background-color: #e0a800; /* Темнее жёлтого */
-        transform: scale(1.05);
-    }
-    
-    /* Hover для серых (неактивных) кнопок */
+    /* Hover для неактивных кнопок сортировки */
     .sort-button:not(.sort-asc):not(.sort-desc):hover {
-        background-color: var(--bs-light);
-        border-color: var(--bs-secondary);
-        transform: scale(1.05);
+        background-color: var(--bs-gray-200);
+        transform: scale(1.1);
     }
     
     [data-bs-theme="dark"] .sort-button:not(.sort-asc):not(.sort-desc):hover {
-        background-color: var(--bs-secondary);
-        border-color: var(--bs-light);
+        background-color: var(--bs-gray-700);
     }
     
     .sort-order {
@@ -1680,7 +1647,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Сортировать по ID">
-                                            <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}funnel{% endif %}"></i>
+                                            <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1690,7 +1657,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Сортировать по каналу">
-                                            <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}funnel{% endif %}"></i>
+                                            <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1700,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Сортировать по сообщению">
-                                            <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1710,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Сортировать по таблице">
-                                            <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1720,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Сортировать по классу тревоги">
-                                            <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1730,7 +1697,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="logic" data-current-sort="{% if 'logic' in sort_indicators %}{{ sort_indicators.logic }}{% endif %}" title="Сортировать по логике">
-                                            <i class="bi bi-{% if 'logic' in sort_indicators %}{% if sort_indicators.logic == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'logic' in sort_indicators %}{% if sort_indicators.logic == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1740,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="confirm_method" data-current-sort="{% if 'confirm_method' in sort_indicators %}{{ sort_indicators.confirm_method }}{% endif %}" title="Сортировать по способу подтверждения">
-                                            <i class="bi bi-{% if 'confirm_method' in sort_indicators %}{% if sort_indicators.confirm_method == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'confirm_method' in sort_indicators %}{% if sort_indicators.confirm_method == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1750,7 +1717,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="prior" data-current-sort="{% if 'prior' in sort_indicators %}{{ sort_indicators.prior }}{% endif %}" title="Сортировать по приоритету">
-                                            <i class="bi bi-{% if 'prior' in sort_indicators %}{% if sort_indicators.prior == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'prior' in sort_indicators %}{% if sort_indicators.prior == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1760,7 +1727,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="limit_type" data-current-sort="{% if 'limit_type' in sort_indicators %}{{ sort_indicators.limit_type }}{% endif %}" title="Сортировать по типу ограничения">
-                                            <i class="bi bi-{% if 'limit_type' in sort_indicators %}{% if sort_indicators.limit_type == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'limit_type' in sort_indicators %}{% if sort_indicators.limit_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1770,7 +1737,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="limit_config_type" data-current-sort="{% if 'limit_config_type' in sort_indicators %}{{ sort_indicators.limit_config_type }}{% endif %}" title="Сортировать по типу настройки пределов">
-                                            <i class="bi bi-{% if 'limit_config_type' in sort_indicators %}{% if sort_indicators.limit_config_type == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'limit_config_type' in sort_indicators %}{% if sort_indicators.limit_config_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1780,7 +1747,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="low" data-current-sort="{% if 'low' in sort_indicators %}{{ sort_indicators.low }}{% endif %}" title="Сортировать по нижнему пределу">
-                                            <i class="bi bi-{% if 'low' in sort_indicators %}{% if sort_indicators.low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'low' in sort_indicators %}{% if sort_indicators.low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1790,7 +1757,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="high" data-current-sort="{% if 'high' in sort_indicators %}{{ sort_indicators.high }}{% endif %}" title="Сортировать по верхнему пределу">
-                                            <i class="bi bi-{% if 'high' in sort_indicators %}{% if sort_indicators.high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'high' in sort_indicators %}{% if sort_indicators.high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1800,7 +1767,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="ch_low" data-current-sort="{% if 'ch_low' in sort_indicators %}{{ sort_indicators.ch_low }}{% endif %}" title="Сортировать по каналу нижнего предела">
-                                            <i class="bi bi-{% if 'ch_low' in sort_indicators %}{% if sort_indicators.ch_low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'ch_low' in sort_indicators %}{% if sort_indicators.ch_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1810,7 +1777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="ch_high" data-current-sort="{% if 'ch_high' in sort_indicators %}{{ sort_indicators.ch_high }}{% endif %}" title="Сортировать по каналу верхнего предела">
-                                            <i class="bi bi-{% if 'ch_high' in sort_indicators %}{% if sort_indicators.ch_high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'ch_high' in sort_indicators %}{% if sort_indicators.ch_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1820,7 +1787,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="hyst_low" data-current-sort="{% if 'hyst_low' in sort_indicators %}{{ sort_indicators.hyst_low }}{% endif %}" title="Сортировать по гистерезису нижнего предела">
-                                            <i class="bi bi-{% if 'hyst_low' in sort_indicators %}{% if sort_indicators.hyst_low == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'hyst_low' in sort_indicators %}{% if sort_indicators.hyst_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1830,7 +1797,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="hyst_high" data-current-sort="{% if 'hyst_high' in sort_indicators %}{{ sort_indicators.hyst_high }}{% endif %}" title="Сортировать по гистерезису верхнего предела">
-                                            <i class="bi bi-{% if 'hyst_high' in sort_indicators %}{% if sort_indicators.hyst_high == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'hyst_high' in sort_indicators %}{% if sort_indicators.hyst_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1840,7 +1807,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="discrete_val" data-current-sort="{% if 'discrete_val' in sort_indicators %}{{ sort_indicators.discrete_val }}{% endif %}" title="Сортировать по дискретному значению">
-                                            <i class="bi bi-{% if 'discrete_val' in sort_indicators %}{% if sort_indicators.discrete_val == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'discrete_val' in sort_indicators %}{% if sort_indicators.discrete_val == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1850,7 +1817,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="created_at" data-current-sort="{% if 'created_at' in sort_indicators %}{{ sort_indicators.created_at }}{% endif %}" title="Сортировать по дате создания">
-                                            <i class="bi bi-{% if 'created_at' in sort_indicators %}{% if sort_indicators.created_at == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'created_at' in sort_indicators %}{% if sort_indicators.created_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1860,7 +1827,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="updated_at" data-current-sort="{% if 'updated_at' in sort_indicators %}{{ sort_indicators.updated_at }}{% endif %}" title="Сортировать по дате обновления">
-                                            <i class="bi bi-{% if 'updated_at' in sort_indicators %}{% if sort_indicators.updated_at == 'asc' %}sort-up{% else %}sort-down{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                            <i class="bi bi-{% if 'updated_at' in sort_indicators %}{% if sort_indicators.updated_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
                                 </th>
@@ -1868,120 +1835,25 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Основные заголовки таблицы -->
                             <tr>
                                 <th>Действия</th>
-                                <th>
-                                    ID
-                                    {% if 'id' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.id == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th>
-                                    Канал
-                                    {% if 'channel' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.channel == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th>
-                                    Сообщение
-                                    {% if 'msg' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.msg == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th>
-                                    Таблица
-                                    {% if 'table' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.table == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Класс тревоги">
-                                    Класс
-                                    {% if 'alarm_class' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.alarm_class == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Способ наблюдения">
-                                    Логика
-                                    {% if 'logic' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.logic == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Способ подтверждения">
-                                    Подтверждение
-                                    {% if 'confirm_method' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.confirm_method == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th>
-                                    Приоритет
-                                    {% if 'prior' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.prior == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Тип ограничения">
-                                    Лимит
-                                    {% if 'limit_type' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.limit_type == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Тип настройки пределов">
-                                    Тип лимита
-                                    {% if 'limit_config_type' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.limit_config_type == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Нижний предел">
-                                    Мин
-                                    {% if 'low' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.low == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Верхний предел">
-                                    Макс
-                                    {% if 'high' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.high == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Канал нижнего предела">
-                                    Канал мин
-                                    {% if 'ch_low' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.ch_low == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Канал верхнего предела">
-                                    Канал макс
-                                    {% if 'ch_high' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.ch_high == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Гистерезис нижнего предела">
-                                    Гист мин
-                                    {% if 'hyst_low' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.hyst_low == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Гистерезис верхнего предела">
-                                    Гист макс
-                                    {% if 'hyst_high' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.hyst_high == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Значение предела для дискретного сигнала">
-                                    Дискрет
-                                    {% if 'discrete_val' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.discrete_val == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Дата создания">
-                                    Создано
-                                    {% if 'created_at' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.created_at == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
-                                <th title="Дата обновления">
-                                    Обновлено
-                                    {% if 'updated_at' in sort_indicators %}
-                                        <i class="bi bi-sort-{% if sort_indicators.updated_at == 'asc' %}up{% else %}down{% endif %}"></i>
-                                    {% endif %}
-                                </th>
+                                <th>ID</th>
+                                <th>Канал</th>
+                                <th>Сообщение</th>
+                                <th>Таблица</th>
+                                <th title="Класс тревоги">Класс</th>
+                                <th title="Способ наблюдения">Логика</th>
+                                <th title="Способ подтверждения">Подтверждение</th>
+                                <th>Приоритет</th>
+                                <th title="Тип ограничения">Лимит</th>
+                                <th title="Тип настройки пределов">Тип лимита</th>
+                                <th title="Нижний предел">Мин</th>
+                                <th title="Верхний предел">Макс</th>
+                                <th title="Канал нижнего предела">Канал мин</th>
+                                <th title="Канал верхнего предела">Канал макс</th>
+                                <th title="Гистерезис нижнего предела">Гист мин</th>
+                                <th title="Гистерезис верхнего предела">Гист макс</th>
+                                <th title="Значение предела для дискретного сигнала">Дискрет</th>
+                                <th title="Дата создания">Создано</th>
+                                <th title="Дата обновления">Обновлено</th>
                             </tr>
                         </thead>
                         <tbody>
