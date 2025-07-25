@@ -1059,8 +1059,8 @@ def ajax_sort_alarms(request):
             "total_count": paginator.count,
             "current_page": page_obj.number,
             "num_pages": paginator.num_pages,
-            "sort_fields": request.GET.getlist("sort_0"),
-            "sort_orders": request.GET.getlist("order_0"),
+            "sort_fields": sort_fields,
+            "sort_orders": sort_orders,
         }
     )
 

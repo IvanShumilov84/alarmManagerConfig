@@ -369,8 +369,9 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 4px;
         height: 100%;
+        flex-wrap: nowrap;
     }
     
     /* Кнопка булавки */
@@ -433,11 +434,12 @@
         border-radius: 3px;
         transition: all 0.2s ease;
         color: var(--bs-gray-600);
-        display: flex;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 20px;
+        min-width: 20px;
         height: 20px;
+        white-space: nowrap;
     }
     
     .sort-button:hover {
@@ -533,38 +535,21 @@
     }
     
     .sort-order {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        background-color: var(--bs-info);
-        color: white;
-        border-radius: 50%;
-        width: 16px;
-        height: 16px;
+        margin-left: 2px;
+        color: var(--bs-primary);
         font-size: 10px;
         font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 10;
-        border: 1px solid white;
+        line-height: 1;
     }
     
-    /* Контрастные номера для разных цветов кнопок */
-    .sort-button.sort-asc .sort-order {
-        background-color: var(--bs-info);
-        color: white;
-    }
-    
+    /* Цвет номеров как у активных кнопок */
+    .sort-button.sort-asc .sort-order,
     .sort-button.sort-desc .sort-order {
-        background-color: var(--bs-info);
-        color: white;
+        color: var(--bs-primary);
     }
     
     [data-bs-theme="dark"] .sort-order {
-        background-color: var(--bs-info);
-        color: white;
-        border-color: var(--bs-dark);
+        color: var(--bs-primary);
     }
     
     /* Кнопка сброса всей сортировки */
@@ -1150,7 +1135,7 @@ window.forceTableHeightAdaptation = function() {
 // Функции для работы с множественной сортировкой
 function getActiveSortParams(url) {
     const sortParams = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 19; i++) {
         const field = url.searchParams.get(`sort_${i}`);
         const order = url.searchParams.get(`order_${i}`);
         if (field) {
@@ -1161,7 +1146,7 @@ function getActiveSortParams(url) {
 }
 
 function clearSortParams(url) {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 19; i++) {
         url.searchParams.delete(`sort_${i}`);
         url.searchParams.delete(`order_${i}`);
     }
@@ -1207,6 +1192,39 @@ function updateResetSortButtonState() {
         resetButton.classList.add('disabled');
         resetButton.title = 'Нет активной сортировки';
     }
+}
+
+function updateSortButtonTooltips() {
+    // Словарь названий полей для подсказок
+    const fieldNames = {
+        'id': 'ID',
+        'channel': 'каналу',
+        'msg': 'сообщению',
+        'table': 'таблице',
+        'alarm_class': 'классу тревоги',
+        'logic': 'логике',
+        'confirm_method': 'способу подтверждения',
+        'prior': 'приоритету',
+        'limit_type': 'типу ограничения',
+        'limit_config_type': 'типу настройки пределов',
+        'low': 'нижнему пределу',
+        'high': 'верхнему пределу',
+        'ch_low': 'каналу нижнего предела',
+        'ch_high': 'каналу верхнего предела',
+        'hyst_low': 'гистерезису нижнего предела',
+        'hyst_high': 'гистерезису верхнего предела',
+        'discrete_val': 'дискретному значению',
+        'created_at': 'дате создания',
+        'updated_at': 'дате обновления'
+    };
+    
+    // Обновляем подсказки для всех кнопок сортировки
+    document.querySelectorAll('.sort-button').forEach(button => {
+        const field = button.dataset.field;
+        if (field && field !== 'actions' && fieldNames[field]) {
+            button.title = `Клик: сортировать по ${fieldNames[field]} | Двойной клик: отменить сортировку`;
+        }
+    });
 }
 
 // AJAX функции для сортировки без перезагрузки страницы
@@ -1393,6 +1411,9 @@ function updateSortButtonStates() {
     
     // Обновляем состояние кнопки сброса сортировки
     updateResetSortButtonState();
+    
+    // Обновляем подсказки для кнопок сортировки
+    updateSortButtonTooltips();
 }
 
 // Функции управления закреплением столбцов (перенесены из controls_panel)
@@ -1540,6 +1561,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обработчики кликов по кнопкам сортировки (множественная сортировка)
     document.querySelectorAll('.sort-button').forEach(button => {
+        let clickTimeout = null;
+        let clickCount = 0;
+        
         button.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1549,6 +1573,71 @@ document.addEventListener('DOMContentLoaded', function() {
             // Игнорируем столбец действий
             if (field === 'actions') return;
             
+            clickCount++;
+            
+            // Очищаем предыдущий таймаут
+            if (clickTimeout) {
+                clearTimeout(clickTimeout);
+            }
+            
+            // Устанавливаем таймаут для определения двойного клика
+            clickTimeout = setTimeout(() => {
+                // Одинарный клик - обычная логика сортировки
+                if (clickCount === 1) {
+                    // Получаем текущие параметры сортировки
+                    const url = new URL(window.location);
+                    const sortParams = getActiveSortParams(url);
+                    
+                    // Ищем текущее поле в активных сортировках
+                    const existingIndex = sortParams.findIndex(sort => sort.field === field);
+                    
+                    if (existingIndex !== -1) {
+                        // Поле уже в сортировке - меняем направление
+                        const currentSort = sortParams[existingIndex];
+                        if (currentSort.order === 'asc') {
+                            currentSort.order = 'desc';
+                        } else if (currentSort.order === 'desc') {
+                            currentSort.order = 'asc';
+                        }
+                    } else {
+                        // Добавляем новое поле сортировки
+                        if (sortParams.length < 19) { // Максимум 19 полей сортировки (все доступные поля кроме "Действия")
+                            sortParams.push({ field: field, order: 'asc' });
+                        }
+                    }
+                    
+                    // Обновляем URL параметры
+                    clearSortParams(url);
+                    applySortParams(url, sortParams);
+                    
+                    // Сбрасываем на первую страницу
+                    url.searchParams.set('page', '1');
+                    
+                    // AJAX сортировка множественными полями
+                    performAjaxSort(url.search);
+                }
+                
+                // Сбрасываем счетчик кликов
+                clickCount = 0;
+            }, 300); // 300ms для определения двойного клика
+        });
+        
+        // Обработчик двойного клика для отмены сортировки
+        button.addEventListener('dblclick', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const field = this.dataset.field;
+            
+            // Игнорируем столбец действий
+            if (field === 'actions') return;
+            
+            // Очищаем таймаут одинарного клика
+            if (clickTimeout) {
+                clearTimeout(clickTimeout);
+                clickCount = 0;
+            }
+            
             // Получаем текущие параметры сортировки
             const url = new URL(window.location);
             const sortParams = getActiveSortParams(url);
@@ -1557,30 +1646,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const existingIndex = sortParams.findIndex(sort => sort.field === field);
             
             if (existingIndex !== -1) {
-                // Поле уже в сортировке - меняем направление или удаляем
-                const currentSort = sortParams[existingIndex];
-                if (currentSort.order === 'asc') {
-                    currentSort.order = 'desc';
-                } else if (currentSort.order === 'desc') {
-                    // Удаляем из сортировки
-                    sortParams.splice(existingIndex, 1);
-                }
-            } else {
-                // Добавляем новое поле сортировки
-                if (sortParams.length < 5) { // Максимум 5 полей сортировки
-                    sortParams.push({ field: field, order: 'asc' });
-                }
+                // Удаляем поле из сортировки
+                sortParams.splice(existingIndex, 1);
+                
+                // Обновляем URL параметры
+                clearSortParams(url);
+                applySortParams(url, sortParams);
+                
+                // Сбрасываем на первую страницу
+                url.searchParams.set('page', '1');
+                
+                // AJAX сортировка множественными полями
+                performAjaxSort(url.search);
+                
+                console.log(`🗑️ Отменена сортировка по полю: ${field}`);
             }
-            
-            // Обновляем URL параметры
-            clearSortParams(url);
-            applySortParams(url, sortParams);
-            
-            // Сбрасываем на первую страницу
-            url.searchParams.set('page', '1');
-            
-            // AJAX сортировка множественными полями
-            performAjaxSort(url.search);
         });
     });
     
@@ -1615,6 +1695,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Инициализация состояния кнопок сортировки при загрузке страницы
     updateSortButtonStates();
+    
+    // Обновляем подсказки для кнопок сортировки
+    updateSortButtonTooltips();
 });
 </script>
 {% endblock %}
@@ -1651,7 +1734,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="pin-button" data-column="2" title="Закрепить столбец ID">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
-                                        <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Сортировать по ID">
+                                        <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Клик: сортировать по ID | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
@@ -1661,7 +1744,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="pin-button" data-column="3" title="Закрепить столбец Канал">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
-                                        <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Сортировать по каналу">
+                                        <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Клик: сортировать по каналу | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
@@ -1671,7 +1754,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="pin-button" data-column="4" title="Закрепить столбец Сообщение">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
-                                        <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Сортировать по сообщению">
+                                        <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Клик: сортировать по сообщению | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
@@ -1681,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="pin-button" data-column="5" title="Закрепить столбец Таблица">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
-                                        <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Сортировать по таблице">
+                                        <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Клик: сортировать по таблице | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
@@ -1691,7 +1774,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="pin-button" data-column="6" title="Закрепить столбец Класс">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
-                                        <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Сортировать по классу тревоги">
+                                        <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Клик: сортировать по классу тревоги | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
                                     </div>
