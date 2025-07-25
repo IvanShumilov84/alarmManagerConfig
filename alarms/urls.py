@@ -38,6 +38,7 @@ urlpatterns = [
     # API endpoints
     path("api/export-json/", views.export_json, name="export_json"),
     path("api/get-logic-fields/", views.get_logic_fields, name="get_logic_fields"),
+    path("api/ajax-sort-alarms/", views.ajax_sort_alarms, name="ajax_sort_alarms"),
     # API для справочников фильтров
     path("api/alarm-classes/", views.api_alarm_classes, name="api_alarm_classes"),
     path("api/logics/", views.api_logics, name="api_logics"),

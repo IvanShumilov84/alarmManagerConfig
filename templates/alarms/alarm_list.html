@@ -658,6 +658,30 @@
         background: var(--bs-secondary-color);
     }
     
+    /* AJAX анимация загрузки */
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .spin {
+        animation: spin 1s linear infinite;
+    }
+    
+    #ajax-loading {
+        font-size: 14px;
+        color: var(--bs-secondary);
+        background-color: var(--bs-body-bg) !important;
+        border: 1px solid var(--bs-border-color) !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    [data-bs-theme="dark"] #ajax-loading {
+        background-color: var(--bs-body-bg) !important;
+        border-color: var(--bs-border-color) !important;
+        color: var(--bs-body-color);
+    }
+    
     /* Адаптация для минимизированного сайдбара - убрана для горизонтального скролла */
     
     /* Адаптивность для разных размеров экрана */
@@ -1028,6 +1052,166 @@ window.forceTableHeightAdaptation = function() {
 
 // ===== УПРАВЛЕНИЕ СТОЛБЦАМИ ЧЕРЕЗ СТРОКУ УПРАВЛЕНИЯ =====
 
+// AJAX функции для сортировки без перезагрузки страницы
+function performAjaxSort(queryString) {
+    // Показываем индикатор загрузки
+    showLoadingIndicator();
+    
+    // Отправляем AJAX запрос 
+    const ajaxUrl = `/api/ajax-sort-alarms${queryString}`;
+    
+    fetch(ajaxUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                // Обновляем содержимое таблицы
+                updateTableContent(data.table_html);
+                
+                // Обновляем пагинацию
+                updatePagination(data.pagination_html);
+                
+                // Обновляем URL без перезагрузки страницы
+                const newUrl = window.location.pathname + queryString;
+                window.history.pushState({}, '', newUrl);
+                
+                // Обновляем состояние кнопок сортировки
+                updateSortButtonStates();
+                
+                console.log(`✅ AJAX сортировка: ${data.total_count} записей (страница ${data.current_page}/${data.num_pages})`);
+            } else {
+                throw new Error('Ошибка сервера при сортировке');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка AJAX сортировки:', error);
+            showErrorMessage('Произошла ошибка при сортировке. Попробуйте обновить страницу.');
+        })
+        .finally(() => {
+            hideLoadingIndicator();
+        });
+}
+
+function updateTableContent(newHtml) {
+    const tbody = document.querySelector('.alarm-table tbody');
+    
+    if (tbody) {
+        tbody.innerHTML = newHtml;
+        
+        // Переприменяем закрепление столбцов если оно было активно
+        const activePin = document.querySelector('.pin-button.active');
+        if (activePin) {
+            const columnIndex = parseInt(activePin.dataset.column);
+            setStickyColumnNew(columnIndex);
+        }
+    } else {
+        console.error('❌ Не найден tbody для обновления!');
+    }
+}
+
+function updatePagination(newHtml) {
+    const paginationContainer = document.querySelector('nav[aria-label="Навигация по страницам"]')?.parentElement;
+    if (paginationContainer) {
+        paginationContainer.innerHTML = newHtml;
+        
+        // Добавляем обработчики для новых ссылок пагинации
+        addPaginationHandlers();
+    }
+}
+
+function addPaginationHandlers() {
+    document.querySelectorAll('.ajax-page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.dataset.page;
+            
+            // Формируем URL с новой страницей
+            const url = new URL(window.location);
+            url.searchParams.set('page', page);
+            
+            // Отправляем AJAX запрос
+            performAjaxSort(url.search);
+        });
+    });
+}
+
+function showLoadingIndicator() {
+    const tbody = document.querySelector('.alarm-table tbody');
+    if (tbody) {
+        tbody.style.opacity = '0.5';
+        tbody.style.pointerEvents = 'none';
+    }
+    
+    // Можно добавить спиннер загрузки
+    const loadingIndicator = document.createElement('div');
+    loadingIndicator.id = 'ajax-loading';
+    loadingIndicator.innerHTML = '<div class="text-center p-3"><i class="bi bi-arrow-clockwise spin"></i> Загрузка...</div>';
+    loadingIndicator.style.position = 'absolute';
+    loadingIndicator.style.top = '50%';
+    loadingIndicator.style.left = '50%';
+    loadingIndicator.style.transform = 'translate(-50%, -50%)';
+    loadingIndicator.style.zIndex = '1000';
+    loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+    loadingIndicator.style.padding = '10px 20px';
+    loadingIndicator.style.borderRadius = '5px';
+    loadingIndicator.style.border = '1px solid #dee2e6';
+    
+    const tableContainer = document.querySelector('.table-responsive');
+    if (tableContainer) {
+        tableContainer.style.position = 'relative';
+        tableContainer.appendChild(loadingIndicator);
+    }
+}
+
+function hideLoadingIndicator() {
+    const tbody = document.querySelector('.alarm-table tbody');
+    if (tbody) {
+        tbody.style.opacity = '1';
+        tbody.style.pointerEvents = 'auto';
+    }
+    
+    const loadingIndicator = document.getElementById('ajax-loading');
+    if (loadingIndicator) {
+        loadingIndicator.remove();
+    }
+}
+
+function showErrorMessage(message) {
+    // Простое уведомление об ошибке
+    alert(message);
+}
+
+function updateSortButtonStates() {
+    // Получаем текущие параметры сортировки из URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentSortField = urlParams.get('sort_0');
+    const currentSortOrder = urlParams.get('order_0');
+    
+    // Обновляем все кнопки сортировки
+    document.querySelectorAll('.sort-button').forEach(button => {
+        const field = button.dataset.field;
+        const icon = button.querySelector('i');
+        
+        // Сбрасываем классы
+        button.classList.remove('sort-asc', 'sort-desc');
+        
+        if (field === currentSortField) {
+            button.dataset.currentSort = currentSortOrder;
+            if (currentSortOrder === 'asc') {
+                button.classList.add('sort-asc');
+            } else if (currentSortOrder === 'desc') {
+                button.classList.add('sort-desc');
+            }
+        } else {
+            button.dataset.currentSort = '';
+        }
+    });
+}
+
 // Функции управления закреплением столбцов (перенесены из controls_panel)
 function clearAllStickyNew() {
     const table = document.querySelector('.alarm-table');
@@ -1212,8 +1396,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Сбрасываем на первую страницу
             url.searchParams.set('page', '1');
             
-            // Переходим на новую страницу
-            window.location.href = url.toString();
+            // AJAX сортировка вместо перезагрузки страницы
+            
+            // Отправляем AJAX запрос для сортировки
+            performAjaxSort(url.search);
         });
     });
     
@@ -1242,6 +1428,9 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }, 500);
     });
+    
+    // Инициализация AJAX обработчиков для пагинации
+    addPaginationHandlers();
 });
 </script>
 {% endblock %}

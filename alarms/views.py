@@ -889,3 +889,142 @@ def api_sort_fields(request):
 
     fields = get_sort_fields(page_type)
     return JsonResponse({"fields": fields, "type": page_type})
+
+
+def ajax_sort_alarms(request):
+    """AJAX endpoint для сортировки тревог без перезагрузки страницы"""
+    from django.template.loader import render_to_string
+    from django.db.models.functions import Lower
+    from django.core.paginator import Paginator
+
+    # Получаем queryset с фильтрами и сортировкой
+    queryset = AlarmConfig.objects.all().select_related(
+        "table", "alarm_class", "logic", "limit_type", "confirm_method"
+    )
+
+    # Применяем фильтрацию через миксин
+    filter_mixin = FilterMixin()
+    filter_mixin.request = request
+    queryset = filter_mixin.apply_filters(queryset)
+
+    # Получаем параметры сортировки
+    sort_fields = []
+    sort_orders = []
+
+    # Собираем все параметры сортировки с индексами
+    i = 0
+    while True:
+        sort_field = request.GET.get(f"sort_{i}")
+        if not sort_field:
+            break
+        sort_fields.append(sort_field)
+        sort_order = request.GET.get(f"order_{i}", "asc")
+        sort_orders.append(sort_order)
+        i += 1
+
+    # Если нет параметров сортировки, используем значения по умолчанию
+    if not sort_fields:
+        sort_fields = ["id"]
+        sort_orders = ["asc"]
+
+    # Создаем аннотации для сортировки по русским названиям
+    queryset = queryset.annotate(
+        alarm_class_display=Lower("alarm_class__verbose_name_ru"),
+        logic_display=Lower("logic__verbose_name_ru"),
+        limit_type_display=Lower("limit_type__verbose_name_ru"),
+        confirm_method_display=Lower("confirm_method__verbose_name_ru"),
+        channel_lower=Lower("channel"),
+    )
+
+    # Список разрешенных полей для сортировки с русскими названиями
+    allowed_fields = {
+        "id": "id",
+        "alarm_class": "alarm_class_display",
+        "table": "table__name",
+        "logic": "logic_display",
+        "channel": "channel_lower",
+        "msg": "msg",
+        "prior": "prior",
+        "created_at": "created_at",
+        "updated_at": "updated_at",
+    }
+
+    # Определяем вторичные поля для групповой сортировки
+    secondary_sort_fields = {
+        "alarm_class": ["id"],
+        "table": ["id"],
+        "logic": ["id"],
+        "channel": ["id"],
+        "msg": ["id"],
+        "prior": ["id"],
+        "created_at": ["id"],
+        "updated_at": ["id"],
+    }
+
+    # Создаем список полей для сортировки
+    order_fields = []
+    used_fields = set()
+
+    # Сначала добавляем все основные поля сортировки пользователя
+    for i, field in enumerate(sort_fields):
+        if field in allowed_fields:
+            db_field = allowed_fields[field]
+            order = sort_orders[i] if i < len(sort_orders) else "asc"
+            order_field = f"{'-' if order == 'desc' else ''}{db_field}"
+            order_fields.append(order_field)
+            used_fields.add(db_field)
+
+    # Затем добавляем вторичные поля, но только если они не совпадают
+    for i, field in enumerate(sort_fields):
+        if field in allowed_fields and field in secondary_sort_fields:
+            for secondary_field in secondary_sort_fields[field]:
+                if secondary_field not in used_fields:
+                    order_fields.append(secondary_field)
+                    used_fields.add(secondary_field)
+
+    # Применяем сортировку
+    if order_fields:
+        queryset = queryset.order_by(*order_fields)
+
+    # Применяем пагинацию
+    paginator = Paginator(queryset, 20)
+    page_number = request.GET.get("page", 1)
+    page_obj = paginator.get_page(page_number)
+
+    # Рендерим реальные шаблоны с данными
+    table_html = render_to_string(
+        "alarms/includes/alarm_table_rows.html",
+        {
+            "alarms": page_obj,
+            "page_obj": page_obj,
+        },
+    )
+
+    # Рендерим пагинацию
+    pagination_html = render_to_string(
+        "alarms/includes/pagination.html",
+        {
+            "page_obj": page_obj,
+        },
+    )
+
+    response = JsonResponse(
+        {
+            "success": True,
+            "message": f"AJAX сортировка завершена! Загружено {len(page_obj)} из {paginator.count} записей",
+            "table_html": table_html,
+            "pagination_html": pagination_html,
+            "total_count": paginator.count,
+            "current_page": page_obj.number,
+            "num_pages": paginator.num_pages,
+            "sort_fields": request.GET.getlist("sort_0"),
+            "sort_orders": request.GET.getlist("order_0"),
+        }
+    )
+
+    # Добавляем CORS заголовки для разработки
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response["Access-Control-Allow-Headers"] = "Content-Type"
+
+    return response

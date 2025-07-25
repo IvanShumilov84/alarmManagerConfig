@@ -1,0 +1,114 @@
+{% for alarm in alarms %}
+<tr>
+    <td>
+        <div class="btn-group" role="group">
+            <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
+               class="btn btn-sm btn-outline-primary" 
+               title="Редактировать">
+                <i class="bi bi-pencil"></i>
+            </a>
+            <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
+               class="btn btn-sm btn-outline-danger" 
+               title="Удалить"
+               onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
+                <i class="bi bi-trash"></i>
+            </a>
+        </div>
+    </td>
+    <td>{{ alarm.id }}</td>
+    <td>
+        {% if alarm.channel %}
+            <code>{{ alarm.channel }}</code>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>{{ alarm.msg }}</td>
+    <td title="{{ alarm.table.description|default:'Описание отсутствует' }}">
+        {{ alarm.table.name }}
+    </td>
+    <td>
+        <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}alarm-error{% elif alarm.alarm_class.name == 'warn' %}alarm-warn{% elif alarm.alarm_class.name == 'info' %}alarm-info{% else %}secondary{% endif %}">
+            {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
+        </span>
+    </td>
+    <td>
+        <span class="badge bg-{% if alarm.logic.name == 'discrete' %}logic-discrete{% elif alarm.logic.name == 'analog' %}logic-analog{% elif alarm.logic.name == 'change' %}logic-change{% else %}secondary{% endif %}">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
+    </td>
+    <td>
+        {% if alarm.confirm_method %}
+            <span class="badge bg-{% if alarm.confirm_method.name == 'rep_ack' %}confirm-rep-ack{% else %}secondary{% endif %}">{{ alarm.confirm_method.verbose_name_ru|default:"Не указан" }}</span>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        <span class="badge bg-secondary">{{ alarm.prior }}</span>
+    </td>
+    <td>
+        {% if alarm.limit_type %}
+            <span class="badge bg-{% if alarm.limit_type.name == 'low' %}limit-low{% elif alarm.limit_type.name == 'high' %}limit-high{% elif alarm.limit_type.name == 'low_high' %}limit-low-high{% else %}secondary{% endif %}">{{ alarm.limit_type.verbose_name_ru|default:"Не указан" }}</span>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.limit_config_type %}
+            <span class="badge bg-{% if alarm.limit_config_type.name == 'values' %}config-values{% elif alarm.limit_config_type.name == 'channels' %}config-channels{% else %}secondary{% endif %}">{{ alarm.limit_config_type.verbose_name_ru|default:"Не указан" }}</span>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.low is not None %}
+            {{ alarm.low }}
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.high is not None %}
+            {{ alarm.high }}
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.ch_low %}
+            <code>{{ alarm.ch_low }}</code>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.ch_high %}
+            <code>{{ alarm.ch_high }}</code>
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.hyst_low is not None %}
+            {{ alarm.hyst_low }}
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.hyst_high is not None %}
+            {{ alarm.hyst_high }}
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>
+        {% if alarm.discrete_val is not None %}
+            {{ alarm.discrete_val }}
+        {% else %}
+            <span class="text-muted">-</span>
+        {% endif %}
+    </td>
+    <td>{{ alarm.created_at|date:"d.m.Y H:i" }}</td>
+    <td>{{ alarm.updated_at|date:"d.m.Y H:i" }}</td>
+</tr>
+{% endfor %} 
