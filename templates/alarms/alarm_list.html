@@ -1369,10 +1369,13 @@ function updateSortButtonStates() {
             const sortParam = sortParams[sortIndex];
             button.dataset.currentSort = sortParam.order;
             
+            // Обновляем иконку в зависимости от направления сортировки
             if (sortParam.order === 'asc') {
-                button.classList.add('sort-asc');  // Зелёная кнопка
+                button.classList.add('sort-asc');
+                icon.className = 'bi bi-sort-alpha-up-alt';
             } else if (sortParam.order === 'desc') {
-                button.classList.add('sort-desc'); // Жёлтая кнопка
+                button.classList.add('sort-desc');
+                icon.className = 'bi bi-sort-alpha-down-alt';
             }
             
             // Добавляем номер порядка сортировки (если больше одного поля)
@@ -1382,8 +1385,10 @@ function updateSortButtonStates() {
                 orderSpan.textContent = sortIndex + 1;
                 button.appendChild(orderSpan);
             }
+        } else {
+            // Если поле не найдено - кнопка остается серой с иконкой "нет сортировки"
+            icon.className = 'bi bi-arrow-down-up';
         }
-        // Если поле не найдено - кнопка остается серой (без дополнительных классов)
     });
     
     // Обновляем состояние кнопки сброса сортировки
