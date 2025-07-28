@@ -69,4 +69,15 @@ urlpatterns = [
         views.api_filter_fields,
         name="api_filter_fields",
     ),
+    # API для порядка столбцов
+    path(
+        "api/save-column-order/",
+        views.save_column_order,
+        name="save_column_order",
+    ),
+    path(
+        "api/get-column-order/",
+        views.get_column_order,
+        name="get_column_order",
+    ),
 ]

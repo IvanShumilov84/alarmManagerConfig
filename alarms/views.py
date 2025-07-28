@@ -11,6 +11,7 @@ from django.http import HttpResponseRedirect
 from .mixins import FilterMixin
 from .models import AlarmClass, Logic, ConfirmMethod, LimitType, LimitConfigType
 from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_POST
 
 
 class AlarmTableListView(FilterMixin, ListView):
@@ -1070,3 +1071,120 @@ def ajax_sort_alarms(request):
     response["Access-Control-Allow-Headers"] = "Content-Type"
 
     return response
+
+
+@require_POST
+@csrf_exempt
+def save_column_order(request):
+    """API endpoint для сохранения настроек таблицы"""
+    from django.http import JsonResponse
+    import json
+    import traceback
+
+    try:
+        data = json.loads(request.body)
+        user_id = data.get("user_id", 1)  # По умолчанию пользователь 1
+        page_type = data.get("page_type", "alarms")
+        column_order = data.get("column_order", [])
+        sticky_columns = data.get("sticky_columns", 0)
+        sort_settings = data.get("sort_settings", {})
+
+        print(f"💾 API сохранение: user_id={user_id}, page_type={page_type}")
+        print(f"📋 Column order: {len(column_order)} столбцов")
+        print(f"📌 Sticky columns: {sticky_columns}")
+
+        # Валидация данных
+        if not isinstance(column_order, list):
+            return JsonResponse(
+                {"success": False, "error": "column_order должен быть массивом"},
+                status=400,
+            )
+
+        # Сохраняем или обновляем настройки
+        from .models import UserColumnPreferences
+
+        preferences, created = UserColumnPreferences.objects.get_or_create(
+            user_id=user_id,
+            page_type=page_type,
+            defaults={
+                "column_order": column_order,
+                "sticky_columns": sticky_columns,
+                "sort_settings": sort_settings,
+            },
+        )
+
+        if not created:
+            preferences.column_order = column_order
+            preferences.sticky_columns = sticky_columns
+            preferences.sort_settings = sort_settings
+            preferences.save()
+
+        print(f"✅ Настройки {'созданы' if created else 'обновлены'}")
+
+        return JsonResponse(
+            {
+                "success": True,
+                "message": "Настройки таблицы сохранены",
+                "created": created,
+            }
+        )
+
+    except json.JSONDecodeError as e:
+        error_msg = f"Неверный JSON формат: {str(e)}"
+        print(f"❌ {error_msg}")
+        return JsonResponse({"success": False, "error": error_msg}, status=400)
+    except Exception as e:
+        error_msg = f"Ошибка сохранения: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return JsonResponse({"success": False, "error": error_msg}, status=500)
+
+
+@require_GET
+def get_column_order(request):
+    """API endpoint для получения настроек таблицы"""
+    from django.http import JsonResponse
+    import traceback
+
+    try:
+        user_id = request.GET.get("user_id", 1)  # По умолчанию пользователь 1
+        page_type = request.GET.get("page_type", "alarms")
+
+        print(f"🔍 API запрос: user_id={user_id}, page_type={page_type}")
+
+        from .models import UserColumnPreferences
+
+        preferences = UserColumnPreferences.objects.filter(
+            user_id=user_id, page_type=page_type
+        ).first()
+
+        if preferences:
+            column_order = preferences.column_order
+            sticky_columns = preferences.sticky_columns
+            sort_settings = preferences.sort_settings
+            print(f"📋 Найдены сохраненные настройки: {len(column_order)} столбцов")
+        else:
+            # Возвращаем настройки по умолчанию
+            column_order = UserColumnPreferences.get_default_column_order(page_type)
+            sticky_columns = 0
+            sort_settings = UserColumnPreferences.get_default_sort_settings()
+            print(
+                f"📋 Используются настройки по умолчанию: {len(column_order)} столбцов"
+            )
+
+        response_data = {
+            "success": True,
+            "column_order": column_order,
+            "sticky_columns": sticky_columns,
+            "sort_settings": sort_settings,
+            "is_default": preferences is None,
+        }
+
+        print(f"✅ API ответ: {response_data}")
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        error_msg = f"Ошибка API: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(f"❌ Traceback: {traceback.format_exc()}")
+        return JsonResponse({"success": False, "error": error_msg}, status=500)

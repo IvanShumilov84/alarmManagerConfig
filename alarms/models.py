@@ -223,3 +223,80 @@ class LimitConfigType(models.Model):
 
     def __str__(self):
         return self.verbose_name_ru
+
+
+class UserColumnPreferences(models.Model):
+    """Модель для пользовательских настроек таблиц"""
+
+    user_id = models.IntegerField(
+        verbose_name="ID пользователя",
+        help_text="ID пользователя для которого сохраняются настройки",
+    )
+    page_type = models.CharField(
+        max_length=50,
+        verbose_name="Тип страницы",
+        help_text="Тип страницы (alarms, tables, etc.)",
+    )
+    column_order = models.JSONField(
+        verbose_name="Порядок столбцов",
+        help_text="JSON массив с порядком столбцов",
+        default=list,
+    )
+    sticky_columns = models.IntegerField(
+        verbose_name="Количество закрепленных столбцов",
+        help_text="Количество закрепленных столбцов (0 = нет закрепления)",
+        default=0,
+    )
+    sort_settings = models.JSONField(
+        verbose_name="Настройки сортировки",
+        help_text="JSON объект с настройками сортировки",
+        default=dict,
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Дата обновления")
+
+    class Meta:
+        verbose_name = "Настройки таблицы пользователя"
+        verbose_name_plural = "Настройки таблиц пользователей"
+        unique_together = ["user_id", "page_type"]
+        ordering = ["user_id", "page_type"]
+
+    def __str__(self):
+        return f"Настройки таблицы пользователя {self.user_id} для {self.page_type}"
+
+    @classmethod
+    def get_default_column_order(cls, page_type="alarms"):
+        """Возвращает порядок столбцов по умолчанию"""
+        if page_type == "alarms":
+            return [
+                "actions",
+                "id",
+                "channel",
+                "msg",
+                "table",
+                "alarm_class",
+                "logic",
+                "confirm_method",
+                "prior",
+                "limit_type",
+                "limit_config_type",
+                "low",
+                "high",
+                "ch_low",
+                "ch_high",
+                "hyst_low",
+                "hyst_high",
+                "discrete_val",
+                "created_at",
+                "updated_at",
+            ]
+        return []
+
+    @classmethod
+    def get_default_sort_settings(cls):
+        """Возвращает настройки сортировки по умолчанию"""
+        return {
+            "sort_fields": [],
+            "sort_orders": [],
+            "active_sorts": 0,
+        }

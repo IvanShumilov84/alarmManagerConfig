@@ -442,6 +442,117 @@
         white-space: nowrap;
     }
     
+    /* Drag handle для перетаскивания столбцов */
+    .drag-handle {
+        background: none;
+        border: none;
+        padding: 2px 4px;
+        cursor: grab;
+        font-size: 12px;
+        line-height: 1;
+        border-radius: 3px;
+        transition: all 0.2s ease;
+        color: var(--bs-gray-500);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 16px;
+        height: 20px;
+        opacity: 0.6;
+    }
+    
+    .drag-handle:hover {
+        opacity: 1;
+        color: var(--bs-primary);
+    }
+    
+    .drag-handle:active {
+        cursor: grabbing;
+    }
+    
+    /* Стили для перетаскивания */
+            .control-cell.dragging {
+            opacity: 0.05;
+            background-color: var(--bs-primary);
+            color: white;
+            z-index: 1000;
+            transform: scale(0.98);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.15s ease;
+            filter: blur(0.5px);
+        }
+        
+        .control-cell.dragging * {
+            pointer-events: none;
+            user-select: none;
+        }
+    
+            .control-cell.drag-over {
+            border-left: 4px solid var(--bs-primary);
+            background-color: rgba(0, 123, 255, 0.1);
+            box-shadow: inset 0 0 0 1px rgba(0, 123, 255, 0.3);
+        }
+        
+        /* Специальные стили для drag-over в закрепленной области */
+        .control-cell.sticky-column.drag-over {
+            border-left: 4px solid var(--bs-warning);
+            background-color: rgba(255, 193, 7, 0.1);
+            box-shadow: inset 0 0 0 1px rgba(255, 193, 7, 0.3);
+        }
+        
+        /* Индикатор границы между закрепленными и незакрепленными столбцами */
+        .sticky-boundary-indicator {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--bs-warning), var(--bs-primary));
+            z-index: 1001;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .sticky-boundary-indicator.visible {
+            opacity: 1;
+        }
+    
+    /* Показываем drag handles только при наведении на заголовок */
+    .control-cell:hover .drag-handle {
+    display: inline-flex !important;
+}
+
+/* Скрываем drag handle для столбца "Действия" */
+.control-cell[data-field="actions"] .drag-handle {
+    display: none !important;
+}
+
+/* Стили для кнопки сброса порядка столбцов */
+.reset-column-order-button {
+    background: none;
+    border: none;
+    color: var(--bs-gray-600);
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+}
+
+.reset-column-order-button:hover {
+    background-color: var(--bs-gray-200);
+    color: var(--bs-gray-800);
+}
+
+.reset-column-order-button:active {
+    background-color: var(--bs-gray-300);
+    transform: scale(0.95);
+    }
+    
     .sort-button:hover {
         background-color: var(--bs-gray-200);
         color: var(--bs-gray-800);
@@ -1584,37 +1695,37 @@ document.addEventListener('DOMContentLoaded', function() {
             clickTimeout = setTimeout(() => {
                 // Одинарный клик - обычная логика сортировки
                 if (clickCount === 1) {
-                    // Получаем текущие параметры сортировки
-                    const url = new URL(window.location);
-                    const sortParams = getActiveSortParams(url);
-                    
-                    // Ищем текущее поле в активных сортировках
-                    const existingIndex = sortParams.findIndex(sort => sort.field === field);
-                    
-                    if (existingIndex !== -1) {
+            // Получаем текущие параметры сортировки
+            const url = new URL(window.location);
+            const sortParams = getActiveSortParams(url);
+            
+            // Ищем текущее поле в активных сортировках
+            const existingIndex = sortParams.findIndex(sort => sort.field === field);
+            
+            if (existingIndex !== -1) {
                         // Поле уже в сортировке - меняем направление
-                        const currentSort = sortParams[existingIndex];
-                        if (currentSort.order === 'asc') {
-                            currentSort.order = 'desc';
-                        } else if (currentSort.order === 'desc') {
+                const currentSort = sortParams[existingIndex];
+                if (currentSort.order === 'asc') {
+                    currentSort.order = 'desc';
+                } else if (currentSort.order === 'desc') {
                             currentSort.order = 'asc';
-                        }
-                    } else {
-                        // Добавляем новое поле сортировки
+                }
+            } else {
+                // Добавляем новое поле сортировки
                         if (sortParams.length < 19) { // Максимум 19 полей сортировки (все доступные поля кроме "Действия")
-                            sortParams.push({ field: field, order: 'asc' });
-                        }
-                    }
-                    
-                    // Обновляем URL параметры
-                    clearSortParams(url);
-                    applySortParams(url, sortParams);
-                    
-                    // Сбрасываем на первую страницу
-                    url.searchParams.set('page', '1');
-                    
-                    // AJAX сортировка множественными полями
-                    performAjaxSort(url.search);
+                    sortParams.push({ field: field, order: 'asc' });
+                }
+            }
+            
+            // Обновляем URL параметры
+            clearSortParams(url);
+            applySortParams(url, sortParams);
+            
+            // Сбрасываем на первую страницу
+            url.searchParams.set('page', '1');
+            
+            // AJAX сортировка множественными полями
+            performAjaxSort(url.search);
                 }
                 
                 // Сбрасываем счетчик кликов
@@ -1698,7 +1809,809 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Обновляем подсказки для кнопок сортировки
     updateSortButtonTooltips();
+    
+    // Инициализация drag & drop для столбцов
+    initializeColumnDragAndDrop();
+    
+    // Добавляем недостающие атрибуты и drag handles
+    addMissingColumnAttributes();
+    
+    // Загружаем сохраненный порядок столбцов после небольшой задержки
+    setTimeout(() => {
+        console.log('🔄 Вызываем loadColumnOrder()...');
+        loadColumnOrder();
+    }, 100);
 });
+
+// ===== DRAG & DROP ДЛЯ ПЕРЕМЕЩЕНИЯ СТОЛБЦОВ =====
+
+function initializeColumnDragAndDrop() {
+    const table = document.querySelector('.alarm-table');
+    if (!table) return;
+    
+    let draggedElement = null;
+    let draggedIndex = null;
+    
+    console.log('🔧 Инициализация drag & drop...');
+    
+    // Обработчики для control cells (самих столбцов)
+    const controlCells = document.querySelectorAll('.control-cell');
+    console.log(`📌 Найдено ${controlCells.length} control cells`);
+    
+    controlCells.forEach((cell, index) => {
+        // Исключаем столбец "Действия" из перетаскивания
+        if (cell.dataset.field === 'actions') {
+            cell.setAttribute('draggable', 'false');
+            console.log(`🚫 Столбец ${cell.dataset.field} исключен из перетаскивания`);
+            return; // Пропускаем добавление обработчиков для этого столбца
+        }
+        
+        cell.setAttribute('draggable', 'true');
+        
+        // Добавляем обработчики напрямую на каждый элемент
+        cell.addEventListener('dragstart', function(e) {
+            // Дополнительная проверка на случай, если draggable был изменен
+            if (this.dataset.field === 'actions') {
+                e.preventDefault();
+                return;
+            }
+            
+            draggedElement = this;
+            draggedIndex = parseInt(this.dataset.columnOrder);
+            
+            console.log(`🎯 Начато перетаскивание столбца ${draggedIndex} (${this.dataset.field})`);
+            
+            e.dataTransfer.setData('text/plain', draggedIndex);
+            e.dataTransfer.effectAllowed = 'move';
+            
+            // Создаем отдельный drag image для избежания артефактов
+            if (e.dataTransfer.setDragImage) {
+                const dragImage = this.cloneNode(true);
+                dragImage.style.position = 'absolute';
+                dragImage.style.top = '-1000px';
+                dragImage.style.left = '-1000px';
+                dragImage.style.opacity = '0.8';
+                dragImage.style.transform = 'rotate(2deg) scale(0.9)';
+                dragImage.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4)';
+                dragImage.style.pointerEvents = 'none';
+                dragImage.style.zIndex = '9999';
+                document.body.appendChild(dragImage);
+                
+                e.dataTransfer.setDragImage(dragImage, 0, 0);
+                
+                // Удаляем drag image после небольшой задержки
+                setTimeout(() => {
+                    if (document.body.contains(dragImage)) {
+                        document.body.removeChild(dragImage);
+                    }
+                }, 0);
+            }
+            
+            // Добавляем класс для визуального эффекта на оригинальный элемент
+            this.classList.add('dragging');
+        });
+        
+        cell.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedElement = null;
+            draggedIndex = null;
+            console.log('🏁 Завершено перетаскивание');
+        });
+        
+        cell.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        
+        cell.addEventListener('dragenter', function(e) {
+            e.preventDefault();
+            if (this !== draggedElement) {
+                this.classList.add('drag-over');
+                const columnIndex = parseInt(this.dataset.columnOrder);
+                const isSticky = this.classList.contains('sticky-column');
+                console.log(`🎯 Наведение на столбец ${columnIndex} (${isSticky ? 'закрепленный' : 'незакрепленный'})`);
+            }
+        });
+        
+        cell.addEventListener('dragleave', function(e) {
+            this.classList.remove('drag-over');
+        });
+        
+        cell.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            
+            if (this === draggedElement) {
+                console.log('❌ Попытка перетащить на тот же элемент');
+                return;
+            }
+            
+            const targetIndex = parseInt(this.dataset.columnOrder);
+            console.log(`🔄 Перемещение столбца ${draggedIndex} на позицию ${targetIndex}`);
+            
+            // Перемещаем столбцы
+            reorderColumns(draggedIndex, targetIndex);
+        });
+        
+        console.log(`✅ Control cell ${index + 1} (${cell.dataset.field}) настроен`);
+    });
+    
+    function startDrag(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const controlCell = e.target.closest('.control-cell');
+        if (!controlCell) return;
+        
+        draggedElement = controlCell;
+        draggedIndex = parseInt(controlCell.dataset.columnOrder);
+        
+        // Добавляем класс для визуального эффекта
+        draggedElement.classList.add('dragging');
+        
+        // Создаем ghost элемент
+        const ghost = draggedElement.cloneNode(true);
+        ghost.style.position = 'absolute';
+        ghost.style.top = '-1000px';
+        ghost.style.left = '-1000px';
+        ghost.style.opacity = '0.8';
+        ghost.style.pointerEvents = 'none';
+        document.body.appendChild(ghost);
+        
+        // Устанавливаем данные для drag
+        e.dataTransfer.setData('text/html', ghost.outerHTML);
+        e.dataTransfer.effectAllowed = 'move';
+        
+        // Обработчики для drop zones
+        document.querySelectorAll('.control-cell').forEach(cell => {
+            if (cell !== draggedElement) {
+                cell.addEventListener('dragover', handleDragOver);
+                cell.addEventListener('drop', handleDrop);
+                cell.addEventListener('dragenter', handleDragEnter);
+                cell.addEventListener('dragleave', handleDragLeave);
+            }
+        });
+        
+        // Обработчик окончания drag
+        document.addEventListener('mouseup', endDrag);
+        
+        console.log(`🎯 Начато перетаскивание столбца ${draggedIndex}`);
+    }
+    
+    function handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    }
+    
+    function handleDragEnter(e) {
+        e.preventDefault();
+        const cell = e.target.closest('.control-cell');
+        if (cell && cell !== draggedElement) {
+            cell.classList.add('drag-over');
+        }
+    }
+    
+    function handleDragLeave(e) {
+        const cell = e.target.closest('.control-cell');
+        if (cell) {
+            cell.classList.remove('drag-over');
+        }
+    }
+    
+    function handleDrop(e) {
+        e.preventDefault();
+        const targetCell = e.target.closest('.control-cell');
+        if (!targetCell || targetCell === draggedElement) return;
+        
+        const targetIndex = parseInt(targetCell.dataset.columnOrder);
+        
+        // Перемещаем столбцы
+        reorderColumns(draggedIndex, targetIndex);
+        
+        console.log(`🔄 Перемещение столбца ${draggedIndex} на позицию ${targetIndex}`);
+    }
+    
+    function endDrag() {
+        if (draggedElement) {
+            draggedElement.classList.remove('dragging');
+            draggedElement = null;
+            draggedIndex = null;
+        }
+        
+        // Убираем drag-over классы
+        document.querySelectorAll('.control-cell').forEach(cell => {
+            cell.classList.remove('drag-over');
+        });
+        
+        // Удаляем ghost элемент
+        const ghost = document.querySelector('.control-cell[style*="position: absolute"]');
+        if (ghost) {
+            ghost.remove();
+        }
+        
+        // Убираем обработчики
+        document.removeEventListener('mouseup', endDrag);
+        document.querySelectorAll('.control-cell').forEach(cell => {
+            cell.removeEventListener('dragover', handleDragOver);
+            cell.removeEventListener('drop', handleDrop);
+            cell.removeEventListener('dragenter', handleDragEnter);
+            cell.removeEventListener('dragleave', handleDragLeave);
+        });
+    }
+}
+
+function reorderColumns(fromIndex, toIndex) {
+    const table = document.querySelector('.alarm-table');
+    if (!table) return;
+    
+    console.log(`📊 Перемещение столбца ${fromIndex} → ${toIndex}`);
+    
+    // Получаем информацию о закрепленных столбцах до перемещения
+    const stickyCountBefore = getStickyColumnsCount();
+    const wasFromSticky = isColumnSticky(fromIndex);
+    const wasToSticky = isColumnSticky(toIndex);
+    
+    console.log(`📌 До перемещения: закреплено ${stickyCountBefore} столбцов`);
+    console.log(`📌 Столбец ${fromIndex} был ${wasFromSticky ? 'закреплен' : 'незакреплен'}`);
+    console.log(`📌 Позиция ${toIndex} была ${wasToSticky ? 'в закрепленной области' : 'в незакрепленной области'}`);
+    
+    // Получаем все строки таблицы
+    const rows = table.querySelectorAll('tr');
+    
+    // Перемещаем ячейки в каждой строке
+    rows.forEach((row, rowIndex) => {
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        console.log(`📋 Строка ${rowIndex}: ${cells.length} ячеек`);
+        
+        if (cells.length >= Math.max(fromIndex, toIndex)) {
+            const cellToMove = cells[fromIndex - 1]; // Индексы начинаются с 1
+            if (cellToMove) {
+                // Удаляем ячейку
+                cellToMove.remove();
+                
+                // Получаем обновленный список ячеек после удаления
+                const updatedCells = Array.from(row.querySelectorAll('th, td'));
+                
+                // Вставляем в новую позицию
+                if (toIndex > fromIndex) {
+                    // Вправо - нужно учесть, что индекс сместился после удаления
+                    const targetIndex = toIndex - 2; // -1 для индексации с 0, -1 для смещения
+                    const targetCell = updatedCells[targetIndex];
+                    if (targetCell) {
+                        targetCell.after(cellToMove);
+                        console.log(`➡️ Вставлено после позиции ${toIndex}`);
+                    } else {
+                        row.appendChild(cellToMove);
+                        console.log(`➡️ Вставлено в конец`);
+                    }
+                } else {
+                    // Влево
+                    const targetIndex = toIndex - 1; // -1 для индексации с 0
+                    const targetCell = updatedCells[targetIndex];
+                    if (targetCell) {
+                        targetCell.before(cellToMove);
+                        console.log(`⬅️ Вставлено перед позицией ${toIndex}`);
+                    } else {
+                        row.insertBefore(cellToMove, row.firstChild);
+                        console.log(`⬅️ Вставлено в начало`);
+                    }
+                }
+            }
+        }
+    });
+    
+    // Обновляем data-column-order атрибуты
+    updateColumnOrderAttributes();
+    
+    // Обрабатываем логику закрепления
+    handleStickyLogicAfterReorder(fromIndex, toIndex, wasFromSticky, wasToSticky, stickyCountBefore);
+    
+    // Сохраняем новый порядок
+    saveColumnOrder();
+    
+    console.log(`✅ Столбцы перемещены успешно`);
+}
+
+function updateColumnOrderAttributes() {
+    const table = document.querySelector('.alarm-table');
+    if (!table) return;
+    
+    const controlCells = table.querySelectorAll('.control-cell');
+    controlCells.forEach((cell, index) => {
+        const newOrder = index + 1;
+        cell.dataset.columnOrder = newOrder;
+        
+        // Обновляем data-column в кнопках закрепления
+        const pinButton = cell.querySelector('.pin-button');
+        if (pinButton) {
+            pinButton.dataset.column = newOrder;
+        }
+    });
+}
+
+function saveColumnOrder() {
+    const table = document.querySelector('.alarm-table');
+    if (!table) return;
+    
+    const columnOrder = [];
+    const controlCells = table.querySelectorAll('.control-cell');
+    
+    controlCells.forEach(cell => {
+        const field = cell.dataset.field;
+        if (field) {
+            columnOrder.push(field);
+        }
+    });
+    
+    // Убеждаемся, что столбец "Действия" всегда в начале
+    const actionsIndex = columnOrder.indexOf('actions');
+    if (actionsIndex > 0) {
+        // Перемещаем "actions" в начало
+        columnOrder.splice(actionsIndex, 1);
+        columnOrder.unshift('actions');
+        console.log('🔄 Столбец "Действия" перемещен в начало списка');
+    }
+    
+    // Получаем текущие настройки
+    const stickyColumns = getStickyColumnsCount();
+    const sortSettings = {
+        sort_fields: getActiveSortParams().map(param => param.field),
+        sort_orders: getActiveSortParams().map(param => param.order),
+        active_sorts: getActiveSortParams().length
+    };
+    
+    console.log('💾 Сохранение настроек таблицы:', {
+        column_order: columnOrder,
+        sticky_columns: stickyColumns,
+        sort_settings: sortSettings
+    });
+    
+    // Отправляем на сервер
+    fetch('/api/save-column-order/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            user_id: 1, // По умолчанию пользователь 1
+            page_type: 'alarms',
+            column_order: columnOrder,
+            sticky_columns: stickyColumns,
+            sort_settings: sortSettings
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Порядок столбцов сохранен');
+        } else {
+            console.error('❌ Ошибка сохранения:', data.error);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Ошибка сети:', error);
+    });
+}
+
+function loadColumnOrder() {
+    console.log('🔄 Начинаем загрузку сохраненных настроек таблицы...');
+    
+    // Загружаем сохраненные настройки таблицы
+    fetch('/api/get-column-order/?user_id=1&page_type=alarms')
+    .then(response => {
+        console.log('📡 Ответ от API:', response.status, response.statusText);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('📋 Данные от API:', data);
+        if (data.success) {
+            // Применяем порядок столбцов
+            if (data.column_order && data.column_order.length > 0) {
+                console.log('📋 Загружен сохраненный порядок столбцов:', data.column_order);
+                applyColumnOrder(data.column_order);
+            } else {
+                console.log('📋 Используется порядок столбцов по умолчанию');
+            }
+            
+            // Применяем закрепление столбцов
+            if (data.sticky_columns && data.sticky_columns > 0) {
+                console.log(`📋 Загружено закрепление: ${data.sticky_columns} столбцов`);
+                setTimeout(() => {
+                    setStickyColumnNew(data.sticky_columns);
+                }, 200);
+            }
+            
+            // Применяем настройки сортировки
+            if (data.sort_settings && data.sort_settings.sort_fields && data.sort_settings.sort_fields.length > 0) {
+                console.log('📋 Загружены настройки сортировки:', data.sort_settings);
+                setTimeout(() => {
+                    applySortSettings(data.sort_settings);
+                }, 300);
+            }
+        } else {
+            console.log('📋 Используются настройки по умолчанию');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Ошибка загрузки настроек таблицы:', error);
+        console.error('❌ Детали ошибки:', error.message);
+    });
+}
+
+// Функция для применения сохраненного порядка столбцов
+function applyColumnOrder(columnOrder) {
+    console.log('🔄 Вызываем applyColumnOrder с параметрами:', columnOrder);
+    
+    const table = document.querySelector('.alarm-table');
+    if (!table) {
+        console.error('❌ Таблица .alarm-table не найдена');
+        return;
+    }
+    
+    console.log('🔄 Применение сохраненного порядка столбцов...');
+    
+    // Получаем текущий порядок столбцов
+    const currentOrder = [];
+    const controlCells = table.querySelectorAll('.control-cell');
+    console.log(`📋 Найдено ${controlCells.length} control cells`);
+    
+    controlCells.forEach((cell, index) => {
+        const field = cell.dataset.field;
+        if (field) {
+            currentOrder.push(field);
+            console.log(`📋 Столбец ${index + 1}: ${field}`);
+        } else {
+            console.log(`📋 Столбец ${index + 1}: нет data-field`);
+        }
+    });
+    
+    // Проверяем, нужно ли применять новый порядок
+    if (JSON.stringify(currentOrder) === JSON.stringify(columnOrder)) {
+        console.log('📋 Порядок столбцов уже соответствует сохраненному');
+        return;
+    }
+    
+    console.log('📋 Текущий порядок:', currentOrder);
+    console.log('📋 Сохраненный порядок:', columnOrder);
+    
+    // Создаем карту для быстрого поиска позиций
+    const fieldToCurrentIndex = {};
+    currentOrder.forEach((field, index) => {
+        fieldToCurrentIndex[field] = index + 1; // +1 для индексации с 1
+    });
+    
+    // Применяем порядок напрямую
+    const rows = table.querySelectorAll('tr');
+    
+    rows.forEach((row, rowIndex) => {
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        const reorderedCells = [];
+        
+        // Создаем новый порядок ячеек, исключая столбец "Действия"
+        columnOrder.forEach(field => {
+            // Столбец "Действия" всегда остается на первой позиции
+            if (field === 'actions') {
+                const currentIndex = fieldToCurrentIndex[field];
+                if (currentIndex && cells[currentIndex - 1]) {
+                    reorderedCells.push(cells[currentIndex - 1]);
+                }
+            } else {
+                const currentIndex = fieldToCurrentIndex[field];
+                if (currentIndex && cells[currentIndex - 1]) {
+                    reorderedCells.push(cells[currentIndex - 1]);
+                }
+            }
+        });
+        
+        // Добавляем ячейки, которых нет в columnOrder (если есть)
+        cells.forEach((cell, index) => {
+            const field = currentOrder[index];
+            if (!columnOrder.includes(field)) {
+                reorderedCells.push(cell);
+            }
+        });
+        
+        // Очищаем строку и добавляем ячейки в новом порядке
+        cells.forEach(cell => cell.remove());
+        reorderedCells.forEach(cell => row.appendChild(cell));
+        
+        console.log(`📋 Строка ${rowIndex}: переупорядочена`);
+    });
+    
+    // Обновляем data-column-order атрибуты
+    updateColumnOrderAttributes();
+    
+    // Обновляем закрепление столбцов
+    updateStickyColumnsAfterReorder();
+    
+    console.log('✅ Сохраненный порядок столбцов применен');
+    console.log('✅ Функция applyColumnOrder завершена');
+}
+
+// Функция для применения настроек сортировки
+function applySortSettings(sortSettings) {
+    console.log('🔄 Применение настроек сортировки...');
+    
+    // Очищаем текущую сортировку
+    clearAllSorting();
+    
+    // Применяем сохраненную сортировку
+    if (sortSettings.sort_fields && sortSettings.sort_orders) {
+        for (let i = 0; i < sortSettings.sort_fields.length; i++) {
+            const field = sortSettings.sort_fields[i];
+            const order = sortSettings.sort_orders[i];
+            
+            if (field && order) {
+                // Устанавливаем параметры сортировки
+                const sortParam = `sort_${i}`;
+                const orderParam = `order_${i}`;
+                
+                // Находим кнопку сортировки для этого поля
+                const sortButton = document.querySelector(`[data-field="${field}"]`);
+                if (sortButton) {
+                    sortButton.dataset.currentSort = order;
+                    updateSortButtonStates();
+                    console.log(`📋 Применена сортировка: ${field} (${order})`);
+                }
+            }
+        }
+        
+        // Выполняем сортировку
+        performAjaxSort();
+    }
+    
+    console.log('✅ Настройки сортировки применены');
+}
+
+// Функция для сброса порядка столбцов к значениям по умолчанию
+function resetColumnOrder() {
+    console.log('🔄 Сброс порядка столбцов к значениям по умолчанию...');
+    
+    // Сохраняем текущее количество закрепленных столбцов
+    const currentStickyCount = getStickyColumnsCount();
+    console.log(`📌 Текущее количество закрепленных столбцов: ${currentStickyCount}`);
+    
+    // Порядок столбцов по умолчанию
+    const defaultOrder = [
+        'actions', 'id', 'channel', 'msg', 'table', 'alarm_class',
+        'logic', 'confirm_method', 'prior', 'limit_type', 'limit_config_type',
+        'low', 'high', 'ch_low', 'ch_high', 'hyst_low', 'hyst_high',
+        'discrete_val', 'created_at', 'updated_at'
+    ];
+    
+    // Применяем порядок по умолчанию
+    applyColumnOrder(defaultOrder);
+    
+    // Восстанавливаем закрепление столбцов
+    setTimeout(() => {
+        // Устанавливаем то же количество закрепленных столбцов
+        if (currentStickyCount > 0) {
+            setStickyColumnNew(currentStickyCount);
+            console.log(`📌 Восстановлено закрепление: ${currentStickyCount} столбцов`);
+        } else {
+            clearAllStickyNew();
+            console.log('📌 Закрепление сброшено');
+        }
+    }, 100);
+    
+    // Сохраняем в базу данных
+    fetch('/api/save-column-order/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            user_id: 1,
+            page_type: 'alarms',
+            column_order: defaultOrder
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('✅ Порядок столбцов сброшен и сохранен');
+            // Показываем уведомление пользователю
+            showNotification('Порядок столбцов сброшен к значениям по умолчанию', 'success');
+        } else {
+            console.error('❌ Ошибка сохранения:', data.error);
+            showNotification('Ошибка при сбросе порядка столбцов', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Ошибка сети:', error);
+        showNotification('Ошибка сети при сбросе порядка столбцов', 'error');
+    });
+}
+
+// Функция для показа уведомлений
+function showNotification(message, type = 'info') {
+    // Создаем элемент уведомления
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Добавляем в body
+    document.body.appendChild(notification);
+    
+    // Автоматически удаляем через 3 секунды
+    setTimeout(() => {
+        if (document.body.contains(notification)) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Функция для получения количества закрепленных столбцов
+function getStickyColumnsCount() {
+    const activePin = document.querySelector('.pin-button.active');
+    if (!activePin) return 0;
+    return parseInt(activePin.dataset.column);
+}
+
+// Функция для проверки, является ли столбец закрепленным
+function isColumnSticky(columnIndex) {
+    const stickyCount = getStickyColumnsCount();
+    return columnIndex <= stickyCount;
+}
+
+// Функция для обновления закрепления столбцов после перемещения
+function updateStickyColumnsAfterReorder() {
+    const activePin = document.querySelector('.pin-button.active');
+    if (!activePin) return;
+    
+    const currentStickyCount = parseInt(activePin.dataset.column);
+    console.log(`🔄 Обновление закрепления после перемещения. Текущее количество: ${currentStickyCount}`);
+    
+    // Очищаем все закрепления
+    clearAllStickyNew();
+    
+    // Применяем закрепление заново
+    setStickyColumnNew(currentStickyCount);
+}
+
+// Функция для обработки логики закрепления после перемещения столбцов
+function handleStickyLogicAfterReorder(fromIndex, toIndex, wasFromSticky, wasToSticky, stickyCountBefore) {
+    const activePin = document.querySelector('.pin-button.active');
+    if (!activePin) {
+        console.log('📌 Нет активных закреплений');
+        return;
+    }
+    
+    let newStickyCount = stickyCountBefore;
+    
+    // Логика изменения количества закрепленных столбцов
+    if (wasFromSticky && !wasToSticky) {
+        // Закрепленный столбец перемещается в незакрепленную область
+        newStickyCount = Math.max(0, stickyCountBefore - 1);
+        console.log(`📌 Закрепленный столбец перемещен в незакрепленную область. Новое количество: ${newStickyCount}`);
+    } else if (!wasFromSticky && wasToSticky) {
+        // Незакрепленный столбец перемещается в закрепленную область
+        newStickyCount = Math.min(toIndex, stickyCountBefore + 1);
+        console.log(`📌 Незакрепленный столбец перемещен в закрепленную область. Новое количество: ${newStickyCount}`);
+    } else if (wasFromSticky && wasToSticky) {
+        // Перемещение внутри закрепленной области
+        newStickyCount = stickyCountBefore;
+        console.log(`📌 Перемещение внутри закрепленной области. Количество не изменилось: ${newStickyCount}`);
+    } else {
+        // Перемещение внутри незакрепленной области
+        newStickyCount = stickyCountBefore;
+        console.log(`📌 Перемещение внутри незакрепленной области. Количество не изменилось: ${newStickyCount}`);
+    }
+    
+    // Обновляем активную булавку
+    if (newStickyCount !== stickyCountBefore) {
+        // Убираем активность со всех булавок
+        document.querySelectorAll('.pin-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Активируем новую булавку
+        const newActivePin = document.querySelector(`.pin-button[data-column="${newStickyCount}"]`);
+        if (newActivePin) {
+            newActivePin.classList.add('active');
+            console.log(`📌 Активирована новая булавка для столбца ${newStickyCount}`);
+        }
+        
+        // Обновляем закрепление
+        clearAllStickyNew();
+        setStickyColumnNew(newStickyCount);
+        
+        // Сохраняем новое состояние
+        const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
+        currentSettings.stickyColumn = newStickyCount.toString();
+        localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
+        
+        console.log(`✅ Закрепление обновлено: ${stickyCountBefore} → ${newStickyCount}`);
+    } else {
+        // Просто обновляем закрепление без изменения количества
+        updateStickyColumnsAfterReorder();
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function addMissingColumnAttributes() {
+    const table = document.querySelector('.alarm-table');
+    if (!table) return;
+    
+    const controlCells = table.querySelectorAll('.control-cell');
+    const fieldMapping = {
+        1: 'actions',
+        2: 'id', 
+        3: 'channel',
+        4: 'msg',
+        5: 'table',
+        6: 'alarm_class',
+        7: 'logic',
+        8: 'confirm_method',
+        9: 'prior',
+        10: 'limit_type',
+        11: 'limit_config_type',
+        12: 'low',
+        13: 'high',
+        14: 'ch_low',
+        15: 'ch_high',
+        16: 'hyst_low',
+        17: 'hyst_high',
+        18: 'discrete_val',
+        19: 'created_at',
+        20: 'updated_at'
+    };
+    
+    controlCells.forEach((cell, index) => {
+        const columnOrder = index + 1;
+        const field = fieldMapping[columnOrder];
+        
+        // Добавляем data-атрибуты если их нет
+        if (!cell.dataset.field) {
+            cell.dataset.field = field;
+        }
+        if (!cell.dataset.columnOrder) {
+            cell.dataset.columnOrder = columnOrder;
+        }
+        
+        // Добавляем drag handle если его нет (кроме столбца "Действия")
+        if (field !== 'actions') {
+            const existingDragHandle = cell.querySelector('.drag-handle');
+            if (!existingDragHandle) {
+                const dragHandle = document.createElement('button');
+                dragHandle.className = 'drag-handle';
+                dragHandle.title = 'Перетащить столбец';
+                dragHandle.style.display = 'none';
+                dragHandle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+                
+                const controlItems = cell.querySelector('.control-items');
+                if (controlItems) {
+                    controlItems.appendChild(dragHandle);
+                }
+            }
+        }
+    });
+    
+    console.log('✅ Добавлены недостающие атрибуты и drag handles');
+}
 </script>
 {% endblock %}
 
@@ -1716,7 +2629,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <thead class="table-light">
                             <!-- Строка управления столбцами -->
                             <tr class="table-controls-row">
-                                <th class="control-cell actions-control">
+                                <th class="control-cell actions-control" data-field="actions" data-column-order="1">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="1" title="Закрепить столбец Действия">
                                             <i class="bi bi-pin-angle"></i>
@@ -1724,12 +2637,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="reset-sort-button disabled" onclick="clearAllSorting(); return false;" title="Нет активной сортировки">
                                             <i class="bi bi-arrow-clockwise"></i>
                                         </button>
+                                        <button class="reset-column-order-button" onclick="resetColumnOrder(); return false;" title="Двойной клик: сбросить порядок столбцов">
+                                            <i class="bi bi-arrow-repeat"></i>
+                                        </button>
                                         <button class="sort-button" data-field="actions" data-current-sort="" title="Сортировка недоступна" style="display: none;">
                                             <i class="bi bi-funnel"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="id" data-column-order="2">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="2" title="Закрепить столбец ID">
                                             <i class="bi bi-pin-angle"></i>
@@ -1737,9 +2656,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Клик: сортировать по ID | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="channel" data-column-order="3">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="3" title="Закрепить столбец Канал">
                                             <i class="bi bi-pin-angle"></i>
@@ -1747,9 +2669,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Клик: сортировать по каналу | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="msg" data-column-order="4">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="4" title="Закрепить столбец Сообщение">
                                             <i class="bi bi-pin-angle"></i>
@@ -1757,9 +2682,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Клик: сортировать по сообщению | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="table" data-column-order="5">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="5" title="Закрепить столбец Таблица">
                                             <i class="bi bi-pin-angle"></i>
@@ -1767,9 +2695,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Клик: сортировать по таблице | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="alarm_class" data-column-order="6">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="6" title="Закрепить столбец Класс">
                                             <i class="bi bi-pin-angle"></i>
@@ -1777,9 +2708,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Клик: сортировать по классу тревоги | Двойной клик: отменить сортировку">
                                             <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="logic" data-column-order="7">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="7" title="Закрепить столбец Логика">
                                             <i class="bi bi-pin-angle"></i>
@@ -1787,9 +2721,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="logic" data-current-sort="{% if 'logic' in sort_indicators %}{{ sort_indicators.logic }}{% endif %}" title="Сортировать по логике">
                                             <i class="bi bi-{% if 'logic' in sort_indicators %}{% if sort_indicators.logic == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="confirm_method" data-column-order="8">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="8" title="Закрепить столбец Подтверждение">
                                             <i class="bi bi-pin-angle"></i>
@@ -1797,9 +2734,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="confirm_method" data-current-sort="{% if 'confirm_method' in sort_indicators %}{{ sort_indicators.confirm_method }}{% endif %}" title="Сортировать по способу подтверждения">
                                             <i class="bi bi-{% if 'confirm_method' in sort_indicators %}{% if sort_indicators.confirm_method == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="prior" data-column-order="9">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="9" title="Закрепить столбец Приоритет">
                                             <i class="bi bi-pin-angle"></i>
@@ -1807,9 +2747,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="prior" data-current-sort="{% if 'prior' in sort_indicators %}{{ sort_indicators.prior }}{% endif %}" title="Сортировать по приоритету">
                                             <i class="bi bi-{% if 'prior' in sort_indicators %}{% if sort_indicators.prior == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="limit_type" data-column-order="10">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="10" title="Закрепить столбец Лимит">
                                             <i class="bi bi-pin-angle"></i>
@@ -1817,9 +2760,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="limit_type" data-current-sort="{% if 'limit_type' in sort_indicators %}{{ sort_indicators.limit_type }}{% endif %}" title="Сортировать по типу ограничения">
                                             <i class="bi bi-{% if 'limit_type' in sort_indicators %}{% if sort_indicators.limit_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="limit_config_type" data-column-order="11">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="11" title="Закрепить столбец Тип лимита">
                                             <i class="bi bi-pin-angle"></i>
@@ -1827,9 +2773,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="limit_config_type" data-current-sort="{% if 'limit_config_type' in sort_indicators %}{{ sort_indicators.limit_config_type }}{% endif %}" title="Сортировать по типу настройки пределов">
                                             <i class="bi bi-{% if 'limit_config_type' in sort_indicators %}{% if sort_indicators.limit_config_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="low" data-column-order="12">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="12" title="Закрепить столбец Мин">
                                             <i class="bi bi-pin-angle"></i>
@@ -1837,9 +2786,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="low" data-current-sort="{% if 'low' in sort_indicators %}{{ sort_indicators.low }}{% endif %}" title="Сортировать по нижнему пределу">
                                             <i class="bi bi-{% if 'low' in sort_indicators %}{% if sort_indicators.low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="high" data-column-order="13">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="13" title="Закрепить столбец Макс">
                                             <i class="bi bi-pin-angle"></i>
@@ -1847,9 +2799,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="high" data-current-sort="{% if 'high' in sort_indicators %}{{ sort_indicators.high }}{% endif %}" title="Сортировать по верхнему пределу">
                                             <i class="bi bi-{% if 'high' in sort_indicators %}{% if sort_indicators.high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="ch_low" data-column-order="14">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="14" title="Закрепить столбец Канал мин">
                                             <i class="bi bi-pin-angle"></i>
@@ -1857,9 +2812,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="ch_low" data-current-sort="{% if 'ch_low' in sort_indicators %}{{ sort_indicators.ch_low }}{% endif %}" title="Сортировать по каналу нижнего предела">
                                             <i class="bi bi-{% if 'ch_low' in sort_indicators %}{% if sort_indicators.ch_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="ch_high" data-column-order="15">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="15" title="Закрепить столбец Канал макс">
                                             <i class="bi bi-pin-angle"></i>
@@ -1867,9 +2825,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="ch_high" data-current-sort="{% if 'ch_high' in sort_indicators %}{{ sort_indicators.ch_high }}{% endif %}" title="Сортировать по каналу верхнего предела">
                                             <i class="bi bi-{% if 'ch_high' in sort_indicators %}{% if sort_indicators.ch_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="hyst_low" data-column-order="16">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="16" title="Закрепить столбец Гист мин">
                                             <i class="bi bi-pin-angle"></i>
@@ -1877,9 +2838,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="hyst_low" data-current-sort="{% if 'hyst_low' in sort_indicators %}{{ sort_indicators.hyst_low }}{% endif %}" title="Сортировать по гистерезису нижнего предела">
                                             <i class="bi bi-{% if 'hyst_low' in sort_indicators %}{% if sort_indicators.hyst_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="hyst_high" data-column-order="17">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="17" title="Закрепить столбец Гист макс">
                                             <i class="bi bi-pin-angle"></i>
@@ -1887,9 +2851,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="hyst_high" data-current-sort="{% if 'hyst_high' in sort_indicators %}{{ sort_indicators.hyst_high }}{% endif %}" title="Сортировать по гистерезису верхнего предела">
                                             <i class="bi bi-{% if 'hyst_high' in sort_indicators %}{% if sort_indicators.hyst_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="discrete_val" data-column-order="18">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="18" title="Закрепить столбец Дискрет">
                                             <i class="bi bi-pin-angle"></i>
@@ -1897,9 +2864,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="discrete_val" data-current-sort="{% if 'discrete_val' in sort_indicators %}{{ sort_indicators.discrete_val }}{% endif %}" title="Сортировать по дискретному значению">
                                             <i class="bi bi-{% if 'discrete_val' in sort_indicators %}{% if sort_indicators.discrete_val == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="created_at" data-column-order="19">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="19" title="Закрепить столбец Создано">
                                             <i class="bi bi-pin-angle"></i>
@@ -1907,15 +2877,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="sort-button" data-field="created_at" data-current-sort="{% if 'created_at' in sort_indicators %}{{ sort_indicators.created_at }}{% endif %}" title="Сортировать по дате создания">
                                             <i class="bi bi-{% if 'created_at' in sort_indicators %}{% if sort_indicators.created_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
                                         </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
+                                        </button>
                                     </div>
                                 </th>
-                                <th class="control-cell">
+                                <th class="control-cell" data-field="updated_at" data-column-order="20">
                                     <div class="control-items">
                                         <button class="pin-button" data-column="20" title="Закрепить столбец Обновлено">
                                             <i class="bi bi-pin-angle"></i>
                                         </button>
                                         <button class="sort-button" data-field="updated_at" data-current-sort="{% if 'updated_at' in sort_indicators %}{{ sort_indicators.updated_at }}{% endif %}" title="Сортировать по дате обновления">
                                             <i class="bi bi-{% if 'updated_at' in sort_indicators %}{% if sort_indicators.updated_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
+                                        </button>
+                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
+                                            <i class="bi bi-grip-vertical"></i>
                                         </button>
                                     </div>
                                 </th>
