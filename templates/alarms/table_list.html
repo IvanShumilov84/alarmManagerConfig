@@ -9,16 +9,90 @@
 <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
 
 <style>
-    /* Контейнер для AG Grid */
+    /* Переопределяем ограничения контейнеров для лучшей адаптивности */
+    .container-fluid {
+        max-width: none !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+    
+    /* Адаптивный контейнер для AG Grid */
     #tablesGrid {
         height: 600px;
-        width: 100%;
+        width: 100% !important;
+        min-width: 0; /* Позволяет контейнеру сжиматься */
+        overflow: hidden; /* Предотвращает горизонтальный скролл контейнера */
+        max-width: 100vw; /* Ограничиваем максимальную ширину */
+    }
+    
+    /* Принудительно устанавливаем ширину для AG Grid */
+    .ag-theme-alpine {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+    
+    /* Responsive стили для мобильных устройств */
+    @media (max-width: 768px) {
+        #tablesGrid {
+            height: 500px;
+            width: 100% !important;
+        }
+        
+        .ag-theme-alpine {
+            width: 100% !important;
+        }
+        
+        .btn-toolbar {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn-toolbar .btn-group {
+            width: 100%;
+        }
+        
+        .btn-toolbar .btn {
+            width: 100%;
+        }
+        
+        /* Уменьшаем отступы на планшетах */
+        .container-fluid {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        #tablesGrid {
+            height: 400px;
+            width: 100% !important;
+        }
+        
+        .ag-theme-alpine {
+            width: 100% !important;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .h2 {
+            font-size: 1.5rem;
+        }
+        
+        /* Уменьшаем отступы на мобильных */
+        .container-fluid {
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+        }
     }
     
     /* Стили для кнопок действий */
     .action-buttons {
         display: flex;
         gap: 5px;
+        flex-wrap: wrap;
     }
     
     .action-buttons .btn {
@@ -26,24 +100,57 @@
         font-size: 12px;
     }
     
+    /* Responsive кнопки действий */
+    @media (max-width: 576px) {
+        .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .action-buttons .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+    
     /* Стили для счетчика тревог */
-    .alarms-count {
+    .count-badge {
         font-weight: bold;
         color: #007bff;
     }
     
     /* Стили для описания */
-    .table-description {
+    .description-cell {
         max-width: 300px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
     
+    /* Responsive описание */
+    @media (max-width: 768px) {
+        .description-cell {
+            max-width: 200px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .description-cell {
+            max-width: 150px;
+        }
+    }
+    
     /* Стили для дат */
     .date-cell {
         font-size: 12px;
         color: #666;
+    }
+    
+    /* Responsive даты */
+    @media (max-width: 576px) {
+        .date-cell {
+            font-size: 10px;
+        }
     }
 </style>
 {% endblock %}
@@ -67,7 +174,6 @@
 
 <!-- AG Grid JavaScript -->
 <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
-<script src="{% static 'js/ag-grid-common.js' %}"></script>
 
 <script>
 // Данные для AG Grid
@@ -86,123 +192,232 @@ const tableData = [
     {% endfor %}
 ];
 
-// Конфигурация колонок AG Grid
-const columnDefs = [
-    {
-        headerName: 'ID',
-        field: 'id',
-        width: 80,
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        pinned: 'left'
-    },
-    {
-        headerName: 'Номер таблицы',
-        field: 'table_number',
-        width: 150,
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        cellStyle: { fontWeight: 'bold' }
-    },
-    {
-        headerName: 'Название',
-        field: 'name',
-        width: 200,
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        filterParams: {
-            filterOptions: ['contains', 'startsWith', 'endsWith', 'equals']
-        }
-    },
-    {
-        headerName: 'Описание',
-        field: 'description',
-        width: 300,
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        cellRenderer: function(params) {
-            if (params.value) {
-                return `<div class="description-cell" title="${params.value}">${params.value}</div>`;
+console.log('Данные загружены:', tableData);
+console.log('Размер экрана:', window.innerWidth);
+
+// Функция для определения конфигурации столбцов в зависимости от размера экрана
+function getColumnDefs() {
+    const isMobile = window.innerWidth <= 576;
+    const isTablet = window.innerWidth <= 768;
+    
+    console.log('Определение столбцов:', { isMobile, isTablet, width: window.innerWidth });
+    
+    return [
+        { 
+            headerName: 'ID', 
+            field: 'id', 
+            width: isMobile ? 50 : 80, 
+            sortable: true, 
+            filter: true,
+            pinned: 'left',
+            hide: isMobile, // Скрываем ID на мобильных
+            flex: isMobile ? 0 : 0 // Не растягиваем ID
+        },
+        { 
+            headerName: 'Номер таблицы', 
+            field: 'table_number', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            cellStyle: { fontWeight: 'bold' },
+            flex: isMobile ? 1 : 1 // Растягиваем номер таблицы
+        },
+        { 
+            headerName: 'Название', 
+            field: 'name', 
+            width: isMobile ? 120 : (isTablet ? 150 : 200), 
+            sortable: true, 
+            filter: true,
+            filterParams: {
+                filterOptions: ['contains', 'startsWith', 'endsWith', 'equals']
+            },
+            flex: 2 // Растягиваем название больше всего
+        },
+        { 
+            headerName: 'Описание', 
+            field: 'description', 
+            width: isMobile ? 100 : (isTablet ? 200 : 300), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем описание на мобильных
+            flex: isMobile ? 0 : 2, // Растягиваем описание на больших экранах
+            cellRenderer: function(params) {
+                if (params.value) {
+                    return `<div class="description-cell" title="${params.value}">${params.value}</div>`;
+                }
+                return '<em class="text-muted">Не указано</em>';
             }
-            return '<em class="text-muted">Не указано</em>';
-        }
-    },
-    {
-        headerName: 'Количество тревог',
-        field: 'alarms_count',
-        width: 150,
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        cellRenderer: function(params) {
-            return `<span class="count-badge">${params.value}</span>`;
-        }
-    },
-    {
-        headerName: 'Дата создания',
-        field: 'created_at',
-        width: 150,
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        cellRenderer: function(params) {
-            return `<div class="date-cell">${params.value}</div>`;
-        }
-    },
-    {
-        headerName: 'Дата обновления',
-        field: 'updated_at',
-        width: 150,
-        sortable: true,
-        filter: 'agDateColumnFilter',
-        cellRenderer: function(params) {
-            return `<div class="date-cell">${params.value}</div>`;
-        }
-    },
-    {
-        headerName: 'Действия',
-        field: 'actions',
-        width: 200,
-        sortable: false,
-        filter: false,
-        cellRenderer: function(params) {
-            const tableId = params.data.id;
-            const canDelete = params.data.can_delete;
-            
-            let deleteButton = '';
-            if (canDelete) {
-                deleteButton = `
-                    <a href="/tables/${tableId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
-                        <i class="bi bi-trash"></i>
-                    </a>
-                `;
-            } else {
-                deleteButton = `
-                    <button class="btn btn-sm btn-outline-secondary" disabled title="Нельзя удалить (есть тревоги)">
-                        <i class="bi bi-trash"></i>
-                    </button>
+        },
+        { 
+            headerName: 'Количество тревог', 
+            field: 'alarms_count', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            flex: 1, // Растягиваем количество тревог
+            cellRenderer: function(params) {
+                return `<span class="count-badge">${params.value}</span>`;
+            }
+        },
+        { 
+            headerName: 'Дата создания', 
+            field: 'created_at', 
+            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем дату создания на мобильных
+            flex: isMobile ? 0 : 1, // Растягиваем дату на больших экранах
+            cellRenderer: function(params) {
+                return `<div class="date-cell">${params.value}</div>`;
+            }
+        },
+        { 
+            headerName: 'Дата обновления', 
+            field: 'updated_at', 
+            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: true, // Скрываем дату обновления на всех устройствах
+            flex: 0, // Не растягиваем
+            cellRenderer: function(params) {
+                return `<div class="date-cell">${params.value}</div>`;
+            }
+        },
+        {
+            headerName: 'Действия',
+            field: 'actions',
+            width: isMobile ? 120 : (isTablet ? 150 : 200),
+            sortable: false,
+            filter: false,
+            flex: 1, // Растягиваем действия
+            cellRenderer: function(params) {
+                const tableId = params.data.id;
+                const canDelete = params.data.can_delete;
+                
+                let deleteButton = '';
+                if (canDelete) {
+                    deleteButton = `
+                        <a href="/tables/${tableId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    `;
+                } else {
+                    deleteButton = `
+                        <button class="btn btn-sm btn-outline-secondary" disabled title="Нельзя удалить (есть тревоги)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    `;
+                }
+                
+                return `
+                    <div class="action-buttons">
+                        <a href="/tables/${tableId}/" class="btn btn-sm btn-outline-info" title="Просмотр">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="/tables/${tableId}/edit/" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        ${deleteButton}
+                    </div>
                 `;
             }
-            
-            return `
-                <div class="action-buttons">
-                    <a href="/tables/${tableId}/" class="btn btn-sm btn-outline-info" title="Просмотр">
-                        <i class="bi bi-eye"></i>
-                    </a>
-                    <a href="/tables/${tableId}/edit/" class="btn btn-sm btn-outline-primary" title="Редактировать">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    ${deleteButton}
-                </div>
+        }
+    ];
+}
+
+// Конфигурация AG Grid
+const gridOptions = {
+    theme: 'legacy',
+    columnDefs: getColumnDefs(),
+    rowData: tableData,
+    defaultColDef: { 
+        sortable: true, 
+        filter: true, 
+        resizable: true,
+        minWidth: 50,
+        flex: 1 // По умолчанию все столбцы растягиваются
+    },
+    pagination: true,
+    paginationPageSize: 20,
+    paginationPageSizeSelector: [10, 20, 50, 100],
+    multiSortKey: 'ctrl',
+    rowSelection: 'multiple', // Исправляем deprecated warning
+    animateRows: true,
+    suppressColumnVirtualisation: false, // Включаем виртуализацию столбцов
+    suppressRowVirtualisation: false, // Включаем виртуализацию строк
+    onGridReady: function(params) {
+        console.log('AG Grid готов, применяем autoSizeColumns');
+        
+        // Применяем autoSizeColumns с задержкой для корректной работы
+        setTimeout(() => {
+            params.api.autoSizeColumns();
+            console.log('autoSizeColumns применен');
+        }, 100);
+        
+        // Добавляем кнопки экспорта
+        const header = document.querySelector('.btn-toolbar');
+        if (header && !document.querySelector('.export-buttons')) {
+            const exportGroup = document.createElement('div');
+            exportGroup.className = 'btn-group me-2 export-buttons';
+            exportGroup.innerHTML = `
+                <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Экспорт
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportToCsv()">
+                        <i class="bi bi-file-earmark-text"></i> CSV
+                    </a></li>
+                </ul>
             `;
+            header.insertBefore(exportGroup, header.firstChild);
         }
     }
-];
+};
 
-// Создаем конфигурацию AG Grid
-const gridOptions = createGridConfig('tables', columnDefs, tableData);
+// Функции экспорта
+function exportToExcel() {
+    gridOptions.api.exportDataAsExcel({
+        fileName: 'tables_export.xlsx'
+    });
+}
+
+function exportToCsv() {
+    gridOptions.api.exportDataAsCsv({
+        fileName: 'tables_export.csv'
+    });
+}
 
 // Инициализация AG Grid
 document.addEventListener('DOMContentLoaded', function() {
-    initAgGrid('tablesGrid', gridOptions);
+    console.log('DOM загружен, инициализируем AG Grid');
+    try {
+        const gridDiv = document.querySelector('#tablesGrid');
+        console.log('Контейнер найден:', gridDiv);
+        agGrid.createGrid(gridDiv, gridOptions);
+        
+        // Debounce функция для оптимизации resize
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            console.log('Изменение размера окна:', window.innerWidth);
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (gridOptions.api) {
+                    console.log('Обновляем конфигурацию столбцов');
+                    // Обновляем конфигурацию столбцов при изменении размера
+                    gridOptions.api.setColumnDefs(getColumnDefs());
+                    setTimeout(() => {
+                        gridOptions.api.autoSizeColumns();
+                        console.log('autoSizeColumns применен после resize');
+                    }, 50);
+                }
+            }, 250); // Задержка 250ms для оптимизации
+        });
+    } catch (error) {
+        console.error('Ошибка инициализации AG Grid:', error);
+    }
 });
 </script>
 {% endblock %} 

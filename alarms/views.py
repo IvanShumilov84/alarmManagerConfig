@@ -1,10 +1,13 @@
+import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, CreateView, UpdateView, View
 from django.urls import reverse_lazy
-import json
+from django.views.generic import ListView, CreateView, UpdateView, View
+from django.http import HttpResponseRedirect, JsonResponse, HttpResponse
+from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Count
+from django.utils.safestring import mark_safe
 from .models import (
     AlarmConfig,
     AlarmTable,
@@ -15,8 +18,6 @@ from .models import (
     LimitConfigType,
 )
 from .forms import AlarmConfigForm, AlarmTableForm
-from django.http import HttpResponseRedirect
-from django.views.decorators.http import require_GET
 
 
 class AlarmTableListView(ListView):
@@ -28,8 +29,6 @@ class AlarmTableListView(ListView):
 
     def get_queryset(self):
         """Получаем queryset с подсчетом тревог для каждой таблицы"""
-        from django.db.models import Count
-
         return (
             AlarmTable.objects.all()
             .annotate(alarms_count=Count("alarms"))
@@ -118,7 +117,12 @@ class AlarmConfigListView(ListView):
         return (
             AlarmConfig.objects.all()
             .select_related(
-                "alarm_class", "logic", "confirm_method", "limit_type", "table"
+                "alarm_class",
+                "logic",
+                "confirm_method",
+                "limit_type",
+                "limit_config_type",
+                "table",
             )
             .order_by("alarm_class__verbose_name_ru", "prior", "channel")
         )
@@ -153,11 +157,16 @@ class AlarmConfigListView(ListView):
                     "limit_type": (
                         alarm.limit_type.verbose_name_ru if alarm.limit_type else ""
                     ),
-                    "low_limit": alarm.low,
-                    "high_limit": alarm.high,
-                    "hyst_low": alarm.hyst_low,
-                    "hyst_high": alarm.hyst_high,
-                    "discrete_val": alarm.discrete_val,
+                    "limit_config_type": (
+                        alarm.limit_config_type.verbose_name_ru
+                        if alarm.limit_config_type
+                        else ""
+                    ),
+                    "low_limit": alarm.low or 0,
+                    "high_limit": alarm.high or 0,
+                    "hyst_low": alarm.hyst_low or 0,
+                    "hyst_high": alarm.hyst_high or 0,
+                    "discrete_val": alarm.discrete_val or 0,
                     "ch_low": alarm.ch_low or "",
                     "ch_high": alarm.ch_high or "",
                     "created_at": (
@@ -173,7 +182,7 @@ class AlarmConfigListView(ListView):
                 }
             )
 
-        context["alarm_data"] = alarm_data
+        context["alarm_data"] = mark_safe(json.dumps(alarm_data, ensure_ascii=False))
 
         # Справочные данные для фильтров
         context["alarm_classes"] = list(
@@ -187,6 +196,9 @@ class AlarmConfigListView(ListView):
         )
         context["limit_types"] = list(
             LimitType.objects.values_list("verbose_name_ru", flat=True)
+        )
+        context["limit_config_types"] = list(
+            LimitConfigType.objects.values_list("verbose_name_ru", flat=True)
         )
 
         return context

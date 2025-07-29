@@ -69,6 +69,34 @@
             z-index: 1000;
         }
         
+        /* Responsive стили для сайдбара */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            
+            .sidebar:not(.minimized) {
+                width: 250px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .sidebar {
+                width: 0;
+                transform: translateX(-100%);
+            }
+            
+            .sidebar:not(.minimized) {
+                width: 250px;
+                transform: translateX(0);
+            }
+            
+            .sidebar.minimized {
+                width: 0;
+                transform: translateX(-100%);
+            }
+        }
+        
         /* Предотвращаем flash при загрузке */
         .sidebar:not(.loaded) {
             transition: none;
@@ -237,11 +265,47 @@
             min-height: 100vh;
             margin-left: 250px;
             transition: margin-left 0.3s ease;
+            width: calc(100vw - 250px); /* Устанавливаем точную ширину */
+            overflow-x: hidden; /* Предотвращаем горизонтальный скролл */
         }
         
         /* Автоматическое управление отступом через CSS */
         body.sidebar-minimized .main-content {
             margin-left: 70px;
+            width: calc(100vw - 70px); /* Корректируем ширину для свернутого сайдбара */
+        }
+        
+        /* Убираем ограничения container-fluid */
+        .main-content .container-fluid {
+            max-width: none !important;
+            width: 100% !important;
+            padding-left: 15px !important;
+            padding-right: 15px !important;
+        }
+        
+        /* Responsive стили для main-content */
+        @media (max-width: 768px) {
+            .main-content {
+                margin-left: 70px;
+                width: calc(100vw - 70px);
+            }
+            
+            .main-content .container-fluid {
+                padding-left: 10px !important;
+                padding-right: 10px !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .main-content {
+                margin-left: 0;
+                width: 100vw;
+            }
+            
+            .main-content .container-fluid {
+                padding-left: 5px !important;
+                padding-right: 5px !important;
+            }
         }
         
         .card {
@@ -338,9 +402,41 @@
             color: var(--text-color);
         }
 
+        /* Стили для кнопки сайдбара на мобильных */
+        .sidebar-toggle-mobile {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--card-shadow);
+        }
+
+        .sidebar-toggle-mobile:hover {
+            transform: scale(1.1);
+        }
+
+        .sidebar-toggle-mobile i {
+            font-size: 1.1rem;
+            color: var(--text-color);
+        }
+
         /* Скрываем фиксированную кнопку на больших экранах, так как есть кнопка в сайдбаре */
         @media (min-width: 768px) {
             .theme-toggle {
+                display: none;
+            }
+            
+            .sidebar-toggle-mobile {
                 display: none;
             }
         }
@@ -356,6 +452,18 @@
             }
             
             .theme-toggle i {
+                font-size: 1rem;
+            }
+            
+            .sidebar-toggle-mobile {
+                top: 10px;
+                left: 10px;
+                width: 40px;
+                height: 40px;
+                display: flex;
+            }
+            
+            .sidebar-toggle-mobile i {
                 font-size: 1rem;
             }
         }
@@ -417,6 +525,11 @@
     <!-- Кнопка переключения темы -->
     <div class="theme-toggle" onclick="toggleTheme()" title="Переключить тему">
         <i class="bi bi-sun-fill" id="themeIcon"></i>
+    </div>
+
+    <!-- Кнопка показа/скрытия сайдбара на мобильных -->
+    <div class="sidebar-toggle-mobile" onclick="toggleSidebar()" title="Показать/скрыть меню">
+        <i class="bi bi-list"></i>
     </div>
 
     <div class="d-flex p-0">

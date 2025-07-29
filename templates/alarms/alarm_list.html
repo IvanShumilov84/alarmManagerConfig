@@ -9,21 +9,91 @@
 <link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
 
 <style>
-    /* Контейнер для AG Grid */
+    /* Переопределяем ограничения контейнеров для лучшей адаптивности */
+    .container-fluid {
+        max-width: none !important;
+        padding-left: 15px !important;
+        padding-right: 15px !important;
+    }
+    
+    /* Адаптивный контейнер для AG Grid */
     #alarmsGrid {
         height: 600px;
         width: 100%;
+        min-width: 0; /* Позволяет контейнеру сжиматься */
+        overflow: hidden; /* Предотвращает горизонтальный скролл контейнера */
+    }
+    
+    /* Responsive стили для мобильных устройств */
+    @media (max-width: 768px) {
+        #alarmsGrid {
+            height: 500px;
+        }
+        
+        .btn-toolbar {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn-toolbar .btn-group {
+            width: 100%;
+        }
+        
+        .btn-toolbar .btn {
+            width: 100%;
+        }
+        
+        /* Уменьшаем отступы на планшетах */
+        .container-fluid {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        #alarmsGrid {
+            height: 400px;
+        }
+        
+        .d-flex.justify-content-between {
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .h2 {
+            font-size: 1.5rem;
+        }
+        
+        /* Уменьшаем отступы на мобильных */
+        .container-fluid {
+            padding-left: 5px !important;
+            padding-right: 5px !important;
+        }
     }
     
     /* Стили для кнопок действий */
     .action-buttons {
         display: flex;
         gap: 5px;
+        flex-wrap: wrap;
     }
     
     .action-buttons .btn {
         padding: 2px 6px;
         font-size: 12px;
+    }
+    
+    /* Responsive кнопки действий */
+    @media (max-width: 576px) {
+        .action-buttons {
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .action-buttons .btn {
+            width: 100%;
+            text-align: center;
+        }
     }
     
     /* Стили для приоритетов */
@@ -40,20 +110,6 @@
     .priority-low {
         color: #28a745;
         font-weight: bold;
-    }
-    
-    /* Стили для описания */
-    .description-cell {
-        max-width: 300px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-    
-    /* Стили для дат */
-    .date-cell {
-        font-size: 12px;
-        color: #666;
     }
     
     /* Стили для классов тревог */
@@ -80,6 +136,50 @@
         border-radius: 4px;
         font-size: 11px;
     }
+    
+    /* Responsive классы тревог */
+    @media (max-width: 576px) {
+        .alarm-class-critical,
+        .alarm-class-warning,
+        .alarm-class-info {
+            font-size: 10px;
+            padding: 1px 4px;
+        }
+    }
+    
+    /* Стили для описания */
+    .description-cell {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    /* Responsive описание */
+    @media (max-width: 768px) {
+        .description-cell {
+            max-width: 200px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .description-cell {
+            max-width: 150px;
+        }
+    }
+    
+    /* Стили для дат */
+    .date-cell {
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* Responsive даты */
+    @media (max-width: 576px) {
+        .date-cell {
+            font-size: 10px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -102,281 +202,375 @@
 
 <!-- AG Grid JavaScript -->
 <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
-<script src="{% static 'js/ag-grid-common.js' %}"></script>
 
 <script>
 // Данные для AG Grid
 const alarmData = {{ alarm_data|safe }};
 
-// Справочные данные для фильтров
-const alarmClasses = {{ alarm_classes|safe }};
-const logics = {{ logics|safe }};
-const confirmMethods = {{ confirm_methods|safe }};
-const limitTypes = {{ limit_types|safe }};
+console.log('Данные тревог загружены:', alarmData);
+console.log('Размер экрана:', window.innerWidth);
 
-// Конфигурация колонок AG Grid
-const columnDefs = [
-    {
-        headerName: 'ID',
-        field: 'id',
-        width: 80,
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        pinned: 'left'
-    },
-    {
-        headerName: 'Канал',
-        field: 'channel',
-        width: 150,
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        filterParams: {
-            filterOptions: ['contains', 'startsWith', 'endsWith', 'equals']
+// Функция для определения конфигурации столбцов в зависимости от размера экрана
+function getColumnDefs() {
+    const isMobile = window.innerWidth <= 576;
+    const isTablet = window.innerWidth <= 768;
+    
+    console.log('Определение столбцов тревог:', { isMobile, isTablet, width: window.innerWidth });
+    
+    return [
+        { 
+            headerName: 'ID', 
+            field: 'id', 
+            width: isMobile ? 50 : 80, 
+            sortable: true, 
+            filter: true,
+            pinned: 'left',
+            hide: isMobile, // Скрываем ID на мобильных
+            flex: isMobile ? 0 : 0
         },
-        cellRenderer: function(params) {
-            const value = params.value;
-            return value ? `<code>${value}</code>` : '<em class="text-muted">Не указан</em>';
-        }
-    },
-    {
-        headerName: 'Сообщение',
-        field: 'message',
-        width: 250,
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        cellRenderer: function(params) {
-            const value = params.value;
-            if (value) {
-                const shortValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
-                return `<div class="description-cell" title="${value}">${shortValue}</div>`;
+        { 
+            headerName: 'Канал', 
+            field: 'channel', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            flex: 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value ? `<code>${value}</code>` : '<em class="text-muted">Не указан</em>';
             }
-            return '<em class="text-muted">Не указано</em>';
-        }
-    },
-    {
-        headerName: 'Таблица',
-        field: 'table',
-        width: 200,
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        cellRenderer: function(params) {
-            const value = params.value;
-            return value ? `<span class="badge bg-info">${value}</span>` : '<em class="text-muted">Не указана</em>';
-        }
-    },
-    {
-        headerName: 'Класс тревоги',
-        field: 'alarm_class',
-        width: 150,
-        sortable: true,
-        filter: 'agSetColumnFilter',
-        filterParams: {
-            values: alarmClasses
         },
-        cellRenderer: function(params) {
-            const value = params.value;
-            if (!value) return '<em class="text-muted">Не указан</em>';
-            
-            let badgeClass = 'alarm-class-info';
-            if (value === 'Критическая' || value === 'Авария') {
-                badgeClass = 'alarm-class-critical';
-            } else if (value === 'Важная' || value === 'Предупреждение') {
-                badgeClass = 'alarm-class-warning';
+        { 
+            headerName: 'Сообщение', 
+            field: 'message', 
+            width: isMobile ? 120 : (isTablet ? 180 : 250), 
+            sortable: true, 
+            filter: true,
+            flex: 2,
+            cellRenderer: function(params) {
+                const value = params.value;
+                if (value) {
+                    const shortValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                    return `<div class="description-cell" title="${value}">${shortValue}</div>`;
+                }
+                return '<em class="text-muted">Не указано</em>';
             }
-            
-            return `<span class="${badgeClass}">${value}</span>`;
-        }
-    },
-    {
-        headerName: 'Способ наблюдения',
-        field: 'logic',
-        width: 120,
-        sortable: true,
-        filter: 'agSetColumnFilter',
-        filterParams: {
-            values: logics
-        }
-    },
-    {
-        headerName: 'Метод подтверждения',
-        field: 'confirm_method',
-        width: 180,
-        sortable: true,
-        filter: 'agSetColumnFilter',
-        filterParams: {
-            values: confirmMethods
-        }
-    },
-    {
-        headerName: 'Приоритет',
-        field: 'priority',
-        width: 100,
-        sortable: true,
-        filter: 'agNumberColumnFilter',
-        cellRenderer: function(params) {
-            const priority = params.value;
-            let color = 'black';
-            if (priority >= 800) color = 'red';
-            else if (priority >= 500) color = 'orange';
-            else if (priority >= 300) color = 'blue';
-            return `<span style="color: ${color}; font-weight: bold;">${priority}</span>`;
-        }
-    },
-    {
-        headerName: 'Тип ограничения',
-        field: 'limit_type',
-        width: 150,
-        sortable: true,
-        filter: 'agSetColumnFilter',
-        filterParams: {
-            values: limitTypes
-        }
-    },
-    {
-        headerName: 'Пределы',
-        children: [
-            {
-                headerName: 'Нижний',
-                field: 'low_limit',
-                width: 100,
-                sortable: true,
-                filter: 'agNumberColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value !== null ? value : '<em class="text-muted">-</em>';
-                }
-            },
-            {
-                headerName: 'Верхний',
-                field: 'high_limit',
-                width: 100,
-                sortable: true,
-                filter: 'agNumberColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value !== null ? value : '<em class="text-muted">-</em>';
-                }
+        },
+        { 
+            headerName: 'Таблица', 
+            field: 'table', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем таблицу на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value ? `<span class="badge bg-info">${value}</span>` : '<em class="text-muted">Не указана</em>';
             }
-        ]
-    },
-    {
-        headerName: 'Гистерезис',
-        children: [
-            {
-                headerName: 'Низкий',
-                field: 'hyst_low',
-                width: 100,
-                sortable: true,
-                filter: 'agNumberColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value !== null ? value : '<em class="text-muted">-</em>';
+        },
+        { 
+            headerName: 'Класс тревоги', 
+            field: 'alarm_class', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            flex: 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                if (!value) return '<em class="text-muted">Не указан</em>';
+                
+                let badgeClass = 'alarm-class-info';
+                if (value === 'Критическая' || value === 'Авария') {
+                    badgeClass = 'alarm-class-critical';
+                } else if (value === 'Важная' || value === 'Предупреждение') {
+                    badgeClass = 'alarm-class-warning';
                 }
-            },
-            {
-                headerName: 'Высокий',
-                field: 'hyst_high',
-                width: 100,
-                sortable: true,
-                filter: 'agNumberColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value !== null ? value : '<em class="text-muted">-</em>';
-                }
+                
+                return `<span class="${badgeClass}">${value}</span>`;
             }
-        ]
-    },
-    {
-        headerName: 'Дополнительно',
-        children: [
-            {
-                headerName: 'Дискретное значение',
-                field: 'discrete_val',
-                width: 120,
-                sortable: true,
-                filter: 'agNumberColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value !== null ? value : '<em class="text-muted">-</em>';
-                }
-            },
-            {
-                headerName: 'Канал низкий',
-                field: 'ch_low',
-                width: 120,
-                sortable: true,
-                filter: 'agTextColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
-                }
-            },
-            {
-                headerName: 'Канал высокий',
-                field: 'ch_high',
-                width: 120,
-                sortable: true,
-                filter: 'agTextColumnFilter',
-                cellRenderer: function(params) {
-                    const value = params.value;
-                    return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
-                }
+        },
+        { 
+            headerName: 'Способ наблюдения', 
+            field: 'logic', 
+            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем способ наблюдения на мобильных
+            flex: isMobile ? 0 : 1
+        },
+        { 
+            headerName: 'Способ подтверждения', 
+            field: 'confirm_method', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем способ подтверждения на мобильных
+            flex: isMobile ? 0 : 1
+        },
+        { 
+            headerName: 'Приоритет', 
+            field: 'priority', 
+            width: isMobile ? 70 : (isTablet ? 80 : 100), 
+            sortable: true, 
+            filter: true,
+            flex: 1,
+            cellRenderer: function(params) {
+                const priority = params.value;
+                let color = 'black';
+                if (priority >= 800) color = 'red';
+                else if (priority >= 500) color = 'orange';
+                else if (priority >= 300) color = 'blue';
+                return `<span style="color: ${color}; font-weight: bold;">${priority}</span>`;
             }
-        ]
-    },
-    {
-        headerName: 'Даты',
-        children: [
-            {
-                headerName: 'Создан',
-                field: 'created_at',
-                width: 150,
-                sortable: true,
-                filter: 'agDateColumnFilter',
-                cellRenderer: function(params) {
-                    return `<div class="date-cell">${params.value}</div>`;
-                }
-            },
-            {
-                headerName: 'Обновлен',
-                field: 'updated_at',
-                width: 150,
-                sortable: true,
-                filter: 'agDateColumnFilter',
-                cellRenderer: function(params) {
-                    return `<div class="date-cell">${params.value}</div>`;
-                }
+        },
+        { 
+            headerName: 'Тип ограничения', 
+            field: 'limit_type', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем тип ограничения на мобильных
+            flex: isMobile ? 0 : 1
+        },
+        { 
+            headerName: 'Тип настройки пределов', 
+            field: 'limit_config_type', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем тип настройки пределов на мобильных
+            flex: isMobile ? 0 : 1
+        },
+        { 
+            headerName: 'Нижний предел', 
+            field: 'low_limit', 
+            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем нижний предел на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
             }
-        ]
+        },
+        { 
+            headerName: 'Верхний предел', 
+            field: 'high_limit', 
+            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем верхний предел на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Канал нижнего предела', 
+            field: 'ch_low', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем канал нижнего предела на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Канал верхнего предела', 
+            field: 'ch_high', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем канал верхнего предела на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Гистерезис нижний', 
+            field: 'hyst_low', 
+            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем гистерезис нижний на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Гистерезис верхний', 
+            field: 'hyst_high', 
+            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем гистерезис верхний на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Дискретное значение', 
+            field: 'discrete_val', 
+            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем дискретное значение на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                const value = params.value;
+                return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
+            }
+        },
+        { 
+            headerName: 'Дата создания', 
+            field: 'created_at', 
+            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: isMobile, // Скрываем дату создания на мобильных
+            flex: isMobile ? 0 : 1,
+            cellRenderer: function(params) {
+                return `<div class="date-cell">${params.value}</div>`;
+            }
+        },
+        { 
+            headerName: 'Дата обновления', 
+            field: 'updated_at', 
+            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+            sortable: true, 
+            filter: true,
+            hide: true, // Скрываем дату обновления на всех устройствах
+            flex: 0,
+            cellRenderer: function(params) {
+                return `<div class="date-cell">${params.value}</div>`;
+            }
+        },
+        {
+            headerName: 'Действия',
+            field: 'actions',
+            width: isMobile ? 100 : (isTablet ? 120 : 100),
+            sortable: false,
+            filter: false,
+            flex: 1,
+            cellRenderer: function(params) {
+                const alarmId = params.data.id;
+                return `
+                    <div class="action-buttons">
+                        <a href="/alarms/${alarmId}/edit/" class="btn btn-sm btn-outline-primary me-1" title="Редактировать">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="/alarms/${alarmId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                `;
+            }
+        }
+    ];
+}
+
+// Конфигурация AG Grid
+const gridOptions = {
+    theme: 'legacy',
+    columnDefs: getColumnDefs(),
+    rowData: alarmData,
+    defaultColDef: { 
+        sortable: true, 
+        filter: true, 
+        resizable: true,
+        minWidth: 50
     },
-    {
-        headerName: 'Действия',
-        field: 'actions',
-        width: 100,
-        sortable: false,
-        filter: false,
-        cellRenderer: function(params) {
-            const alarmId = params.data.id;
-            return `
-                <div class="action-buttons">
-                    <a href="/alarms/${alarmId}/edit/" class="btn btn-sm btn-outline-primary me-1" title="Редактировать">
-                        <i class="bi bi-pencil"></i>
-                    </a>
-                    <a href="/alarms/${alarmId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
-                        <i class="bi bi-trash"></i>
-                    </a>
-                </div>
+    pagination: true,
+    paginationPageSize: 20,
+    paginationPageSizeSelector: [10, 20, 50, 100],
+    multiSortKey: 'ctrl',
+    rowSelection: 'multiRow',
+    animateRows: true,
+    onGridReady: function(params) {
+        console.log('AG Grid тревог готов, применяем sizeColumnsToFit');
+        
+        // Применяем sizeColumnsToFit с задержкой для корректной работы
+        setTimeout(() => {
+            params.api.sizeColumnsToFit();
+            console.log('sizeColumnsToFit применен для тревог');
+        }, 100);
+        
+        // Добавляем кнопки экспорта
+        const header = document.querySelector('.btn-toolbar');
+        if (header && !document.querySelector('.export-buttons')) {
+            const exportGroup = document.createElement('div');
+            exportGroup.className = 'btn-group me-2 export-buttons';
+            exportGroup.innerHTML = `
+                <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-download"></i> Экспорт
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportToCsv()">
+                        <i class="bi bi-file-earmark-text"></i> CSV
+                    </a></li>
+                </ul>
             `;
+            header.insertBefore(exportGroup, header.firstChild);
         }
     }
-];
+};
 
-// Создаем конфигурацию AG Grid
-const gridOptions = createGridConfig('alarms', columnDefs, alarmData);
+// Функции экспорта
+function exportToExcel() {
+    gridOptions.api.exportDataAsExcel({
+        fileName: 'alarms_export.xlsx'
+    });
+}
+
+function exportToCsv() {
+    gridOptions.api.exportDataAsCsv({
+        fileName: 'alarms_export.csv'
+    });
+}
 
 // Инициализация AG Grid
 document.addEventListener('DOMContentLoaded', function() {
-    initAgGrid('alarmsGrid', gridOptions);
+    console.log('DOM загружен, инициализируем AG Grid тревог');
+    try {
+        const gridDiv = document.querySelector('#alarmsGrid');
+        console.log('Контейнер тревог найден:', gridDiv);
+        agGrid.createGrid(gridDiv, gridOptions);
+        
+        // Debounce функция для оптимизации resize
+        let resizeTimeout;
+        window.addEventListener('resize', function() {
+            console.log('Изменение размера окна для тревог:', window.innerWidth);
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (gridOptions.api) {
+                    console.log('Обновляем конфигурацию столбцов тревог');
+                    // Обновляем конфигурацию столбцов при изменении размера
+                    gridOptions.api.setColumnDefs(getColumnDefs());
+                    setTimeout(() => {
+                        gridOptions.api.sizeColumnsToFit();
+                        console.log('sizeColumnsToFit применен после resize для тревог');
+                    }, 50);
+                }
+            }, 250); // Задержка 250ms для оптимизации
+        });
+    } catch (error) {
+        console.error('Ошибка инициализации AG Grid тревог:', error);
+    }
 });
 </script>
 {% endblock %}

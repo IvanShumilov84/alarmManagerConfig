@@ -269,16 +269,27 @@ function showNotification(message, type = 'info') {
  * @param {Object} gridOptions - опции AG Grid
  */
 function initAgGrid(containerId, gridOptions) {
+    console.log('initAgGrid вызвана с:', { containerId, gridOptions });
+
     const gridDiv = document.querySelector(`#${containerId}`);
     if (!gridDiv) {
         console.error(`Контейнер #${containerId} не найден`);
         return;
     }
 
-    // Сохраняем API в глобальной переменной
-    window.gridApi = new agGrid.Grid(gridDiv, gridOptions);
+    console.log('Контейнер найден:', gridDiv);
+    console.log('agGrid доступен:', typeof agGrid);
 
-    return window.gridApi;
+    try {
+        // Сохраняем API в глобальной переменной
+        window.gridApi = new agGrid.Grid(gridDiv, gridOptions);
+        console.log('AG Grid создан успешно:', window.gridApi);
+
+        return window.gridApi;
+    } catch (error) {
+        console.error('Ошибка создания AG Grid:', error);
+        throw error;
+    }
 }
 
 /**
