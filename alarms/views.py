@@ -14,122 +14,26 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
 
-class AlarmTableListView(FilterMixin, ListView):
-    """Представление для списка таблиц аварий"""
+class AlarmTableListView(ListView):
+    """Представление для списка таблиц аварий с AG Grid"""
 
     model = AlarmTable
     template_name = "alarms/table_list.html"
     context_object_name = "tables"
-    paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с подсчетом тревог для каждой таблицы и применяем фильтры"""
+        """Получаем queryset с подсчетом тревог для каждой таблицы"""
         from django.db.models import Count
 
-        queryset = AlarmTable.objects.all().annotate(alarms_count=Count("alarms"))
-
-        # Применяем фильтрацию через миксин
-        queryset = self.apply_filters(queryset)
-
-        # Применяем сортировку
-        sort_fields = []
-        sort_orders = []
-
-        # Собираем все параметры сортировки с индексами
-        i = 0
-        while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
-                break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
-            i += 1
-
-        # Применяем сортировку
-        if sort_fields:
-            order_by_fields = []
-            for i, field in enumerate(sort_fields):
-                if field:
-                    order = sort_orders[i] if i < len(sort_orders) else "asc"
-                    if order == "desc":
-                        order_by_fields.append(f"-{field}")
-                    else:
-                        order_by_fields.append(field)
-
-            if order_by_fields:
-                queryset = queryset.order_by(*order_by_fields)
-        else:
-            # Сортировка по умолчанию
-            queryset = queryset.order_by("table_number")
-
-        return queryset
+        return (
+            AlarmTable.objects.all()
+            .annotate(alarms_count=Count("alarms"))
+            .order_by("table_number")
+        )
 
     def get_context_data(self, **kwargs):
         """Добавляем базовые параметры в контекст"""
         context = super().get_context_data(**kwargs)
-
-        # Добавляем счетчики для отображения в бейджах
-        total_count = AlarmTable.objects.all().count()
-
-        # Новый способ определения наличия активных фильтров
-        has_active_filters = any(
-            key.startswith("filter_field_") for key in self.request.GET.keys()
-        )
-        # Если есть активные фильтры, подсчитываем отфильтрованные записи
-        if has_active_filters:
-            # Получаем queryset без пагинации для подсчета всех отфильтрованных записей
-            from django.db.models import Count
-
-            filtered_queryset = AlarmTable.objects.all().annotate(
-                alarms_count=Count("alarms")
-            )
-            filtered_queryset = self.apply_filters(filtered_queryset)
-            filtered_count = filtered_queryset.count()
-        else:
-            filtered_count = total_count
-
-        context["total_count"] = total_count
-        context["filtered_count"] = filtered_count
-        context["has_active_filters"] = has_active_filters
-
-        # Добавляем поля сортировки для таблиц
-        context["sort_fields"] = get_sort_fields("tables")
-        context["storage_key"] = "tablesSortFields"
-
-        # Добавляем поля фильтров для таблиц
-        context["filter_fields"] = get_filter_fields("tables")
-
-        # Получаем параметры сортировки
-        sort_fields = []
-        sort_orders = []
-
-        # Собираем все параметры сортировки с индексами
-        i = 0
-        while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
-                break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
-            i += 1
-
-        # Для обратной совместимости
-        context["sort_orders"] = sort_orders[: len(sort_fields)]
-
-        # Создаем словарь для отображения стрелок в заголовках таблицы
-        context["sort_indicators"] = {}
-        for i, field in enumerate(sort_fields):
-            if field and i < len(sort_orders):
-                context["sort_indicators"][field] = sort_orders[i]
-
-        context["current_sort"] = self.request.GET.get("sort", "table_number")
-        context["current_order"] = self.request.GET.get("order", "asc")
-
-        # Добавляем display_mode для controls_panel
-        context["display_mode"] = "tables"
-
         return context
 
 

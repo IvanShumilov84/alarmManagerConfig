@@ -4,94 +4,46 @@
 {% block title %}{% include 'alarms/includes/page_title.html' with page_title="Таблицы тревог" %}{% endblock %}
 
 {% block extra_css %}
+<!-- AG Grid CSS -->
+<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
+<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
+
 <style>
-    /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
-    
-    /* Панель управления - автоматическая подстройка под ширину с учетом сайдбара */
-    .controls-panel {
-        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
-        max-width: 100%;
-        transition: width 0.3s ease;
-        margin-left: 0;
-        margin-right: 0;
-    }
-    
-    /* Таблица - автоматическая подстройка под ширину с учетом сайдбара */
-    .card {
-        width: calc(100vw - 250px - 2rem); /* 250px сайдбар + отступы */
-        max-width: 100%;
-        transition: width 0.3s ease;
-        margin-left: 0;
-        margin-right: 0;
-    }
-    
-    /* Адаптация для минимизированного сайдбара */
-    body.sidebar-minimized .controls-panel {
-        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
-    }
-    
-    body.sidebar-minimized .card {
-        width: calc(100vw - 70px - 2rem); /* 70px минимизированный сайдбар + отступы */
-    }
-    
-    /* Адаптивность для мобильных устройств */
-    @media (max-width: 768px) {
-        .controls-panel,
-        .card {
-            width: calc(100vw - 1rem) !important; /* На мобильных полная ширина */
-        }
-    }
-    
-    /* Контейнер основного контента с правильными отступами */
-    .container-fluid {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        max-width: none;
+    /* Контейнер для AG Grid */
+    #tablesGrid {
+        height: 600px;
         width: 100%;
     }
     
-    /* Адаптивная таблица под разные размеры сайдбара */
-    .table-responsive {
-        transition: all 0.3s ease;
-        width: 100%;
+    /* Стили для кнопок действий */
+    .action-buttons {
+        display: flex;
+        gap: 5px;
     }
     
-    /* СПЕЦИФИЧНЫЕ СТИЛИ ДЛЯ ТАБЛИЦ */
-    
-    /* Стили для кнопок удаления */
-    .btn-outline-warning:hover {
-        background-color: #ffc107;
-        border-color: #ffc107;
-        color: #000;
+    .action-buttons .btn {
+        padding: 2px 6px;
+        font-size: 12px;
     }
     
-    .btn-outline-warning:focus {
-        box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+    /* Стили для счетчика тревог */
+    .alarms-count {
+        font-weight: bold;
+        color: #007bff;
     }
     
-    /* Улучшенные tooltips */
-    [title] {
-        position: relative;
-        cursor: help;
+    /* Стили для описания */
+    .table-description {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     
-    /* Анимация для кнопки предупреждения */
-    .btn-outline-warning {
-        transition: all 0.2s ease-in-out;
-    }
-    
-    .btn-outline-warning:hover {
-        transform: scale(1.05);
-    }
-    
-    /* Стили для модального окна */
-    .modal-header.bg-warning {
-        border-bottom: 1px solid #ffc107;
-    }
-    
-    .badge.bg-warning.text-dark {
-        font-size: 0.9em;
-        padding: 0.4em 0.6em;
+    /* Стили для дат */
+    .date-cell {
+        font-size: 12px;
+        color: #666;
     }
 </style>
 {% endblock %}
@@ -99,220 +51,281 @@
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-                        <i class="bi bi-table"></i> Таблицы тревог
-        <span class="badge bg-secondary ms-2">
-            Всего: {{ total_count }}
-        </span>
+        <i class="bi bi-table me-2"></i>Таблицы тревог
     </h1>
-    </div>
-</div>
-
-<!-- ПАНЕЛЬ УПРАВЛЕНИЯ -->
-{% include 'alarms/includes/controls_panel.html' with page_type='tables' %}
-
-<div class="card">
-    <div class="card-body">
-        {% if tables %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-light">
-                        <tr>
-                            <th>
-                                Номер
-                                {% if 'table_number' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.table_number == 'asc' %}up{% else %}down{% endif %}"></i>
-                                {% endif %}
-                            </th>
-                            <th>
-                                Название
-                                {% if 'name' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.name == 'asc' %}up{% else %}down{% endif %}"></i>
-                                {% endif %}
-                            </th>
-                            <th>
-                                Описание
-                                {% if 'description' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.description == 'asc' %}up{% else %}down{% endif %}"></i>
-                                {% endif %}
-                            </th>
-                            <th>
-                                Количество тревог
-                                {% if 'alarms_count' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.alarms_count == 'asc' %}up{% else %}down{% endif %}"></i>
-                                {% endif %}
-                            </th>
-                            <th>
-                                Дата создания
-                                {% if 'created_at' in sort_indicators %}
-                                    <i class="bi bi-arrow-{% if sort_indicators.created_at == 'asc' %}up{% else %}down{% endif %}"></i>
-                                {% endif %}
-                            </th>
-                            <th>Действия</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for table in tables %}
-                        <tr>
-                            <td>
-                                <span class="badge bg-primary">{{ table.table_number }}</span>
-                            </td>
-                            <td>
-                                <strong>{{ table.name }}</strong>
-                            </td>
-                            <td>
-                                {% if table.description %}
-                                    {{ table.description|truncatechars:100 }}
-                                {% else %}
-                                    <span class="text-muted">Описание отсутствует</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <span class="badge bg-info">{{ table.alarms_count }}</span>
-                            </td>
-                            <td>{{ table.created_at|date:"d.m.Y H:i" }}</td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'alarms:table_detail' table.pk %}" 
-                                       class="btn btn-sm btn-outline-success" 
-                                       title="Просмотреть тревоги">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <a href="{% url 'alarms:table_edit' table.pk %}" 
-                                       class="btn btn-sm btn-outline-primary" 
-                                       title="Редактировать">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
-                                    {% if table.alarms_count == 0 %}
-                                    <a href="{% url 'alarms:table_delete' table.pk %}" 
-                                       class="btn btn-sm btn-outline-danger" 
-                                           title="Удалить таблицу '{{ table.name }}'">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
-                                    {% else %}
-                                        <button class="btn btn-sm btn-outline-warning" 
-                                                title="Удаление невозможно - в таблице '{{ table.name }}' содержится {{ table.alarms_count }} тревог(а). Сначала удалите все тревоги из таблицы."
-                                                onclick="showDeleteWarning({{ table.alarms_count }}, '{{ table.name }}', {{ table.pk }})">
-                                            <i class="bi bi-exclamation-triangle"></i>
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Пагинация -->
-            {% if is_paginated %}
-            <nav aria-label="Навигация по страницам">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">&laquo; Первая</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Предыдущая</a>
-                        </li>
-                    {% endif %}
-                    
-                    <li class="page-item active">
-                        <span class="page-link">
-                            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
-                        </span>
-                    </li>
-                    
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Следующая</a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}">Последняя &raquo;</a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-        {% else %}
-            <div class="text-center text-muted py-5">
-                {% if has_active_filters %}
-                    {% include 'alarms/includes/empty_filtered.html' %}
-                {% else %}
-                    <i class="bi bi-table fs-1"></i>
-                                            <h4>Таблицы тревог не найдены</h4>
-                    <p>Создайте первую таблицу тревог для начала работы</p>
-                    <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
-                        <i class="bi bi-plus-circle"></i> Создать первую таблицу
-                    </a>
-                {% endif %}
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<script src="{% static 'js/filters.js' %}"></script>
-<script src="{% static 'js/sort.js' %}"></script>
-
-<!-- Модальное окно для предупреждения о невозможности удаления -->
-<div class="modal fade" id="deleteWarningModal" tabindex="-1" aria-labelledby="deleteWarningModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title" id="deleteWarningModalLabel">
-                    <i class="bi bi-exclamation-triangle"></i> Удаление невозможно
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>Невозможно удалить таблицу <strong id="tableName"></strong>.</p>
-                <p>В таблице содержится <span id="alarmsCount" class="badge bg-warning text-dark"></span> тревог(а).</p>
-                <p>Для удаления таблицы сначала удалите все тревоги из неё.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
-                <a href="#" id="viewAlarmsLink" class="btn btn-primary">
-                    <i class="bi bi-eye"></i> Просмотреть тревоги
-                </a>
-            </div>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'alarms:table_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Создать таблицу
+            </a>
         </div>
     </div>
 </div>
 
+<!-- Контейнер для AG Grid -->
+<div id="tablesGrid" class="ag-theme-alpine"></div>
+
+<!-- AG Grid JavaScript -->
+<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+
 <script>
-function showDeleteWarning(alarmsCount, tableName, tableId) {
-    // Заполняем данные в модальном окне
-    document.getElementById('tableName').textContent = tableName;
-    document.getElementById('alarmsCount').textContent = alarmsCount;
-    document.getElementById('viewAlarmsLink').href = `/tables/${tableId}/alarms/`;
+// Данные для AG Grid
+const tableData = [
+    {% for table in tables %}
+    {
+        id: {{ table.id }},
+        table_number: {{ table.table_number }},
+        name: "{{ table.name|escapejs }}",
+        description: "{{ table.description|escapejs }}",
+        alarms_count: {{ table.alarms_count }},
+        created_at: "{{ table.created_at|date:'Y-m-d H:i' }}",
+        updated_at: "{{ table.updated_at|date:'Y-m-d H:i' }}",
+        can_delete: {{ table.can_be_deleted|yesno:"true,false" }}
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+// Конфигурация колонок AG Grid
+const columnDefs = [
+    {
+        headerName: 'ID',
+        field: 'id',
+        width: 80,
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        pinned: 'left'
+    },
+    {
+        headerName: 'Номер таблицы',
+        field: 'table_number',
+        width: 150,
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        cellStyle: { fontWeight: 'bold' }
+    },
+    {
+        headerName: 'Название',
+        field: 'name',
+        width: 200,
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        filterParams: {
+            filterOptions: ['contains', 'startsWith', 'endsWith', 'equals']
+        }
+    },
+    {
+        headerName: 'Описание',
+        field: 'description',
+        width: 300,
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        cellRenderer: function(params) {
+            if (params.value) {
+                return `<div class="table-description" title="${params.value}">${params.value}</div>`;
+            }
+            return '<em class="text-muted">Не указано</em>';
+        }
+    },
+    {
+        headerName: 'Количество тревог',
+        field: 'alarms_count',
+        width: 150,
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        cellRenderer: function(params) {
+            return `<span class="alarms-count">${params.value}</span>`;
+        }
+    },
+    {
+        headerName: 'Дата создания',
+        field: 'created_at',
+        width: 150,
+        sortable: true,
+        filter: 'agDateColumnFilter',
+        cellRenderer: function(params) {
+            return `<div class="date-cell">${params.value}</div>`;
+        }
+    },
+    {
+        headerName: 'Дата обновления',
+        field: 'updated_at',
+        width: 150,
+        sortable: true,
+        filter: 'agDateColumnFilter',
+        cellRenderer: function(params) {
+            return `<div class="date-cell">${params.value}</div>`;
+        }
+    },
+    {
+        headerName: 'Действия',
+        field: 'actions',
+        width: 200,
+        sortable: false,
+        filter: false,
+        cellRenderer: function(params) {
+            const tableId = params.data.id;
+            const canDelete = params.data.can_delete;
+            
+            let deleteButton = '';
+            if (canDelete) {
+                deleteButton = `
+                    <a href="/alarms/tables/${tableId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                `;
+            } else {
+                deleteButton = `
+                    <button class="btn btn-sm btn-outline-secondary" disabled title="Нельзя удалить (есть тревоги)">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+            }
+            
+            return `
+                <div class="action-buttons">
+                    <a href="/alarms/tables/${tableId}/" class="btn btn-sm btn-outline-info" title="Просмотр">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <a href="/alarms/tables/${tableId}/edit/" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    ${deleteButton}
+                </div>
+            `;
+        }
+    }
+];
+
+// Конфигурация AG Grid
+const gridOptions = {
+    columnDefs: columnDefs,
+    rowData: tableData,
     
-    // Показываем модальное окно
-    const modal = new bootstrap.Modal(document.getElementById('deleteWarningModal'));
-    modal.show();
+    // Основные настройки
+    defaultColDef: {
+        sortable: true,
+        filter: true,
+        resizable: true,
+        minWidth: 100
+    },
+    
+    // Пагинация
+    pagination: true,
+    paginationPageSize: 20,
+    paginationPageSizeSelector: [10, 20, 50, 100],
+    
+    // Сортировка
+    multiSortKey: 'ctrl',
+    
+    // Выбор строк
+    rowSelection: 'multiple',
+    
+    // Экспорт
+    enableRangeSelection: true,
+    
+    // Производительность
+    animateRows: true,
+    
+    // События
+    onGridReady: function(params) {
+        // Автоматически подгоняем размер колонок под содержимое
+        params.api.sizeColumnsToFit();
+        
+        // Загружаем сохраненные настройки
+        loadGridSettings();
+    },
+    
+    onSortChanged: function(event) {
+        saveGridSettings();
+    },
+    
+    onFilterChanged: function(event) {
+        saveGridSettings();
+    },
+    
+    onColumnMoved: function(event) {
+        saveGridSettings();
+    },
+    
+    onColumnResized: function(event) {
+        saveGridSettings();
+    }
+};
+
+// Функции для работы с настройками
+function saveGridSettings() {
+    const settings = {
+        columnState: gridOptions.api.getColumnState(),
+        sortModel: gridOptions.api.getSortModel(),
+        filterModel: gridOptions.api.getFilterModel()
+    };
+    localStorage.setItem('tablesGridSettings', JSON.stringify(settings));
 }
 
-// Инициализация улучшенных tooltips
+function loadGridSettings() {
+    const saved = localStorage.getItem('tablesGridSettings');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            
+            if (settings.columnState) {
+                gridOptions.api.applyColumnState({
+                    state: settings.columnState,
+                    applyOrder: true
+                });
+            }
+            
+            if (settings.sortModel) {
+                gridOptions.api.setSortModel(settings.sortModel);
+            }
+            
+            if (settings.filterModel) {
+                gridOptions.api.setFilterModel(settings.filterModel);
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error);
+        }
+    }
+}
+
+// Инициализация AG Grid
 document.addEventListener('DOMContentLoaded', function() {
-    // Инициализируем Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl, {
-            placement: 'top',
-            trigger: 'hover focus',
-            html: true
-        });
+    const gridDiv = document.querySelector('#tablesGrid');
+    new agGrid.Grid(gridDiv, gridOptions);
+});
+
+// Функции экспорта
+function exportToExcel() {
+    gridOptions.api.exportDataAsExcel({
+        fileName: 'tables_export.xlsx'
     });
-    
-    // Добавляем анимацию для кнопок предупреждения
-    const warningButtons = document.querySelectorAll('.btn-outline-warning');
-    warningButtons.forEach(button => {
-        button.addEventListener('mouseenter', function() {
-            this.style.transform = 'scale(1.05)';
-        });
-        
-        button.addEventListener('mouseleave', function() {
-            this.style.transform = 'scale(1)';
-        });
+}
+
+function exportToCsv() {
+    gridOptions.api.exportDataAsCsv({
+        fileName: 'tables_export.csv'
     });
+}
+
+// Добавляем кнопки экспорта в заголовок
+document.addEventListener('DOMContentLoaded', function() {
+    const header = document.querySelector('.btn-toolbar');
+    const exportGroup = document.createElement('div');
+    exportGroup.className = 'btn-group me-2';
+    exportGroup.innerHTML = `
+        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-download"></i> Экспорт
+        </button>
+        <ul class="dropdown-menu">
+            <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a></li>
+            <li><a class="dropdown-item" href="#" onclick="exportToCsv()">
+                <i class="bi bi-file-earmark-text"></i> CSV
+            </a></li>
+        </ul>
+    `;
+    header.insertBefore(exportGroup, header.firstChild);
 });
 </script>
 {% endblock %} 
