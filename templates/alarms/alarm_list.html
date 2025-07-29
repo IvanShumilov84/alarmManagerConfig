@@ -4,3099 +4,379 @@
 {% block title %}{% include 'alarms/includes/page_title.html' with page_title="Тревоги" %}{% endblock %}
 
 {% block extra_css %}
+<!-- AG Grid CSS -->
+<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
+<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
+
 <style>
-    /* CSS ПЕРЕМЕННЫЕ ДЛЯ АДАПТИВНОЙ ВЫСОТЫ */
-    :root {
-        --controls-panel-height: 120px; /* Динамически обновляется через JavaScript */
-        --page-padding: 40px; /* Буфер для отступов и пагинации */
-        --header-height: 0px; /* Высота заголовка страницы (если есть) */
-        --sidebar-width: 250px; /* Ширина развернутого сайдбара */
-        --sidebar-width-minimized: 70px; /* Ширина минимизированного сайдбара */
-    }
-    
-    /* АДАПТИВНАЯ ШИРИНА КОНТЕЙНЕРОВ */
-    
-    /* Панель управления - зафиксирована сверху */
-    .controls-panel {
-        margin-left: 0;
-        margin-right: 0;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background-color: var(--bs-body-bg);
-        border-bottom: 1px solid var(--bs-border-color);
-        padding-bottom: 0.5rem;
-        /* Убираем ограничения ширины для горизонтального скролла */
+    /* Контейнер для AG Grid */
+    #alarmsGrid {
+        height: 600px;
         width: 100%;
-        overflow-x: auto; /* Горизонтальный скролл для панели управления */
     }
     
-    /* Таблица тревог - адаптивная высота, занимает всё доступное пространство */
-    .card {
-        margin-left: 0;
-        margin-right: 0;
-        margin-bottom: 0; /* Убираем нижний отступ */
+    /* Стили для кнопок действий */
+    .action-buttons {
         display: flex;
-        flex-direction: column;
-        /* Динамическая высота: обновляется через JavaScript */
-        height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
-        min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
-        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding));
-        /* Убираем ограничения ширины для горизонтального скролла */
-        width: 100%;
-        overflow: hidden; /* Скрываем переполнение карточки */
-        /* Плавная анимация при изменении высоты */
-        transition: height 0.3s ease, min-height 0.3s ease, max-height 0.3s ease;
+        gap: 5px;
     }
     
-    /* Заголовок таблицы - полностью зафиксирован и непрокручиваемый */
-    .alarm-table thead {
-        position: sticky;
-        top: 0;
-        z-index: 15;
-        background-color: var(--bs-body-bg);
+    .action-buttons .btn {
+        padding: 2px 6px;
+        font-size: 12px;
     }
     
-    .alarm-table thead th:not(.sticky-column) {
-        position: sticky;
-        top: 0;
-        background-color: var(--bs-light);
-        z-index: 20;
-        /* border-bottom убран - используются общие стили таблицы */
-        /* Дополнительные стили для надежной фиксации */
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        backdrop-filter: blur(5px);
-        -webkit-backdrop-filter: blur(5px);
-        /* Убираем возможность прокрутки заголовков */
-        will-change: transform;
-        transform: translateZ(0);
-        white-space: nowrap;
-        /* Минимальная высота для стабильности */
-        min-height: 40px;
-        height: auto;
-        line-height: 1.2;
-        vertical-align: middle;
-        /* Принудительная фиксация */
-        position: -webkit-sticky; /* Safari support */
-        position: sticky;
-        /* Убираем любые margin/padding которые могут мешать */
-        margin: 0;
-        /* Гарантируем непрозрачность фона */
-        background-clip: padding-box;
-    }
-    
-    /* Стили для закрепленных столбцов - заголовки */
-    .alarm-table thead th.sticky-column {
-        position: sticky !important;
-        top: 0 !important;
-        left: var(--sticky-left, 0) !important; /* Фиксированная позиция */
-        background-color: #f8f9fa !important; /* Полностью непрозрачный светлый фон */
-        z-index: 30 !important;
-        /* border-bottom убран - используются общие стили таблицы */
-        /* Убираем вертикальные границы и тени */
-        will-change: transform !important;
-        transform: translateZ(0) !important;
-        white-space: nowrap !important;
-        min-height: 40px !important;
-        height: auto !important;
-        line-height: 1.2 !important;
-        vertical-align: middle !important;
-        margin: 0 !important;
-        background-clip: border-box !important; /* Фон покрывает границы ячеек */
-        /* Создаем новый stacking context для полной изоляции */
-        isolation: isolate !important;
-        /* МОЩНАЯ МАСКИРОВКА: создаем дополнительные слои перекрытия */
-        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
-        /* box-shadow убран для предотвращения визуального утолщения границ */
-        /* Убираем backdrop-filter для предотвращения прозрачности */
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        /* border-right восстановлена через общие стили ячеек */
-    }
-    
-    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для sticky заголовков */
-    .alarm-table thead th.sticky-column::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: -1000px;
-        bottom: 0;
-        width: 1000px;
-        background-color: #f8f9fa;
-        z-index: -1;
-        pointer-events: none;
-    }
-
-    /* Стили для закрепленных столбцов - ячейки тела таблицы */
-    .alarm-table tbody td.sticky-column {
-        position: sticky !important;
-        left: var(--sticky-left, 0) !important; /* Фиксированная позиция */
-        background-color: #ffffff !important; /* Полностью непрозрачный белый фон */
-        z-index: 25 !important;
-        /* Убираем вертикальные границы и тени */
-        will-change: transform !important;
-        transform: translateZ(0) !important;
-        white-space: nowrap !important;
-        vertical-align: middle !important;
-        background-clip: border-box !important; /* Фон покрывает границы ячеек */
-        /* Создаем новый stacking context для полной изоляции */
-        isolation: isolate !important;
-        /* МОЩНАЯ МАСКИРОВКА: создаем дополнительные слои перекрытия */
-        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
-        /* box-shadow убран для предотвращения визуального утолщения границ */
-        /* Дополнительная защита от просвечивания */
-        overflow: hidden !important;
-        /* Убираем backdrop-filter для предотвращения прозрачности */
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        /* border-right восстановлена через общие стили ячеек */
-    }
-    
-    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для sticky ячеек тела */
-    .alarm-table tbody td.sticky-column::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: -1000px;
-        bottom: 0;
-        width: 1000px;
-        background-color: #ffffff;
-        z-index: -1;
-        pointer-events: none;
-    }
-    
-    /* Тело таблицы - прокручиваемое */
-    .alarm-table tbody {
-        position: relative;
-        z-index: 1;
-    }
-    
-    .alarm-table tbody tr {
-        /* Оптимизация отрисовки строк */
-        will-change: auto;
-        transform: translateZ(0);
-    }
-    
-    /* Темная тема для заголовка */
-    [data-bs-theme="dark"] .alarm-table thead {
-        background-color: var(--bs-body-bg);
-    }
-
-    /* Темная тема для закрепленных столбцов - заголовки */
-    [data-bs-theme="dark"] .alarm-table thead th.sticky-column {
-        background-color: #343a40 !important; /* Полностью непрозрачный темный фон */
-        background-clip: border-box !important; /* Фон покрывает границы ячеек */
-        isolation: isolate !important; /* Создаем новый stacking context */
-        /* МОЩНАЯ МАСКИРОВКА для темной темы */
-        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
-        /* box-shadow убран для предотвращения визуального утолщения границ */
-        /* ТОЛЬКО дополнительные границы для темной темы - заголовки */
-        border-left-width: 1px !important;
-        border-top-width: 1px !important;
-        border-left-style: solid !important;
-        border-top-style: solid !important;
-        border-left-color: var(--border-color) !important;
-        border-top-color: var(--border-color) !important;
-        /* Убираем любые дополнительные эффекты для темной темы - заголовки */
-        box-shadow: none !important;
-        outline: none !important;
-        text-shadow: none !important;
-        /* Убираем backdrop-filter для предотвращения прозрачности */
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }
-    
-    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для темной темы - заголовки */
-    [data-bs-theme="dark"] .alarm-table thead th.sticky-column::after {
-        background-color: #343a40 !important;
-    }
-
-    /* Темная тема для закрепленных столбцов - ячейки тела */
-    [data-bs-theme="dark"] .alarm-table tbody td.sticky-column {
-        background-color: #212529 !important; /* Полностью непрозрачный темный фон */
-        background-clip: border-box !important; /* Фон покрывает границы ячеек */
-        isolation: isolate !important; /* Создаем новый stacking context */
-        /* МОЩНАЯ МАСКИРОВКА для темной темы */
-        contain: strict !important; /* Полная изоляция макета, стилей и рисования */
-        /* box-shadow убран для предотвращения визуального утолщения границ */
-        /* ТОЛЬКО дополнительные границы для темной темы - ячейки тела */
-        border-left-width: 1px !important;
-        border-top-width: 1px !important;
-        border-left-style: solid !important;
-        border-top-style: solid !important;
-        border-left-color: var(--border-color) !important;
-        border-top-color: var(--border-color) !important;
-        /* Убираем любые дополнительные эффекты для темной темы - ячейки тела */
-        box-shadow: none !important;
-        outline: none !important;
-        text-shadow: none !important;
-        /* Убираем backdrop-filter для предотвращения прозрачности */
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }
-    
-    /* ДОПОЛНИТЕЛЬНАЯ ПСЕВДО-МАСКА для темной темы - ячейки тела */
-    [data-bs-theme="dark"] .alarm-table tbody td.sticky-column::after {
-        background-color: #212529 !important;
-    }
-    
-    /* ===== СИНХРОНИЗАЦИЯ HOVER ЭФФЕКТОВ ДЛЯ STICKY СТОЛБЦОВ ===== */
-    
-    /* Hover эффекты для sticky столбцов - светлая тема */
-    .alarm-table.table-hover tbody tr:hover td.sticky-column {
-        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.075)) !important; /* Bootstrap официальный hover цвет с fallback */
-        /* Сохраняем остальные важные стили */
-        position: sticky !important;
-        left: var(--sticky-left, 0) !important;
-        z-index: 25 !important;
-        background-clip: border-box !important;
-        isolation: isolate !important;
-        contain: strict !important;
-        will-change: transform !important;
-        transform: translateZ(0) !important;
-        white-space: nowrap !important;
-        vertical-align: middle !important;
-        overflow: hidden !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-    }
-    
-    /* Hover эффекты для псевдоэлементов sticky столбцов - светлая тема */
-    .alarm-table.table-hover tbody tr:hover td.sticky-column::after {
-        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-color-rgb, 33, 37, 41), 0.075)) !important; /* Синхронизируем с основным цветом */
-        content: "";
-        position: absolute;
-        top: 0;
-        right: -1000px;
-        bottom: 0;
-        width: 1000px;
-        z-index: -1;
-        pointer-events: none;
-    }
-    
-    /* Hover эффекты для sticky столбцов - темная тема */
-    [data-bs-theme="dark"] .alarm-table.table-hover tbody tr:hover td.sticky-column {
-        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.125)) !important; /* Bootstrap официальный hover цвет с fallback для темной темы */
-        /* Сохраняем остальные важные стили */
-        position: sticky !important;
-        left: var(--sticky-left, 0) !important;
-        z-index: 25 !important;
-        background-clip: border-box !important;
-        isolation: isolate !important;
-        contain: strict !important;
-        will-change: transform !important;
-        transform: translateZ(0) !important;
-        white-space: nowrap !important;
-        vertical-align: middle !important;
-        overflow: hidden !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        /* Границы для темной темы */
-        border-left-width: 1px !important;
-        border-top-width: 1px !important;
-        border-left-style: solid !important;
-        border-top-style: solid !important;
-        border-left-color: var(--border-color) !important;
-        border-top-color: var(--border-color) !important;
-        box-shadow: none !important;
-        outline: none !important;
-        text-shadow: none !important;
-    }
-    
-    /* Hover эффекты для псевдоэлементов sticky столбцов - темная тема */
-    [data-bs-theme="dark"] .alarm-table.table-hover tbody tr:hover td.sticky-column::after {
-        background-color: var(--bs-tertiary-bg, rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.125)) !important; /* Синхронизируем с основным цветом с fallback */
-        content: "";
-        position: absolute;
-        top: 0;
-        right: -1000px;
-        bottom: 0;
-        width: 1000px;
-        z-index: -1;
-        pointer-events: none;
-    }
-    
-    /* Дополнительная поддержка для заголовков sticky столбцов при hover (если потребуется) */
-    .alarm-table.table-hover thead tr:hover th.sticky-column {
-        /* Заголовки обычно не имеют hover эффектов, но добавляем для консистентности */
-        background-color: #f8f9fa !important; /* Сохраняем оригинальный цвет заголовка */
-    }
-    
-    [data-bs-theme="dark"] .alarm-table.table-hover thead tr:hover th.sticky-column {
-        background-color: #343a40 !important; /* Сохраняем оригинальный цвет заголовка для темной темы */
-    }
-    
-    /* ===== СТРОКА УПРАВЛЕНИЯ СТОЛБЦАМИ ===== */
-    
-    /* Контейнер для строки управления */
-    .table-controls-row {
-        background-color: var(--bs-light);
-        border-bottom: 1px solid var(--bs-border-color);
-        position: sticky;
-        top: 0;
-        z-index: 35; /* Выше чем обычные заголовки, но ниже sticky столбцов */
-    }
-    
-    [data-bs-theme="dark"] .table-controls-row {
-        background-color: var(--bs-gray-800);
-    }
-    
-    /* Ячейки управления */
-    .control-cell {
-        padding: 4px 8px !important;
-        text-align: center !important;
-        vertical-align: middle !important;
-        border-right: 1px solid var(--bs-border-color) !important;
-        border-bottom: 1px solid var(--bs-border-color) !important;
-        white-space: nowrap !important;
-        background-color: inherit;
-        height: 35px;
-        min-height: 35px;
-        position: relative;
-    }
-    
-    /* Убираем правую границу с последней ячейки */
-    .control-cell:last-child {
-        border-right: none !important;
-    }
-    
-    /* Контейнер элементов управления в ячейке */
-    .control-items {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        height: 100%;
-        flex-wrap: nowrap;
-    }
-    
-    /* Кнопка булавки */
-    .pin-button {
-        background: none;
-        border: none;
-        padding: 2px 4px;
-        cursor: pointer;
-        font-size: 14px;
-        line-height: 1;
-        border-radius: 3px;
-        transition: all 0.2s ease;
-        color: var(--bs-gray-600);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 22px;
-        height: 22px;
-    }
-    
-    .pin-button:hover {
-        background-color: var(--bs-gray-200);
-        color: var(--bs-gray-800);
-        transform: scale(1.1);
-    }
-    
-    .pin-button.active {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.1);
+    /* Стили для приоритетов */
+    .priority-high {
+        color: #dc3545;
         font-weight: bold;
     }
     
-    .pin-button.active:hover {
-        background-color: rgba(var(--bs-primary-rgb), 0.2);
+    .priority-medium {
+        color: #fd7e14;
+        font-weight: bold;
     }
     
-    /* Темная тема для булавок */
-    [data-bs-theme="dark"] .pin-button {
-        color: var(--bs-gray-400);
+    .priority-low {
+        color: #28a745;
+        font-weight: bold;
     }
     
-    [data-bs-theme="dark"] .pin-button:hover {
-        background-color: var(--bs-gray-700);
-        color: var(--bs-gray-200);
-    }
-    
-    [data-bs-theme="dark"] .pin-button.active {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.2);
-    }
-    
-    /* Кнопка сортировки */
-    .sort-button {
-        background: none;
-        border: none;
-        padding: 2px 4px;
-        cursor: pointer;
-        font-size: 12px;
-        line-height: 1;
-        border-radius: 3px;
-        transition: all 0.2s ease;
-        color: var(--bs-gray-600);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 20px;
-        height: 20px;
+    /* Стили для описания */
+    .description-cell {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
     
-    /* Drag handle для перетаскивания столбцов */
-    .drag-handle {
-        background: none;
-        border: none;
-        padding: 2px 4px;
-        cursor: grab;
+    /* Стили для дат */
+    .date-cell {
         font-size: 12px;
-        line-height: 1;
-        border-radius: 3px;
-        transition: all 0.2s ease;
-        color: var(--bs-gray-500);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 16px;
-        height: 20px;
-        opacity: 0.6;
+        color: #666;
     }
     
-    .drag-handle:hover {
-        opacity: 1;
-        color: var(--bs-primary);
-    }
-    
-    .drag-handle:active {
-        cursor: grabbing;
-    }
-    
-    /* Стили для перетаскивания */
-            .control-cell.dragging {
-            opacity: 0.05;
-            background-color: var(--bs-primary);
-            color: white;
-            z-index: 1000;
-            transform: scale(0.98);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.15s ease;
-            filter: blur(0.5px);
-        }
-        
-        .control-cell.dragging * {
-            pointer-events: none;
-            user-select: none;
-        }
-    
-            .control-cell.drag-over {
-            border-left: 4px solid var(--bs-primary);
-            background-color: rgba(0, 123, 255, 0.1);
-            box-shadow: inset 0 0 0 1px rgba(0, 123, 255, 0.3);
-        }
-        
-        /* Специальные стили для drag-over в закрепленной области */
-        .control-cell.sticky-column.drag-over {
-            border-left: 4px solid var(--bs-warning);
-            background-color: rgba(255, 193, 7, 0.1);
-            box-shadow: inset 0 0 0 1px rgba(255, 193, 7, 0.3);
-        }
-        
-        /* Индикатор границы между закрепленными и незакрепленными столбцами */
-        .sticky-boundary-indicator {
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 3px;
-            background: linear-gradient(to bottom, var(--bs-warning), var(--bs-primary));
-            z-index: 1001;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .sticky-boundary-indicator.visible {
-            opacity: 1;
-        }
-    
-    /* Показываем drag handles только при наведении на заголовок */
-    .control-cell:hover .drag-handle {
-    display: inline-flex !important;
-}
-
-/* Скрываем drag handle для столбца "Действия" */
-.control-cell[data-field="actions"] .drag-handle {
-    display: none !important;
-}
-
-/* Стили для кнопки сброса порядка столбцов */
-.reset-column-order-button {
-    background: none;
-    border: none;
-    color: var(--bs-gray-600);
-    padding: 4px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 20px;
-    height: 20px;
-}
-
-.reset-column-order-button:hover {
-    background-color: var(--bs-gray-200);
-    color: var(--bs-gray-800);
-}
-
-.reset-column-order-button:active {
-    background-color: var(--bs-gray-300);
-    transform: scale(0.95);
-    }
-    
-    .sort-button:hover {
-        background-color: var(--bs-gray-200);
-        color: var(--bs-gray-800);
-        transform: scale(1.1);
-    }
-    
-    .sort-button.sort-asc {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.1);
-        font-weight: bold;
-    }
-    
-    .sort-button.sort-desc {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.1);
-        font-weight: bold;
-    }
-    
-    .sort-button.sort-asc:hover,
-    .sort-button.sort-desc:hover {
-        background-color: rgba(var(--bs-primary-rgb), 0.2);
-        transform: scale(1.1);
-    }
-    
-    /* Темная тема для сортировки */
-    [data-bs-theme="dark"] .sort-button {
-        color: var(--bs-gray-400);
-    }
-    
-    [data-bs-theme="dark"] .sort-button:hover {
-        background-color: var(--bs-gray-700);
-        color: var(--bs-gray-200);
-    }
-    
-    [data-bs-theme="dark"] .sort-button.sort-asc {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.2);
-        font-weight: bold;
-    }
-    
-    [data-bs-theme="dark"] .sort-button.sort-desc {
-        color: var(--bs-primary);
-        background-color: rgba(var(--bs-primary-rgb), 0.2);
-        font-weight: bold;
-    }
-    
-    /* Sticky стили для ячеек управления */
-    .control-cell.sticky-column {
-        position: sticky !important;
-        left: var(--sticky-left, 0) !important;
-        z-index: 40 !important; /* Выше всех других элементов */
-        background-color: var(--bs-light) !important;
-        background-clip: border-box !important;
-        isolation: isolate !important;
-    }
-    
-    [data-bs-theme="dark"] .control-cell.sticky-column {
-        background-color: var(--bs-gray-800) !important;
-    }
-    
-    /* Псевдоэлементы для маскировки управляющих ячеек */
-    .control-cell.sticky-column::after {
-        content: "";
-        position: absolute;
-        top: 0;
-        right: -1000px;
-        bottom: 0;
-        width: 1000px;
-        background-color: var(--bs-light);
-        z-index: -1;
-        pointer-events: none;
-    }
-    
-    [data-bs-theme="dark"] .control-cell.sticky-column::after {
-        background-color: var(--bs-gray-800);
-    }
-    
-    /* Скрываем кнопку сортировки для столбца Действия (сортировка недоступна) */
-    .control-cell.actions-control .sort-button {
-        display: none;
-    }
-    
-    /* Hover для неактивных кнопок сортировки */
-    .sort-button:not(.sort-asc):not(.sort-desc):hover {
-        background-color: var(--bs-gray-200);
-        transform: scale(1.1);
-    }
-    
-    [data-bs-theme="dark"] .sort-button:not(.sort-asc):not(.sort-desc):hover {
-        background-color: var(--bs-gray-700);
-    }
-    
-    .sort-order {
-        margin-left: 2px;
-        color: var(--bs-primary);
-        font-size: 10px;
-        font-weight: bold;
-        line-height: 1;
-    }
-    
-    /* Цвет номеров как у активных кнопок */
-    .sort-button.sort-asc .sort-order,
-    .sort-button.sort-desc .sort-order {
-        color: var(--bs-primary);
-    }
-    
-    [data-bs-theme="dark"] .sort-order {
-        color: var(--bs-primary);
-    }
-    
-    /* Кнопка сброса всей сортировки */
-    .reset-sort-button {
-        background: var(--bs-danger);
+    /* Стили для классов тревог */
+    .alarm-class-critical {
+        background-color: #dc3545;
         color: white;
-        border: 1px solid var(--bs-danger);
+        padding: 2px 6px;
         border-radius: 4px;
-        padding: 4px 8px;
-        cursor: pointer;
-        font-size: 12px;
-        transition: all 0.2s ease;
-        position: relative;
+        font-size: 11px;
     }
     
-    .reset-sort-button:hover:not(.disabled) {
-        background: var(--bs-danger);
-        opacity: 0.8;
-        transform: scale(1.05);
-    }
-    
-    /* Неактивное состояние кнопки сброса */
-    .reset-sort-button.disabled {
-        background: var(--bs-secondary);
-        color: var(--bs-secondary-color);
-        border-color: var(--bs-secondary);
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-    
-    .reset-sort-button.disabled:hover {
-        transform: none;
-        opacity: 0.6;
-    }
-    
-    [data-bs-theme="dark"] .reset-sort-button {
-        background: var(--bs-danger);
+    .alarm-class-warning {
+        background-color: #fd7e14;
         color: white;
-        border-color: var(--bs-danger);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
     }
     
-    [data-bs-theme="dark"] .reset-sort-button.disabled {
-        background: var(--bs-secondary);
-        color: var(--bs-secondary-color);
-        border-color: var(--bs-secondary);
-    }
-    
-
-    
-    [data-bs-theme="dark"] .alarm-table thead th:not(.sticky-column) {
-        background-color: var(--bs-dark);
-        box-shadow: 0 2px 4px rgba(255, 255, 255, 0.1);
-    }
-    
-
-
-    
-    /* РАДИКАЛЬНОЕ ИСПРАВЛЕНИЕ: Изменяем border-collapse для решения проблемы прозрачности */
-    .alarm-table {
-        border-collapse: separate !important;
-        border-spacing: 0 !important;
-    }
-    
-    /* Восстанавливаем границы между ячейками при border-collapse: separate */
-    .alarm-table th,
-    .alarm-table td {
-        border-right-width: 1px !important;
-        border-bottom-width: 1px !important;
-        border-right-style: solid !important;
-        border-bottom-style: solid !important;
-        border-right-color: var(--bs-border-color) !important;
-        border-bottom-color: var(--bs-border-color) !important;
-    }
-    
-    /* Убираем правую границу с последнего столбца */
-    .alarm-table th:last-child,
-    .alarm-table td:last-child {
-        border-right: none !important;
-    }
-    
-    /* ИСПРАВЛЕНИЕ ПРОБЛЕМЫ С ЭЛЕМЕНТАМИ CODE В STICKY СТОЛБЦАХ */
-    /* Bootstrap стили для code могут конфликтовать со sticky столбцами */
-    .alarm-table .sticky-column code {
-        border: none !important; /* Убираем границы у элементов code */
-        padding: 0.125rem 0.25rem !important; /* Стандартный padding без влияния на границы */
-        margin: 0 !important; /* Убираем margin */
-        display: inline !important; /* Принудительно inline */
-        box-sizing: border-box !important; /* Правильный box-sizing */
-        background-color: inherit !important; /* Наследуем цвет фона от родителя */
-        box-shadow: none !important; /* Убираем тени */
-        outline: none !important; /* Убираем outline */
-        line-height: inherit !important; /* Наследуем line-height */
-        vertical-align: baseline !important; /* Базовое выравнивание */
-    }
-    
-    /* ДОПОЛНИТЕЛЬНОЕ ИСПРАВЛЕНИЕ: убираем псевдоэлементы у code в sticky столбцах */
-    .alarm-table .sticky-column code::before,
-    .alarm-table .sticky-column code::after {
-        display: none !important;
-    }
-    
-    /* ИСПРАВЛЕНИЕ СМЕЩЕНИЯ: только дополнительные границы для sticky столбцов */
-    .alarm-table .sticky-column {
-        /* ТОЛЬКО дополнительные границы (left и top) */
-        /* right и bottom наследуются от общих стилей ячеек */
-        border-left-width: 1px !important;
-        border-top-width: 1px !important;
-        border-left-style: solid !important;
-        border-top-style: solid !important;
-        border-left-color: var(--bs-border-color) !important;
-        border-top-color: var(--bs-border-color) !important;
-        /* Убираем любые дополнительные эффекты, которые могут влиять на визуальную толщину */
-        box-shadow: none !important;
-        outline: none !important;
-        text-shadow: none !important;
-        /* Дополнительная защита от дрожания границ */
-        -webkit-transform: translateZ(0) !important;
-        transform: translateZ(0) !important;
-    }
-    
-    /* Контейнер таблицы - занимает всё доступное пространство с фиксированной шапкой */
-    .table-responsive {
-        flex-grow: 1;
-        overflow-y: auto; /* Вертикальная прокрутка */
-        overflow-x: auto; /* Горизонтальная прокрутка */
-        /* Занимаем всё оставшееся пространство в карточке */
-        height: 100%;
-        min-height: 300px; /* Минимальная высота для удобства использования */
-        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 40px); /* Ограничиваем максимальную высоту */
-        /* Улучшенная фиксация для sticky элементов */
-        position: relative;
-        contain: layout style paint;
-        /* Оптимизация прокрутки */
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-        /* Принудительное отображение скроллбаров */
-        scrollbar-width: auto; /* Firefox */
-        -ms-overflow-style: auto; /* IE */
-    }
-    
-    /* Фиксированная вертикальная граница для закрепленных столбцов */
-    .card-body {
-        position: relative; /* Для позиционирования границы */
-    }
-    
-    .sticky-column-border {
-        position: absolute;
-        top: var(--sticky-border-top, 0);
-        height: var(--sticky-border-height, 0);
-        left: var(--sticky-border-left, 0);
-        width: 2px;
-        background-color: var(--bs-primary);
-        z-index: 40;
-        pointer-events: none;
-        display: none; /* Скрыта по умолчанию */
-        margin: 0;
-        padding: 0;
-    }
-    
-    .sticky-column-border.visible {
-        display: block;
-    }
-    
-    /* Тёмная тема для фиксированной границы */
-    [data-bs-theme="dark"] .sticky-column-border {
-        background-color: var(--bs-primary);
-    }
-    
-    /* Обеспечиваем видимость скроллбаров в Webkit браузерах */
-    .table-responsive::-webkit-scrollbar {
-        width: 12px;
-        height: 12px;
-    }
-    
-    .table-responsive::-webkit-scrollbar-track {
-        background: var(--bs-secondary-bg);
-        border-radius: 6px;
-    }
-    
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: var(--bs-secondary);
-        border-radius: 6px;
-    }
-    
-    .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: var(--bs-secondary-color);
-    }
-    
-    /* AJAX анимация загрузки */
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    .spin {
-        animation: spin 1s linear infinite;
-    }
-    
-    #ajax-loading {
-        font-size: 14px;
-        color: var(--bs-secondary);
-        background-color: var(--bs-body-bg) !important;
-        border: 1px solid var(--bs-border-color) !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    [data-bs-theme="dark"] #ajax-loading {
-        background-color: var(--bs-body-bg) !important;
-        border-color: var(--bs-border-color) !important;
-        color: var(--bs-body-color);
-    }
-    
-    /* Адаптация для минимизированного сайдбара - убрана для горизонтального скролла */
-    
-    /* Адаптивность для разных размеров экрана */
-    
-    /* Планшеты и маленькие экраны */
-    @media (max-width: 1200px) {
-        :root {
-            --controls-panel-height: 140px; /* Увеличенная высота на средних экранах */
-        }
-    }
-    
-    /* Мобильные устройства */
-    @media (max-width: 768px) {
-        :root {
-            --controls-panel-height: 180px; /* Динамически обновляется */
-            --page-padding: 20px; /* Уменьшенные отступы */
-        }
-        
-        .table-responsive {
-            min-height: 250px; /* Уменьшенная минимальная высота на мобильных */
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 40px);
-        }
-        
-        .container-fluid {
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            padding-top: 0.5rem;
-        }
-        
-        .card {
-            /* Адаптивная высота для мобильных */
-            height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
-            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 10px) !important;
-        }
-    }
-    
-    /* Очень маленькие экраны */
-    @media (max-width: 480px) {
-        :root {
-            --controls-panel-height: 220px; /* Динамически обновляется */
-            --page-padding: 10px; /* Минимальные отступы */
-        }
-        
-        .table-responsive {
-            min-height: 200px; /* Еще меньше на очень маленьких экранах */
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 30px);
-        }
-        
-        .container-fluid {
-            padding: 0.25rem;
-        }
-        
-        .card {
-            /* Максимальная адаптивность для очень маленьких экранов */
-            height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
-            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 5px) !important;
-        }
-    }
-    
-    /* Большие экраны */
-    @media (min-width: 1400px) {
-        :root {
-            --controls-panel-height: 100px; /* Динамически обновляется */
-            --page-padding: 50px; /* Увеличенные отступы на больших экранах */
-        }
-        
-        .table-responsive {
-            min-height: 500px; /* Увеличенная минимальная высота на больших экранах */
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 30px);
-        }
-        
-        .card {
-            /* Оптимальная высота для больших экранов */
-            height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
-            min-height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
-            max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding)) !important;
-        }
-    }
-    
-    /* СТИЛИ СТРАНИЦЫ И ТАБЛИЦЫ */
-    
-    /* Убираем прокрутку всей страницы - только внутренняя прокрутка таблицы */
-    html, body {
-        overflow: hidden; /* Полностью убираем прокрутку страницы */
-        height: 100vh; /* Фиксированная высота */
-        margin: 0;
-        padding: 0;
-    }
-    
-    /* Центрирование всех ячеек таблицы тревог */
-    .alarm-table td,
-    .alarm-table th {
-        text-align: center;
-        vertical-align: middle;
-    }
-    
-    /* Исключение для столбца действий - оставляем выравнивание по левому краю */
-    .alarm-table td:first-child {
-        text-align: left;
-    }
-    
-
-    
-    /* Настройки для горизонтального скролла таблицы */
-    .alarm-table {
-        min-width: 1800px; /* Минимальная ширина таблицы для принудительного горизонтального скролла */
-        width: max-content; /* Автоматическая ширина на основе содержимого */
-    }
-    
-    .alarm-table th,
-    .alarm-table td {
-        white-space: nowrap; /* Предотвращение переноса текста */
-        overflow: hidden;
-        text-overflow: ellipsis; /* Троеточие для длинного текста */
-        padding: 8px 12px; /* Увеличенные отступы для лучшего вида */
-        width: auto; /* Автоматическая ширина под содержимое */
-    }
-    
-    /* Общие настройки для всех столбцов (заменяет старые жестко закодированные стили) */
-    .alarm-table th,
-    .alarm-table td {
-        white-space: nowrap; /* Запрещаем перенос по умолчанию */
-        width: auto; /* Автоматическая ширина под содержимое */
-    }
-    
-    /* Исключения для столбцов с кнопками - разрешаем перенос */
-    .alarm-table th:first-child,
-    .alarm-table td:first-child {
-        white-space: normal; /* Разрешаем перенос для кнопок */
-    }
-    
-    /* Ограничения ширины для длинных текстовых столбцов */
-    .alarm-table th:nth-child(4), /* Сообщение */
-    .alarm-table td:nth-child(4),
-    .alarm-table th:nth-child(5), /* Таблица */
-    .alarm-table td:nth-child(5) {
-        max-width: 250px; /* Ограничение максимальной ширины */
-    }
-    
-    /* Контейнер карточки таблицы */
-    .card-body {
-        display: flex;
-        flex-direction: column;
-        flex-grow: 1;
-        padding-bottom: 0;
-        overflow: hidden;
-        /* Плавная адаптация при изменении высоты */
-        transition: all 0.3s ease;
-        /* Максимальная высота для предотвращения переполнения */
-        max-height: 100%;
-        height: 100%;
-    }
-    
-    /* Адаптивный контейнер таблицы */
-    .table-responsive {
-        flex-grow: 1;
-        overflow-x: auto;
-        overflow-y: auto;
-        /* Динамическая высота устанавливается через JavaScript */
-        max-height: calc(100vh - var(--controls-panel-height) - var(--page-padding) - 20px);
-        /* Плавная анимация высоты */
-        transition: max-height 0.3s ease, min-height 0.3s ease;
-        /* Минимальная высота для стабильности отображения */
-        min-height: 300px;
-    }
-    
-    /* Стили для пустого состояния */
-    .empty-state {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-grow: 1;
-        min-height: 300px;
-    }
-    
-    /* Контейнер основного контента - точная высота без прокрутки */
-    .container-fluid {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        padding-top: 1rem;
-        padding-bottom: 0; /* Убираем нижний отступ */
-        max-width: none;
-        width: 100%;
-        height: 100%; /* Занимаем всю доступную высоту */
-        max-height: 100%; /* Не превышаем доступную высоту */
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* Убираем прокрутку контейнера, но разрешаем для таблицы */
-    }
-    
-    /* Основной контент - адаптивная высота с учетом сайдбара */
-    .main-content {
-        padding-top: 0;
-        padding-bottom: 0; /* Убираем нижний отступ */
-        /* Адаптивная высота с учетом того, что сайдбар занимает место слева */
-        height: 100vh; 
-        max-height: 100vh; 
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* Убираем прокрутку основного контента */
-        /* Отступ слева под сайдбар */
-        margin-left: 250px; /* Ширина развернутого сайдбара */
-        transition: margin-left 0.3s ease;
-    }
-    
-    /* Адаптация основного контента для минимизированного сайдбара */
-    body.sidebar-minimized .main-content {
-        margin-left: 70px; /* Ширина минимизированного сайдбара */
+    .alarm-class-info {
+        background-color: #17a2b8;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 11px;
     }
 </style>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-// Улучшенная функция для адаптации высоты таблицы
-function adaptTableHeight() {
-    const controlsPanel = document.querySelector('.controls-panel');
-    const tableContainer = document.querySelector('.table-responsive');
-    const card = document.querySelector('.card');
-    
-    if (controlsPanel && tableContainer && card) {
-        // Получаем реальную высоту панели управления
-        const controlsPanelHeight = controlsPanel.getBoundingClientRect().height;
-        const viewportHeight = window.innerHeight;
-        
-        // Учитываем отступы и другие элементы страницы
-        const headerHeight = 0; // Если есть заголовок страницы
-        const paddingBuffer = 40; // Буфер для отступов и пагинации
-        const sidebarOffset = document.body.classList.contains('sidebar-minimized') ? 70 : 250;
-        
-        // Вычисляем доступную высоту для таблицы
-        const availableHeight = viewportHeight - controlsPanelHeight - headerHeight - paddingBuffer;
-        
-        // Обновляем CSS переменную для точного расчета
-        document.documentElement.style.setProperty('--controls-panel-height', `${controlsPanelHeight}px`);
-        
-        // Устанавливаем максимальную высоту для контейнера таблицы
-        tableContainer.style.maxHeight = `${availableHeight}px`;
-        tableContainer.style.minHeight = `${Math.min(300, availableHeight)}px`;
-        
-        // Обновляем высоту карточки
-        card.style.height = `calc(100vh - ${controlsPanelHeight}px - ${paddingBuffer}px)`;
-        
-        console.log(`Адаптация высоты: Панель управления=${controlsPanelHeight}px, Таблица=${availableHeight}px`);
-        
-        // Обновляем sticky заголовки
-        enforceTableHeaderSticky();
-    }
-}
-
-// Улучшенная функция для фиксации заголовка таблицы
-function enforceTableHeaderSticky() {
-    const tableHeader = document.querySelector('.alarm-table thead');
-    if (tableHeader) {
-        tableHeader.style.setProperty('position', 'sticky', 'important');
-        tableHeader.style.setProperty('top', '0px', 'important');
-        tableHeader.style.setProperty('z-index', '15', 'important');
-    }
-}
-
-// Функция для плавной адаптации с задержкой
-function smoothAdaptTableHeight() {
-    clearTimeout(window.adaptTimeout);
-    window.adaptTimeout = setTimeout(() => {
-        adaptTableHeight();
-    }, 150); // Небольшая задержка для завершения анимаций Bootstrap
-}
-
-// Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Первоначальная адаптация
-    setTimeout(adaptTableHeight, 100);
-    
-    // Обработчики событий для табов Bootstrap
-    const tabButtons = document.querySelectorAll('[data-bs-toggle="tab"]');
-    tabButtons.forEach(tabButton => {
-        // Событие при показе нового таба
-        tabButton.addEventListener('shown.bs.tab', function(event) {
-            console.log('Таб показан:', event.target.id);
-            smoothAdaptTableHeight();
-        });
-        
-        // Событие при скрытии таба
-        tabButton.addEventListener('hidden.bs.tab', function(event) {
-            console.log('Таб скрыт:', event.target.id);
-            smoothAdaptTableHeight();
-        });
-        
-        // Простое событие клика для дополнительной надежности
-        tabButton.addEventListener('click', function() {
-            setTimeout(smoothAdaptTableHeight, 200);
-        });
-    });
-    
-    // Отслеживание изменений размера панели управления
-    const controlsPanel = document.querySelector('.controls-panel');
-    if (controlsPanel && window.ResizeObserver) {
-        // Безопасное использование ResizeObserver с ограничениями
-        let resizeTimeout;
-        const resizeObserver = new ResizeObserver(entries => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                console.log('Размер панели управления изменился');
-                adaptTableHeight();
-            }, 100);
-        });
-        
-        resizeObserver.observe(controlsPanel);
-        
-        // Автоматическое отключение наблюдателя через 30 секунд для безопасности
-        setTimeout(() => {
-            resizeObserver.disconnect();
-            console.log('ResizeObserver отключен для безопасности');
-        }, 30000);
-    }
-    
-    // Дополнительная адаптация при изменении содержимого табов
-    const tabContent = document.querySelector('#controlsTabContent');
-    if (tabContent) {
-        // Наблюдение за изменениями в содержимом табов
-        const contentObserver = new MutationObserver(function(mutations) {
-            let shouldUpdate = false;
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'childList' || mutation.type === 'attributes') {
-                    shouldUpdate = true;
-                }
-            });
-            
-            if (shouldUpdate) {
-                console.log('Содержимое табов изменилось');
-                smoothAdaptTableHeight();
-            }
-        });
-        
-        contentObserver.observe(tabContent, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
-        });
-        
-        // Автоматическое отключение наблюдателя через 30 секунд
-        setTimeout(() => {
-            contentObserver.disconnect();
-            console.log('MutationObserver отключен для безопасности');
-        }, 30000);
-    }
-});
-
-// Адаптация при изменении размера окна
-window.addEventListener('resize', function() {
-    clearTimeout(window.resizeTimeout);
-    window.resizeTimeout = setTimeout(adaptTableHeight, 300);
-});
-
-// Дополнительная адаптация при изменении ориентации на мобильных устройствах
-window.addEventListener('orientationchange', function() {
-    setTimeout(adaptTableHeight, 500);
-});
-
-// Функция для принудительной адаптации (может быть вызвана извне)
-window.forceTableHeightAdaptation = function() {
-    console.log('Принудительная адаптация высоты таблицы');
-    adaptTableHeight();
-};
-
-// ===== УПРАВЛЕНИЕ СТОЛБЦАМИ ЧЕРЕЗ СТРОКУ УПРАВЛЕНИЯ =====
-
-// Функции для работы с множественной сортировкой
-function getActiveSortParams(url) {
-    const sortParams = [];
-    for (let i = 0; i < 19; i++) {
-        const field = url.searchParams.get(`sort_${i}`);
-        const order = url.searchParams.get(`order_${i}`);
-        if (field) {
-            sortParams.push({ field: field, order: order || 'asc' });
-        }
-    }
-    return sortParams;
-}
-
-function clearSortParams(url) {
-    for (let i = 0; i < 19; i++) {
-        url.searchParams.delete(`sort_${i}`);
-        url.searchParams.delete(`order_${i}`);
-    }
-}
-
-function applySortParams(url, sortParams) {
-    sortParams.forEach((sort, index) => {
-        url.searchParams.set(`sort_${index}`, sort.field);
-        url.searchParams.set(`order_${index}`, sort.order);
-    });
-}
-
-function clearAllSorting() {
-    // Проверяем есть ли активная сортировка
-    if (!hasActiveSorting()) {
-        return; // Ничего не делаем если сортировки нет
-    }
-    
-    const url = new URL(window.location);
-    clearSortParams(url);
-    url.searchParams.set('page', '1');
-    
-    console.log('🗑️ Сброс всей сортировки');
-    performAjaxSort(url.search);
-}
-
-function hasActiveSorting() {
-    const url = new URL(window.location);
-    const sortParams = getActiveSortParams(url);
-    return sortParams.length > 0;
-}
-
-function updateResetSortButtonState() {
-    const resetButton = document.querySelector('.reset-sort-button');
-    if (!resetButton) return;
-    
-    const hasSort = hasActiveSorting();
-    
-    if (hasSort) {
-        resetButton.classList.remove('disabled');
-        resetButton.title = 'Сбросить всю сортировку';
-    } else {
-        resetButton.classList.add('disabled');
-        resetButton.title = 'Нет активной сортировки';
-    }
-}
-
-function updateSortButtonTooltips() {
-    // Словарь названий полей для подсказок
-    const fieldNames = {
-        'id': 'ID',
-        'channel': 'каналу',
-        'msg': 'сообщению',
-        'table': 'таблице',
-        'alarm_class': 'классу тревоги',
-        'logic': 'логике',
-        'confirm_method': 'способу подтверждения',
-        'prior': 'приоритету',
-        'limit_type': 'типу ограничения',
-        'limit_config_type': 'типу настройки пределов',
-        'low': 'нижнему пределу',
-        'high': 'верхнему пределу',
-        'ch_low': 'каналу нижнего предела',
-        'ch_high': 'каналу верхнего предела',
-        'hyst_low': 'гистерезису нижнего предела',
-        'hyst_high': 'гистерезису верхнего предела',
-        'discrete_val': 'дискретному значению',
-        'created_at': 'дате создания',
-        'updated_at': 'дате обновления'
-    };
-    
-    // Обновляем подсказки для всех кнопок сортировки
-    document.querySelectorAll('.sort-button').forEach(button => {
-        const field = button.dataset.field;
-        if (field && field !== 'actions' && fieldNames[field]) {
-            button.title = `Клик: сортировать по ${fieldNames[field]} | Двойной клик: отменить сортировку`;
-        }
-    });
-}
-
-// AJAX функции для сортировки без перезагрузки страницы
-function performAjaxSort(queryString) {
-    // Показываем индикатор загрузки
-    showLoadingIndicator();
-    
-    // Отправляем AJAX запрос 
-    const ajaxUrl = `/api/ajax-sort-alarms${queryString}`;
-    
-    fetch(ajaxUrl)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            if (data.success) {
-                // Обновляем содержимое таблицы
-                updateTableContent(data.table_html);
-                
-                // Обновляем пагинацию
-                updatePagination(data.pagination_html);
-                
-                // Обновляем URL без перезагрузки страницы
-                const newUrl = window.location.pathname + queryString;
-                window.history.pushState({}, '', newUrl);
-                
-                // Обновляем состояние кнопок сортировки
-                updateSortButtonStates();
-                
-                console.log(`✅ AJAX сортировка: ${data.total_count} записей (страница ${data.current_page}/${data.num_pages})`);
-            } else {
-                throw new Error('Ошибка сервера при сортировке');
-            }
-        })
-        .catch(error => {
-            console.error('Ошибка AJAX сортировки:', error);
-            showErrorMessage('Произошла ошибка при сортировке. Попробуйте обновить страницу.');
-        })
-        .finally(() => {
-            hideLoadingIndicator();
-        });
-}
-
-function updateTableContent(newHtml) {
-    const tbody = document.querySelector('.alarm-table tbody');
-    
-    if (tbody) {
-        tbody.innerHTML = newHtml;
-        
-        // Переприменяем закрепление столбцов если оно было активно
-        const activePin = document.querySelector('.pin-button.active');
-        if (activePin) {
-            const columnIndex = parseInt(activePin.dataset.column);
-            setStickyColumnNew(columnIndex);
-        }
-    } else {
-        console.error('❌ Не найден tbody для обновления!');
-    }
-}
-
-function updatePagination(newHtml) {
-    const paginationContainer = document.querySelector('nav[aria-label="Навигация по страницам"]')?.parentElement;
-    if (paginationContainer) {
-        paginationContainer.innerHTML = newHtml;
-        
-        // Добавляем обработчики для новых ссылок пагинации
-        addPaginationHandlers();
-    }
-}
-
-function addPaginationHandlers() {
-    document.querySelectorAll('.ajax-page-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const page = this.dataset.page;
-            
-            // Формируем URL с новой страницей
-            const url = new URL(window.location);
-            url.searchParams.set('page', page);
-            
-            // Отправляем AJAX запрос
-            performAjaxSort(url.search);
-        });
-    });
-}
-
-function showLoadingIndicator() {
-    const tbody = document.querySelector('.alarm-table tbody');
-    if (tbody) {
-        tbody.style.opacity = '0.5';
-        tbody.style.pointerEvents = 'none';
-    }
-    
-    // Можно добавить спиннер загрузки
-    const loadingIndicator = document.createElement('div');
-    loadingIndicator.id = 'ajax-loading';
-    loadingIndicator.innerHTML = '<div class="text-center p-3"><i class="bi bi-arrow-clockwise spin"></i> Загрузка...</div>';
-    loadingIndicator.style.position = 'absolute';
-    loadingIndicator.style.top = '50%';
-    loadingIndicator.style.left = '50%';
-    loadingIndicator.style.transform = 'translate(-50%, -50%)';
-    loadingIndicator.style.zIndex = '1000';
-    loadingIndicator.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-    loadingIndicator.style.padding = '10px 20px';
-    loadingIndicator.style.borderRadius = '5px';
-    loadingIndicator.style.border = '1px solid #dee2e6';
-    
-    const tableContainer = document.querySelector('.table-responsive');
-    if (tableContainer) {
-        tableContainer.style.position = 'relative';
-        tableContainer.appendChild(loadingIndicator);
-    }
-}
-
-function hideLoadingIndicator() {
-    const tbody = document.querySelector('.alarm-table tbody');
-    if (tbody) {
-        tbody.style.opacity = '1';
-        tbody.style.pointerEvents = 'auto';
-    }
-    
-    const loadingIndicator = document.getElementById('ajax-loading');
-    if (loadingIndicator) {
-        loadingIndicator.remove();
-    }
-}
-
-function showErrorMessage(message) {
-    // Простое уведомление об ошибке
-    alert(message);
-}
-
-function updateSortButtonStates() {
-    // Получаем текущие параметры множественной сортировки из URL
-    const url = new URL(window.location);
-    const sortParams = getActiveSortParams(url);
-    
-    // Обновляем все кнопки сортировки
-    document.querySelectorAll('.sort-button').forEach(button => {
-        const field = button.dataset.field;
-        const icon = button.querySelector('i');
-        
-        // Сбрасываем классы и данные
-        button.classList.remove('sort-asc', 'sort-desc');
-        button.dataset.currentSort = '';
-        
-        // Удаляем старый индикатор порядка
-        const oldOrderSpan = button.querySelector('.sort-order');
-        if (oldOrderSpan) {
-            oldOrderSpan.remove();
-        }
-        
-        // Ищем поле в активных сортировках
-        const sortIndex = sortParams.findIndex(sort => sort.field === field);
-        
-        if (sortIndex !== -1) {
-            const sortParam = sortParams[sortIndex];
-            button.dataset.currentSort = sortParam.order;
-            
-            // Обновляем иконку в зависимости от направления сортировки
-            if (sortParam.order === 'asc') {
-                button.classList.add('sort-asc');
-                icon.className = 'bi bi-sort-alpha-up-alt';
-            } else if (sortParam.order === 'desc') {
-                button.classList.add('sort-desc');
-                icon.className = 'bi bi-sort-alpha-down-alt';
-            }
-            
-            // Добавляем номер порядка сортировки (если больше одного поля)
-            if (sortParams.length > 1) {
-                const orderSpan = document.createElement('span');
-                orderSpan.className = 'sort-order';
-                orderSpan.textContent = sortIndex + 1;
-                button.appendChild(orderSpan);
-            }
-        } else {
-            // Если поле не найдено - кнопка остается серой с иконкой "нет сортировки"
-            icon.className = 'bi bi-arrow-down-up';
-        }
-    });
-    
-    // Обновляем состояние кнопки сброса сортировки
-    updateResetSortButtonState();
-    
-    // Обновляем подсказки для кнопок сортировки
-    updateSortButtonTooltips();
-}
-
-// Функции управления закреплением столбцов (перенесены из controls_panel)
-function clearAllStickyNew() {
-    const table = document.querySelector('.alarm-table');
-    const stickyBorder = document.getElementById('stickyBorder');
-    if (!table) return;
-    
-    // Убираем sticky стили со всех столбцов (включая строку управления)
-    for (let i = 1; i <= 20; i++) {
-        const headers = table.querySelectorAll(`th:nth-child(${i})`);
-        const cells = table.querySelectorAll(`td:nth-child(${i})`);
-        const controlCells = table.querySelectorAll(`.control-cell:nth-child(${i})`);
-        
-        [...headers, ...cells, ...controlCells].forEach(element => {
-            element.style.removeProperty('--sticky-left');
-            element.style.left = '';
-            element.classList.remove('sticky-column');
-        });
-    }
-    
-    // Скрываем фиксированную границу
-    if (stickyBorder) {
-        stickyBorder.classList.remove('visible');
-    }
-}
-
-function setStickyColumnNew(columnIndex) {
-    const table = document.querySelector('.alarm-table');
-    const stickyBorder = document.getElementById('stickyBorder');
-    if (!table) return;
-    
-    let cumulativeWidth = 0;
-    let stickyColumnsCount = 0;
-    
-    // Закрепляем все столбцы от 1 до выбранного включительно
-    for (let i = 1; i <= columnIndex; i++) {
-        const headers = table.querySelectorAll(`tr:not(.table-controls-row) th:nth-child(${i})`);
-        const cells = table.querySelectorAll(`td:nth-child(${i})`);
-        const controlCells = table.querySelectorAll(`.control-cell:nth-child(${i})`);
-        
-        if (headers.length === 0) continue; // Пропускаем несуществующие столбцы
-        
-        // Применяем sticky стили к текущему столбцу
-        [...headers, ...cells, ...controlCells].forEach(element => {
-            element.style.setProperty('--sticky-left', `${cumulativeWidth}px`);
-            element.classList.add('sticky-column');
-        });
-        
-        // Добавляем ширину текущего столбца к накопительной ширине
-        const currentHeader = table.querySelector(`tr:not(.table-controls-row) th:nth-child(${i})`);
-        if (currentHeader) {
-            cumulativeWidth += currentHeader.offsetWidth;
-            stickyColumnsCount++;
-        }
-    }
-    
-    // Управляем фиксированной границей
-    if (stickyBorder) {
-        if (columnIndex > 0 && cumulativeWidth > 0) {
-            const tableContainer = document.querySelector('.table-responsive');
-            const cardBody = document.querySelector('.card-body');
-            
-            if (tableContainer && cardBody) {
-                const tableRect = tableContainer.getBoundingClientRect();
-                const cardRect = cardBody.getBoundingClientRect();
-                const tableHeight = table.offsetHeight;
-                
-                const containerOffsetLeft = tableRect.left - cardRect.left;
-                const containerOffsetTop = tableRect.top - cardRect.top;
-                
-                const totalLeft = containerOffsetLeft + cumulativeWidth;
-                stickyBorder.style.setProperty('--sticky-border-left', `${totalLeft}px`);
-                stickyBorder.style.setProperty('--sticky-border-top', `${containerOffsetTop}px`);
-                stickyBorder.style.setProperty('--sticky-border-height', `${tableHeight}px`);
-                stickyBorder.classList.add('visible');
-            }
-        } else {
-            stickyBorder.classList.remove('visible');
-        }
-    }
-    
-    console.log(`Закреплено столбцов: ${stickyColumnsCount} (от 1 до ${columnIndex}), граница на ${cumulativeWidth}px`);
-}
-
-// Обработчики событий для элементов управления
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация состояния булавок из localStorage
-    const savedSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-    const savedStickyColumn = savedSettings.stickyColumn;
-    
-    if (savedStickyColumn) {
-        // Активируем сохраненную булавку
-        const pinButton = document.querySelector(`.pin-button[data-column="${savedStickyColumn}"]`);
-        if (pinButton) {
-            pinButton.classList.add('active');
-            setStickyColumnNew(parseInt(savedStickyColumn));
-        }
-    }
-    
-    // Обработчики кликов по булавкам
-    document.querySelectorAll('.pin-button').forEach(button => {
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const columnIndex = parseInt(this.dataset.column);
-            
-            const isCurrentlyActive = this.classList.contains('active');
-            
-            // Убираем активность со всех булавок
-            document.querySelectorAll('.pin-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Очищаем все закрепления
-            clearAllStickyNew();
-            
-            if (!isCurrentlyActive) {
-                // Активируем выбранную булавку
-                this.classList.add('active');
-                setStickyColumnNew(columnIndex);
-                
-                // Сохраняем состояние
-                const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-                currentSettings.stickyColumn = columnIndex.toString();
-                localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
-                
-                                 // Уведомления о закреплении столбцов убраны
-            } else {
-                                 // Деактивируем закрепление
-                 const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-                 delete currentSettings.stickyColumn;
-                 localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
-            }
-            
-            // Адаптируем высоту таблицы
-            setTimeout(() => {
-                if (window.forceTableHeightAdaptation) {
-                    window.forceTableHeightAdaptation();
-                }
-            }, 200);
-        });
-    });
-    
-    // Обработчики кликов по кнопкам сортировки (множественная сортировка)
-    document.querySelectorAll('.sort-button').forEach(button => {
-        let clickTimeout = null;
-        let clickCount = 0;
-        
-        button.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const field = this.dataset.field;
-            
-            // Игнорируем столбец действий
-            if (field === 'actions') return;
-            
-            clickCount++;
-            
-            // Очищаем предыдущий таймаут
-            if (clickTimeout) {
-                clearTimeout(clickTimeout);
-            }
-            
-            // Устанавливаем таймаут для определения двойного клика
-            clickTimeout = setTimeout(() => {
-                // Одинарный клик - обычная логика сортировки
-                if (clickCount === 1) {
-            // Получаем текущие параметры сортировки
-            const url = new URL(window.location);
-            const sortParams = getActiveSortParams(url);
-            
-            // Ищем текущее поле в активных сортировках
-            const existingIndex = sortParams.findIndex(sort => sort.field === field);
-            
-            if (existingIndex !== -1) {
-                        // Поле уже в сортировке - меняем направление
-                const currentSort = sortParams[existingIndex];
-                if (currentSort.order === 'asc') {
-                    currentSort.order = 'desc';
-                } else if (currentSort.order === 'desc') {
-                            currentSort.order = 'asc';
-                }
-            } else {
-                // Добавляем новое поле сортировки
-                        if (sortParams.length < 19) { // Максимум 19 полей сортировки (все доступные поля кроме "Действия")
-                    sortParams.push({ field: field, order: 'asc' });
-                }
-            }
-            
-            // Обновляем URL параметры
-            clearSortParams(url);
-            applySortParams(url, sortParams);
-            
-            // Сбрасываем на первую страницу
-            url.searchParams.set('page', '1');
-            
-            // AJAX сортировка множественными полями
-            performAjaxSort(url.search);
-                }
-                
-                // Сбрасываем счетчик кликов
-                clickCount = 0;
-            }, 300); // 300ms для определения двойного клика
-        });
-        
-        // Обработчик двойного клика для отмены сортировки
-        button.addEventListener('dblclick', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const field = this.dataset.field;
-            
-            // Игнорируем столбец действий
-            if (field === 'actions') return;
-            
-            // Очищаем таймаут одинарного клика
-            if (clickTimeout) {
-                clearTimeout(clickTimeout);
-                clickCount = 0;
-            }
-            
-            // Получаем текущие параметры сортировки
-            const url = new URL(window.location);
-            const sortParams = getActiveSortParams(url);
-            
-            // Ищем текущее поле в активных сортировках
-            const existingIndex = sortParams.findIndex(sort => sort.field === field);
-            
-            if (existingIndex !== -1) {
-                // Удаляем поле из сортировки
-                sortParams.splice(existingIndex, 1);
-                
-                // Обновляем URL параметры
-                clearSortParams(url);
-                applySortParams(url, sortParams);
-                
-                // Сбрасываем на первую страницу
-                url.searchParams.set('page', '1');
-                
-                // AJAX сортировка множественными полями
-                performAjaxSort(url.search);
-                
-                console.log(`🗑️ Отменена сортировка по полю: ${field}`);
-            }
-        });
-    });
-    
-    // Обновляем классы кнопок сортировки на основе текущего состояния
-    document.querySelectorAll('.sort-button').forEach(button => {
-        const currentSort = button.dataset.currentSort;
-        const icon = button.querySelector('i');
-        
-        button.classList.remove('sort-asc', 'sort-desc');
-        
-        if (currentSort === 'asc') {
-            button.classList.add('sort-asc');
-        } else if (currentSort === 'desc') {
-            button.classList.add('sort-desc');
-        }
-    });
-    
-    // Пересчет позиций при изменении размера окна
-    window.addEventListener('resize', function() {
-        clearTimeout(window.stickyRecalcTimeout);
-        window.stickyRecalcTimeout = setTimeout(() => {
-            const activePin = document.querySelector('.pin-button.active');
-            if (activePin) {
-                const columnIndex = parseInt(activePin.dataset.column);
-                setStickyColumnNew(columnIndex);
-            }
-        }, 500);
-    });
-    
-    // Инициализация AJAX обработчиков для пагинации
-    addPaginationHandlers();
-    
-    // Инициализация состояния кнопок сортировки при загрузке страницы
-    updateSortButtonStates();
-    
-    // Обновляем подсказки для кнопок сортировки
-    updateSortButtonTooltips();
-    
-    // Инициализация drag & drop для столбцов
-    initializeColumnDragAndDrop();
-    
-    // Добавляем недостающие атрибуты и drag handles
-    addMissingColumnAttributes();
-    
-    // Загружаем сохраненный порядок столбцов после небольшой задержки
-    setTimeout(() => {
-        console.log('🔄 Вызываем loadColumnOrder()...');
-        loadColumnOrder();
-    }, 100);
-});
-
-// ===== DRAG & DROP ДЛЯ ПЕРЕМЕЩЕНИЯ СТОЛБЦОВ =====
-
-function initializeColumnDragAndDrop() {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    let draggedElement = null;
-    let draggedIndex = null;
-    
-    console.log('🔧 Инициализация drag & drop...');
-    
-    // Обработчики для control cells (самих столбцов)
-    const controlCells = document.querySelectorAll('.control-cell');
-    console.log(`📌 Найдено ${controlCells.length} control cells`);
-    
-    controlCells.forEach((cell, index) => {
-        // Исключаем столбец "Действия" из перетаскивания
-        if (cell.dataset.field === 'actions') {
-            cell.setAttribute('draggable', 'false');
-            console.log(`🚫 Столбец ${cell.dataset.field} исключен из перетаскивания`);
-            return; // Пропускаем добавление обработчиков для этого столбца
-        }
-        
-        cell.setAttribute('draggable', 'true');
-        
-        // Добавляем обработчики напрямую на каждый элемент
-        cell.addEventListener('dragstart', function(e) {
-            // Дополнительная проверка на случай, если draggable был изменен
-            if (this.dataset.field === 'actions') {
-                e.preventDefault();
-                return;
-            }
-            
-            draggedElement = this;
-            draggedIndex = parseInt(this.dataset.columnOrder);
-            
-            console.log(`🎯 Начато перетаскивание столбца ${draggedIndex} (${this.dataset.field})`);
-            
-            e.dataTransfer.setData('text/plain', draggedIndex);
-            e.dataTransfer.effectAllowed = 'move';
-            
-            // Создаем отдельный drag image для избежания артефактов
-            if (e.dataTransfer.setDragImage) {
-                const dragImage = this.cloneNode(true);
-                dragImage.style.position = 'absolute';
-                dragImage.style.top = '-1000px';
-                dragImage.style.left = '-1000px';
-                dragImage.style.opacity = '0.8';
-                dragImage.style.transform = 'rotate(2deg) scale(0.9)';
-                dragImage.style.boxShadow = '0 8px 16px rgba(0,0,0,0.4)';
-                dragImage.style.pointerEvents = 'none';
-                dragImage.style.zIndex = '9999';
-                document.body.appendChild(dragImage);
-                
-                e.dataTransfer.setDragImage(dragImage, 0, 0);
-                
-                // Удаляем drag image после небольшой задержки
-                setTimeout(() => {
-                    if (document.body.contains(dragImage)) {
-                        document.body.removeChild(dragImage);
-                    }
-                }, 0);
-            }
-            
-            // Добавляем класс для визуального эффекта на оригинальный элемент
-            this.classList.add('dragging');
-        });
-        
-        cell.addEventListener('dragend', function(e) {
-            this.classList.remove('dragging');
-            draggedElement = null;
-            draggedIndex = null;
-            console.log('🏁 Завершено перетаскивание');
-        });
-        
-        cell.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        });
-        
-        cell.addEventListener('dragenter', function(e) {
-            e.preventDefault();
-            if (this !== draggedElement) {
-                this.classList.add('drag-over');
-                const columnIndex = parseInt(this.dataset.columnOrder);
-                const isSticky = this.classList.contains('sticky-column');
-                console.log(`🎯 Наведение на столбец ${columnIndex} (${isSticky ? 'закрепленный' : 'незакрепленный'})`);
-            }
-        });
-        
-        cell.addEventListener('dragleave', function(e) {
-            this.classList.remove('drag-over');
-        });
-        
-        cell.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('drag-over');
-            
-            if (this === draggedElement) {
-                console.log('❌ Попытка перетащить на тот же элемент');
-                return;
-            }
-            
-            const targetIndex = parseInt(this.dataset.columnOrder);
-            console.log(`🔄 Перемещение столбца ${draggedIndex} на позицию ${targetIndex}`);
-            
-            // Перемещаем столбцы
-            reorderColumns(draggedIndex, targetIndex);
-        });
-        
-        console.log(`✅ Control cell ${index + 1} (${cell.dataset.field}) настроен`);
-    });
-    
-    function startDrag(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const controlCell = e.target.closest('.control-cell');
-        if (!controlCell) return;
-        
-        draggedElement = controlCell;
-        draggedIndex = parseInt(controlCell.dataset.columnOrder);
-        
-        // Добавляем класс для визуального эффекта
-        draggedElement.classList.add('dragging');
-        
-        // Создаем ghost элемент
-        const ghost = draggedElement.cloneNode(true);
-        ghost.style.position = 'absolute';
-        ghost.style.top = '-1000px';
-        ghost.style.left = '-1000px';
-        ghost.style.opacity = '0.8';
-        ghost.style.pointerEvents = 'none';
-        document.body.appendChild(ghost);
-        
-        // Устанавливаем данные для drag
-        e.dataTransfer.setData('text/html', ghost.outerHTML);
-        e.dataTransfer.effectAllowed = 'move';
-        
-        // Обработчики для drop zones
-        document.querySelectorAll('.control-cell').forEach(cell => {
-            if (cell !== draggedElement) {
-                cell.addEventListener('dragover', handleDragOver);
-                cell.addEventListener('drop', handleDrop);
-                cell.addEventListener('dragenter', handleDragEnter);
-                cell.addEventListener('dragleave', handleDragLeave);
-            }
-        });
-        
-        // Обработчик окончания drag
-        document.addEventListener('mouseup', endDrag);
-        
-        console.log(`🎯 Начато перетаскивание столбца ${draggedIndex}`);
-    }
-    
-    function handleDragOver(e) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    }
-    
-    function handleDragEnter(e) {
-        e.preventDefault();
-        const cell = e.target.closest('.control-cell');
-        if (cell && cell !== draggedElement) {
-            cell.classList.add('drag-over');
-        }
-    }
-    
-    function handleDragLeave(e) {
-        const cell = e.target.closest('.control-cell');
-        if (cell) {
-            cell.classList.remove('drag-over');
-        }
-    }
-    
-    function handleDrop(e) {
-        e.preventDefault();
-        const targetCell = e.target.closest('.control-cell');
-        if (!targetCell || targetCell === draggedElement) return;
-        
-        const targetIndex = parseInt(targetCell.dataset.columnOrder);
-        
-        // Перемещаем столбцы
-        reorderColumns(draggedIndex, targetIndex);
-        
-        console.log(`🔄 Перемещение столбца ${draggedIndex} на позицию ${targetIndex}`);
-    }
-    
-    function endDrag() {
-        if (draggedElement) {
-            draggedElement.classList.remove('dragging');
-            draggedElement = null;
-            draggedIndex = null;
-        }
-        
-        // Убираем drag-over классы
-        document.querySelectorAll('.control-cell').forEach(cell => {
-            cell.classList.remove('drag-over');
-        });
-        
-        // Удаляем ghost элемент
-        const ghost = document.querySelector('.control-cell[style*="position: absolute"]');
-        if (ghost) {
-            ghost.remove();
-        }
-        
-        // Убираем обработчики
-        document.removeEventListener('mouseup', endDrag);
-        document.querySelectorAll('.control-cell').forEach(cell => {
-            cell.removeEventListener('dragover', handleDragOver);
-            cell.removeEventListener('drop', handleDrop);
-            cell.removeEventListener('dragenter', handleDragEnter);
-            cell.removeEventListener('dragleave', handleDragLeave);
-        });
-    }
-}
-
-function reorderColumns(fromIndex, toIndex) {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    console.log(`📊 Перемещение столбца ${fromIndex} → ${toIndex}`);
-    
-    // Получаем информацию о закрепленных столбцах до перемещения
-    const stickyCountBefore = getStickyColumnsCount();
-    const wasFromSticky = isColumnSticky(fromIndex);
-    const wasToSticky = isColumnSticky(toIndex);
-    
-    console.log(`📌 До перемещения: закреплено ${stickyCountBefore} столбцов`);
-    console.log(`📌 Столбец ${fromIndex} был ${wasFromSticky ? 'закреплен' : 'незакреплен'}`);
-    console.log(`📌 Позиция ${toIndex} была ${wasToSticky ? 'в закрепленной области' : 'в незакрепленной области'}`);
-    
-    // Получаем все строки таблицы
-    const rows = table.querySelectorAll('tr');
-    
-    // Перемещаем ячейки в каждой строке
-    rows.forEach((row, rowIndex) => {
-        const cells = Array.from(row.querySelectorAll('th, td'));
-        console.log(`📋 Строка ${rowIndex}: ${cells.length} ячеек`);
-        
-        if (cells.length >= Math.max(fromIndex, toIndex)) {
-            const cellToMove = cells[fromIndex - 1]; // Индексы начинаются с 1
-            if (cellToMove) {
-                // Удаляем ячейку
-                cellToMove.remove();
-                
-                // Получаем обновленный список ячеек после удаления
-                const updatedCells = Array.from(row.querySelectorAll('th, td'));
-                
-                // Вставляем в новую позицию
-                if (toIndex > fromIndex) {
-                    // Вправо - нужно учесть, что индекс сместился после удаления
-                    const targetIndex = toIndex - 2; // -1 для индексации с 0, -1 для смещения
-                    const targetCell = updatedCells[targetIndex];
-                    if (targetCell) {
-                        targetCell.after(cellToMove);
-                        console.log(`➡️ Вставлено после позиции ${toIndex}`);
-                    } else {
-                        row.appendChild(cellToMove);
-                        console.log(`➡️ Вставлено в конец`);
-                    }
-                } else {
-                    // Влево
-                    const targetIndex = toIndex - 1; // -1 для индексации с 0
-                    const targetCell = updatedCells[targetIndex];
-                    if (targetCell) {
-                        targetCell.before(cellToMove);
-                        console.log(`⬅️ Вставлено перед позицией ${toIndex}`);
-                    } else {
-                        row.insertBefore(cellToMove, row.firstChild);
-                        console.log(`⬅️ Вставлено в начало`);
-                    }
-                }
-            }
-        }
-    });
-    
-    // Обновляем data-column-order атрибуты
-    updateColumnOrderAttributes();
-    
-    // Обрабатываем логику закрепления
-    handleStickyLogicAfterReorder(fromIndex, toIndex, wasFromSticky, wasToSticky, stickyCountBefore);
-    
-    // Сохраняем новый порядок
-    saveColumnOrder();
-    
-    console.log(`✅ Столбцы перемещены успешно`);
-}
-
-function updateColumnOrderAttributes() {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    const controlCells = table.querySelectorAll('.control-cell');
-    controlCells.forEach((cell, index) => {
-        const newOrder = index + 1;
-        cell.dataset.columnOrder = newOrder;
-        
-        // Обновляем data-column в кнопках закрепления
-        const pinButton = cell.querySelector('.pin-button');
-        if (pinButton) {
-            pinButton.dataset.column = newOrder;
-        }
-    });
-}
-
-function saveColumnOrder() {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    const columnOrder = [];
-    const controlCells = table.querySelectorAll('.control-cell');
-    
-    controlCells.forEach(cell => {
-        const field = cell.dataset.field;
-        if (field) {
-            columnOrder.push(field);
-        }
-    });
-    
-    // Убеждаемся, что столбец "Действия" всегда в начале
-    const actionsIndex = columnOrder.indexOf('actions');
-    if (actionsIndex > 0) {
-        // Перемещаем "actions" в начало
-        columnOrder.splice(actionsIndex, 1);
-        columnOrder.unshift('actions');
-        console.log('🔄 Столбец "Действия" перемещен в начало списка');
-    }
-    
-    // Получаем текущие настройки
-    const stickyColumns = getStickyColumnsCount();
-    const sortSettings = {
-        sort_fields: getActiveSortParams().map(param => param.field),
-        sort_orders: getActiveSortParams().map(param => param.order),
-        active_sorts: getActiveSortParams().length
-    };
-    
-    console.log('💾 Сохранение настроек таблицы:', {
-        column_order: columnOrder,
-        sticky_columns: stickyColumns,
-        sort_settings: sortSettings
-    });
-    
-    // Отправляем на сервер
-    fetch('/api/save-column-order/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            user_id: 1, // По умолчанию пользователь 1
-            page_type: 'alarms',
-            column_order: columnOrder,
-            sticky_columns: stickyColumns,
-            sort_settings: sortSettings
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('✅ Порядок столбцов сохранен');
-        } else {
-            console.error('❌ Ошибка сохранения:', data.error);
-        }
-    })
-    .catch(error => {
-        console.error('❌ Ошибка сети:', error);
-    });
-}
-
-function loadColumnOrder() {
-    console.log('🔄 Начинаем загрузку сохраненных настроек таблицы...');
-    
-    // Загружаем сохраненные настройки таблицы
-    fetch('/api/get-column-order/?user_id=1&page_type=alarms')
-    .then(response => {
-        console.log('📡 Ответ от API:', response.status, response.statusText);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        console.log('📋 Данные от API:', data);
-        if (data.success) {
-            // Применяем порядок столбцов
-            if (data.column_order && data.column_order.length > 0) {
-                console.log('📋 Загружен сохраненный порядок столбцов:', data.column_order);
-                applyColumnOrder(data.column_order);
-            } else {
-                console.log('📋 Используется порядок столбцов по умолчанию');
-            }
-            
-            // Применяем закрепление столбцов
-            if (data.sticky_columns && data.sticky_columns > 0) {
-                console.log(`📋 Загружено закрепление: ${data.sticky_columns} столбцов`);
-                setTimeout(() => {
-                    setStickyColumnNew(data.sticky_columns);
-                }, 200);
-            }
-            
-            // Применяем настройки сортировки
-            if (data.sort_settings && data.sort_settings.sort_fields && data.sort_settings.sort_fields.length > 0) {
-                console.log('📋 Загружены настройки сортировки:', data.sort_settings);
-                setTimeout(() => {
-                    applySortSettings(data.sort_settings);
-                }, 300);
-            }
-        } else {
-            console.log('📋 Используются настройки по умолчанию');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Ошибка загрузки настроек таблицы:', error);
-        console.error('❌ Детали ошибки:', error.message);
-    });
-}
-
-// Функция для применения сохраненного порядка столбцов
-function applyColumnOrder(columnOrder) {
-    console.log('🔄 Вызываем applyColumnOrder с параметрами:', columnOrder);
-    
-    const table = document.querySelector('.alarm-table');
-    if (!table) {
-        console.error('❌ Таблица .alarm-table не найдена');
-        return;
-    }
-    
-    console.log('🔄 Применение сохраненного порядка столбцов...');
-    
-    // Получаем текущий порядок столбцов
-    const currentOrder = [];
-    const controlCells = table.querySelectorAll('.control-cell');
-    console.log(`📋 Найдено ${controlCells.length} control cells`);
-    
-    controlCells.forEach((cell, index) => {
-        const field = cell.dataset.field;
-        if (field) {
-            currentOrder.push(field);
-            console.log(`📋 Столбец ${index + 1}: ${field}`);
-        } else {
-            console.log(`📋 Столбец ${index + 1}: нет data-field`);
-        }
-    });
-    
-    // Проверяем, нужно ли применять новый порядок
-    if (JSON.stringify(currentOrder) === JSON.stringify(columnOrder)) {
-        console.log('📋 Порядок столбцов уже соответствует сохраненному');
-        return;
-    }
-    
-    console.log('📋 Текущий порядок:', currentOrder);
-    console.log('📋 Сохраненный порядок:', columnOrder);
-    
-    // Создаем карту для быстрого поиска позиций
-    const fieldToCurrentIndex = {};
-    currentOrder.forEach((field, index) => {
-        fieldToCurrentIndex[field] = index + 1; // +1 для индексации с 1
-    });
-    
-    // Применяем порядок напрямую
-    const rows = table.querySelectorAll('tr');
-    
-    rows.forEach((row, rowIndex) => {
-        const cells = Array.from(row.querySelectorAll('th, td'));
-        const reorderedCells = [];
-        
-        // Создаем новый порядок ячеек, исключая столбец "Действия"
-        columnOrder.forEach(field => {
-            // Столбец "Действия" всегда остается на первой позиции
-            if (field === 'actions') {
-                const currentIndex = fieldToCurrentIndex[field];
-                if (currentIndex && cells[currentIndex - 1]) {
-                    reorderedCells.push(cells[currentIndex - 1]);
-                }
-            } else {
-                const currentIndex = fieldToCurrentIndex[field];
-                if (currentIndex && cells[currentIndex - 1]) {
-                    reorderedCells.push(cells[currentIndex - 1]);
-                }
-            }
-        });
-        
-        // Добавляем ячейки, которых нет в columnOrder (если есть)
-        cells.forEach((cell, index) => {
-            const field = currentOrder[index];
-            if (!columnOrder.includes(field)) {
-                reorderedCells.push(cell);
-            }
-        });
-        
-        // Очищаем строку и добавляем ячейки в новом порядке
-        cells.forEach(cell => cell.remove());
-        reorderedCells.forEach(cell => row.appendChild(cell));
-        
-        console.log(`📋 Строка ${rowIndex}: переупорядочена`);
-    });
-    
-    // Обновляем data-column-order атрибуты
-    updateColumnOrderAttributes();
-    
-    // Обновляем закрепление столбцов
-    updateStickyColumnsAfterReorder();
-    
-    console.log('✅ Сохраненный порядок столбцов применен');
-    console.log('✅ Функция applyColumnOrder завершена');
-}
-
-// Функция для применения настроек сортировки
-function applySortSettings(sortSettings) {
-    console.log('🔄 Применение настроек сортировки...');
-    
-    // Очищаем текущую сортировку
-    clearAllSorting();
-    
-    // Применяем сохраненную сортировку
-    if (sortSettings.sort_fields && sortSettings.sort_orders) {
-        for (let i = 0; i < sortSettings.sort_fields.length; i++) {
-            const field = sortSettings.sort_fields[i];
-            const order = sortSettings.sort_orders[i];
-            
-            if (field && order) {
-                // Устанавливаем параметры сортировки
-                const sortParam = `sort_${i}`;
-                const orderParam = `order_${i}`;
-                
-                // Находим кнопку сортировки для этого поля
-                const sortButton = document.querySelector(`[data-field="${field}"]`);
-                if (sortButton) {
-                    sortButton.dataset.currentSort = order;
-                    updateSortButtonStates();
-                    console.log(`📋 Применена сортировка: ${field} (${order})`);
-                }
-            }
-        }
-        
-        // Выполняем сортировку
-        performAjaxSort();
-    }
-    
-    console.log('✅ Настройки сортировки применены');
-}
-
-// Функция для сброса порядка столбцов к значениям по умолчанию
-function resetColumnOrder() {
-    console.log('🔄 Сброс порядка столбцов к значениям по умолчанию...');
-    
-    // Сохраняем текущее количество закрепленных столбцов
-    const currentStickyCount = getStickyColumnsCount();
-    console.log(`📌 Текущее количество закрепленных столбцов: ${currentStickyCount}`);
-    
-    // Порядок столбцов по умолчанию
-    const defaultOrder = [
-        'actions', 'id', 'channel', 'msg', 'table', 'alarm_class',
-        'logic', 'confirm_method', 'prior', 'limit_type', 'limit_config_type',
-        'low', 'high', 'ch_low', 'ch_high', 'hyst_low', 'hyst_high',
-        'discrete_val', 'created_at', 'updated_at'
-    ];
-    
-    // Применяем порядок по умолчанию
-    applyColumnOrder(defaultOrder);
-    
-    // Восстанавливаем закрепление столбцов
-    setTimeout(() => {
-        // Устанавливаем то же количество закрепленных столбцов
-        if (currentStickyCount > 0) {
-            setStickyColumnNew(currentStickyCount);
-            console.log(`📌 Восстановлено закрепление: ${currentStickyCount} столбцов`);
-        } else {
-            clearAllStickyNew();
-            console.log('📌 Закрепление сброшено');
-        }
-    }, 100);
-    
-    // Сохраняем в базу данных
-    fetch('/api/save-column-order/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
-        },
-        body: JSON.stringify({
-            user_id: 1,
-            page_type: 'alarms',
-            column_order: defaultOrder
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            console.log('✅ Порядок столбцов сброшен и сохранен');
-            // Показываем уведомление пользователю
-            showNotification('Порядок столбцов сброшен к значениям по умолчанию', 'success');
-        } else {
-            console.error('❌ Ошибка сохранения:', data.error);
-            showNotification('Ошибка при сбросе порядка столбцов', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('❌ Ошибка сети:', error);
-        showNotification('Ошибка сети при сбросе порядка столбцов', 'error');
-    });
-}
-
-// Функция для показа уведомлений
-function showNotification(message, type = 'info') {
-    // Создаем элемент уведомления
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    
-    // Добавляем в body
-    document.body.appendChild(notification);
-    
-    // Автоматически удаляем через 3 секунды
-    setTimeout(() => {
-        if (document.body.contains(notification)) {
-            notification.remove();
-        }
-    }, 3000);
-}
-
-// Функция для получения количества закрепленных столбцов
-function getStickyColumnsCount() {
-    const activePin = document.querySelector('.pin-button.active');
-    if (!activePin) return 0;
-    return parseInt(activePin.dataset.column);
-}
-
-// Функция для проверки, является ли столбец закрепленным
-function isColumnSticky(columnIndex) {
-    const stickyCount = getStickyColumnsCount();
-    return columnIndex <= stickyCount;
-}
-
-// Функция для обновления закрепления столбцов после перемещения
-function updateStickyColumnsAfterReorder() {
-    const activePin = document.querySelector('.pin-button.active');
-    if (!activePin) return;
-    
-    const currentStickyCount = parseInt(activePin.dataset.column);
-    console.log(`🔄 Обновление закрепления после перемещения. Текущее количество: ${currentStickyCount}`);
-    
-    // Очищаем все закрепления
-    clearAllStickyNew();
-    
-    // Применяем закрепление заново
-    setStickyColumnNew(currentStickyCount);
-}
-
-// Функция для обработки логики закрепления после перемещения столбцов
-function handleStickyLogicAfterReorder(fromIndex, toIndex, wasFromSticky, wasToSticky, stickyCountBefore) {
-    const activePin = document.querySelector('.pin-button.active');
-    if (!activePin) {
-        console.log('📌 Нет активных закреплений');
-        return;
-    }
-    
-    let newStickyCount = stickyCountBefore;
-    
-    // Логика изменения количества закрепленных столбцов
-    if (wasFromSticky && !wasToSticky) {
-        // Закрепленный столбец перемещается в незакрепленную область
-        newStickyCount = Math.max(0, stickyCountBefore - 1);
-        console.log(`📌 Закрепленный столбец перемещен в незакрепленную область. Новое количество: ${newStickyCount}`);
-    } else if (!wasFromSticky && wasToSticky) {
-        // Незакрепленный столбец перемещается в закрепленную область
-        newStickyCount = Math.min(toIndex, stickyCountBefore + 1);
-        console.log(`📌 Незакрепленный столбец перемещен в закрепленную область. Новое количество: ${newStickyCount}`);
-    } else if (wasFromSticky && wasToSticky) {
-        // Перемещение внутри закрепленной области
-        newStickyCount = stickyCountBefore;
-        console.log(`📌 Перемещение внутри закрепленной области. Количество не изменилось: ${newStickyCount}`);
-    } else {
-        // Перемещение внутри незакрепленной области
-        newStickyCount = stickyCountBefore;
-        console.log(`📌 Перемещение внутри незакрепленной области. Количество не изменилось: ${newStickyCount}`);
-    }
-    
-    // Обновляем активную булавку
-    if (newStickyCount !== stickyCountBefore) {
-        // Убираем активность со всех булавок
-        document.querySelectorAll('.pin-button').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        // Активируем новую булавку
-        const newActivePin = document.querySelector(`.pin-button[data-column="${newStickyCount}"]`);
-        if (newActivePin) {
-            newActivePin.classList.add('active');
-            console.log(`📌 Активирована новая булавка для столбца ${newStickyCount}`);
-        }
-        
-        // Обновляем закрепление
-        clearAllStickyNew();
-        setStickyColumnNew(newStickyCount);
-        
-        // Сохраняем новое состояние
-        const currentSettings = JSON.parse(localStorage.getItem('alarmListSettings') || '{}');
-        currentSettings.stickyColumn = newStickyCount.toString();
-        localStorage.setItem('alarmListSettings', JSON.stringify(currentSettings));
-        
-        console.log(`✅ Закрепление обновлено: ${stickyCountBefore} → ${newStickyCount}`);
-    } else {
-        // Просто обновляем закрепление без изменения количества
-        updateStickyColumnsAfterReorder();
-    }
-}
-
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-}
-
-function addMissingColumnAttributes() {
-    const table = document.querySelector('.alarm-table');
-    if (!table) return;
-    
-    const controlCells = table.querySelectorAll('.control-cell');
-    const fieldMapping = {
-        1: 'actions',
-        2: 'id', 
-        3: 'channel',
-        4: 'msg',
-        5: 'table',
-        6: 'alarm_class',
-        7: 'logic',
-        8: 'confirm_method',
-        9: 'prior',
-        10: 'limit_type',
-        11: 'limit_config_type',
-        12: 'low',
-        13: 'high',
-        14: 'ch_low',
-        15: 'ch_high',
-        16: 'hyst_low',
-        17: 'hyst_high',
-        18: 'discrete_val',
-        19: 'created_at',
-        20: 'updated_at'
-    };
-    
-    controlCells.forEach((cell, index) => {
-        const columnOrder = index + 1;
-        const field = fieldMapping[columnOrder];
-        
-        // Добавляем data-атрибуты если их нет
-        if (!cell.dataset.field) {
-            cell.dataset.field = field;
-        }
-        if (!cell.dataset.columnOrder) {
-            cell.dataset.columnOrder = columnOrder;
-        }
-        
-        // Добавляем drag handle если его нет (кроме столбца "Действия")
-        if (field !== 'actions') {
-            const existingDragHandle = cell.querySelector('.drag-handle');
-            if (!existingDragHandle) {
-                const dragHandle = document.createElement('button');
-                dragHandle.className = 'drag-handle';
-                dragHandle.title = 'Перетащить столбец';
-                dragHandle.style.display = 'none';
-                dragHandle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
-                
-                const controlItems = cell.querySelector('.control-items');
-                if (controlItems) {
-                    controlItems.appendChild(dragHandle);
-                }
-            }
-        }
-    });
-    
-    console.log('✅ Добавлены недостающие атрибуты и drag handles');
-}
-</script>
-{% endblock %}
-
 {% block content %}
-<!-- ПАНЕЛЬ УПРАВЛЕНИЯ (ФИЛЬТРЫ + СОРТИРОВКА) -->
-{% include 'alarms/includes/controls_panel.html' with page_type='alarms' %}
-
-<div class="card">
-    <div class="card-body">
-        {% if alarms %}
-            <!-- Фиксированная граница для закрепленных столбцов -->
-            <div class="sticky-column-border" id="stickyBorder"></div>
-            <div class="table-responsive" id="alarmTableContainer">
-                    <table class="table table-hover alarm-table">
-                        <thead class="table-light">
-                            <!-- Строка управления столбцами -->
-                            <tr class="table-controls-row">
-                                <th class="control-cell actions-control" data-field="actions" data-column-order="1">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="1" title="Закрепить столбец Действия">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="reset-sort-button disabled" onclick="clearAllSorting(); return false;" title="Нет активной сортировки">
-                                            <i class="bi bi-arrow-clockwise"></i>
-                                        </button>
-                                        <button class="reset-column-order-button" onclick="resetColumnOrder(); return false;" title="Двойной клик: сбросить порядок столбцов">
-                                            <i class="bi bi-arrow-repeat"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="actions" data-current-sort="" title="Сортировка недоступна" style="display: none;">
-                                            <i class="bi bi-funnel"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="id" data-column-order="2">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="2" title="Закрепить столбец ID">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="id" data-current-sort="{% if 'id' in sort_indicators %}{{ sort_indicators.id }}{% endif %}" title="Клик: сортировать по ID | Двойной клик: отменить сортировку">
-                                            <i class="bi bi-{% if 'id' in sort_indicators %}{% if sort_indicators.id == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="channel" data-column-order="3">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="3" title="Закрепить столбец Канал">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="channel" data-current-sort="{% if 'channel' in sort_indicators %}{{ sort_indicators.channel }}{% endif %}" title="Клик: сортировать по каналу | Двойной клик: отменить сортировку">
-                                            <i class="bi bi-{% if 'channel' in sort_indicators %}{% if sort_indicators.channel == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="msg" data-column-order="4">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="4" title="Закрепить столбец Сообщение">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="msg" data-current-sort="{% if 'msg' in sort_indicators %}{{ sort_indicators.msg }}{% endif %}" title="Клик: сортировать по сообщению | Двойной клик: отменить сортировку">
-                                            <i class="bi bi-{% if 'msg' in sort_indicators %}{% if sort_indicators.msg == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="table" data-column-order="5">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="5" title="Закрепить столбец Таблица">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="table" data-current-sort="{% if 'table' in sort_indicators %}{{ sort_indicators.table }}{% endif %}" title="Клик: сортировать по таблице | Двойной клик: отменить сортировку">
-                                            <i class="bi bi-{% if 'table' in sort_indicators %}{% if sort_indicators.table == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="alarm_class" data-column-order="6">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="6" title="Закрепить столбец Класс">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="alarm_class" data-current-sort="{% if 'alarm_class' in sort_indicators %}{{ sort_indicators.alarm_class }}{% endif %}" title="Клик: сортировать по классу тревоги | Двойной клик: отменить сортировку">
-                                            <i class="bi bi-{% if 'alarm_class' in sort_indicators %}{% if sort_indicators.alarm_class == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="logic" data-column-order="7">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="7" title="Закрепить столбец Логика">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="logic" data-current-sort="{% if 'logic' in sort_indicators %}{{ sort_indicators.logic }}{% endif %}" title="Сортировать по логике">
-                                            <i class="bi bi-{% if 'logic' in sort_indicators %}{% if sort_indicators.logic == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="confirm_method" data-column-order="8">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="8" title="Закрепить столбец Подтверждение">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="confirm_method" data-current-sort="{% if 'confirm_method' in sort_indicators %}{{ sort_indicators.confirm_method }}{% endif %}" title="Сортировать по способу подтверждения">
-                                            <i class="bi bi-{% if 'confirm_method' in sort_indicators %}{% if sort_indicators.confirm_method == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="prior" data-column-order="9">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="9" title="Закрепить столбец Приоритет">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="prior" data-current-sort="{% if 'prior' in sort_indicators %}{{ sort_indicators.prior }}{% endif %}" title="Сортировать по приоритету">
-                                            <i class="bi bi-{% if 'prior' in sort_indicators %}{% if sort_indicators.prior == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="limit_type" data-column-order="10">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="10" title="Закрепить столбец Лимит">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="limit_type" data-current-sort="{% if 'limit_type' in sort_indicators %}{{ sort_indicators.limit_type }}{% endif %}" title="Сортировать по типу ограничения">
-                                            <i class="bi bi-{% if 'limit_type' in sort_indicators %}{% if sort_indicators.limit_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="limit_config_type" data-column-order="11">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="11" title="Закрепить столбец Тип лимита">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="limit_config_type" data-current-sort="{% if 'limit_config_type' in sort_indicators %}{{ sort_indicators.limit_config_type }}{% endif %}" title="Сортировать по типу настройки пределов">
-                                            <i class="bi bi-{% if 'limit_config_type' in sort_indicators %}{% if sort_indicators.limit_config_type == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="low" data-column-order="12">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="12" title="Закрепить столбец Мин">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="low" data-current-sort="{% if 'low' in sort_indicators %}{{ sort_indicators.low }}{% endif %}" title="Сортировать по нижнему пределу">
-                                            <i class="bi bi-{% if 'low' in sort_indicators %}{% if sort_indicators.low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="high" data-column-order="13">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="13" title="Закрепить столбец Макс">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="high" data-current-sort="{% if 'high' in sort_indicators %}{{ sort_indicators.high }}{% endif %}" title="Сортировать по верхнему пределу">
-                                            <i class="bi bi-{% if 'high' in sort_indicators %}{% if sort_indicators.high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="ch_low" data-column-order="14">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="14" title="Закрепить столбец Канал мин">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="ch_low" data-current-sort="{% if 'ch_low' in sort_indicators %}{{ sort_indicators.ch_low }}{% endif %}" title="Сортировать по каналу нижнего предела">
-                                            <i class="bi bi-{% if 'ch_low' in sort_indicators %}{% if sort_indicators.ch_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="ch_high" data-column-order="15">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="15" title="Закрепить столбец Канал макс">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="ch_high" data-current-sort="{% if 'ch_high' in sort_indicators %}{{ sort_indicators.ch_high }}{% endif %}" title="Сортировать по каналу верхнего предела">
-                                            <i class="bi bi-{% if 'ch_high' in sort_indicators %}{% if sort_indicators.ch_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="hyst_low" data-column-order="16">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="16" title="Закрепить столбец Гист мин">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="hyst_low" data-current-sort="{% if 'hyst_low' in sort_indicators %}{{ sort_indicators.hyst_low }}{% endif %}" title="Сортировать по гистерезису нижнего предела">
-                                            <i class="bi bi-{% if 'hyst_low' in sort_indicators %}{% if sort_indicators.hyst_low == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="hyst_high" data-column-order="17">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="17" title="Закрепить столбец Гист макс">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="hyst_high" data-current-sort="{% if 'hyst_high' in sort_indicators %}{{ sort_indicators.hyst_high }}{% endif %}" title="Сортировать по гистерезису верхнего предела">
-                                            <i class="bi bi-{% if 'hyst_high' in sort_indicators %}{% if sort_indicators.hyst_high == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="discrete_val" data-column-order="18">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="18" title="Закрепить столбец Дискрет">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="discrete_val" data-current-sort="{% if 'discrete_val' in sort_indicators %}{{ sort_indicators.discrete_val }}{% endif %}" title="Сортировать по дискретному значению">
-                                            <i class="bi bi-{% if 'discrete_val' in sort_indicators %}{% if sort_indicators.discrete_val == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="created_at" data-column-order="19">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="19" title="Закрепить столбец Создано">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="created_at" data-current-sort="{% if 'created_at' in sort_indicators %}{{ sort_indicators.created_at }}{% endif %}" title="Сортировать по дате создания">
-                                            <i class="bi bi-{% if 'created_at' in sort_indicators %}{% if sort_indicators.created_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                                <th class="control-cell" data-field="updated_at" data-column-order="20">
-                                    <div class="control-items">
-                                        <button class="pin-button" data-column="20" title="Закрепить столбец Обновлено">
-                                            <i class="bi bi-pin-angle"></i>
-                                        </button>
-                                        <button class="sort-button" data-field="updated_at" data-current-sort="{% if 'updated_at' in sort_indicators %}{{ sort_indicators.updated_at }}{% endif %}" title="Сортировать по дате обновления">
-                                            <i class="bi bi-{% if 'updated_at' in sort_indicators %}{% if sort_indicators.updated_at == 'asc' %}sort-alpha-up-alt{% else %}sort-alpha-down-alt{% endif %}{% else %}arrow-down-up{% endif %}"></i>
-                                        </button>
-                                        <button class="drag-handle" title="Перетащить столбец" style="display: none;">
-                                            <i class="bi bi-grip-vertical"></i>
-                                        </button>
-                                    </div>
-                                </th>
-                            </tr>
-                            <!-- Основные заголовки таблицы -->
-                            <tr>
-                                <th>Действия</th>
-                                <th>ID</th>
-                                <th>Канал</th>
-                                <th>Сообщение</th>
-                                <th>Таблица</th>
-                                <th title="Класс тревоги">Класс</th>
-                                <th title="Способ наблюдения">Логика</th>
-                                <th title="Способ подтверждения">Подтверждение</th>
-                                <th>Приоритет</th>
-                                <th title="Тип ограничения">Лимит</th>
-                                <th title="Тип настройки пределов">Тип лимита</th>
-                                <th title="Нижний предел">Мин</th>
-                                <th title="Верхний предел">Макс</th>
-                                <th title="Канал нижнего предела">Канал мин</th>
-                                <th title="Канал верхнего предела">Канал макс</th>
-                                <th title="Гистерезис нижнего предела">Гист мин</th>
-                                <th title="Гистерезис верхнего предела">Гист макс</th>
-                                <th title="Значение предела для дискретного сигнала">Дискрет</th>
-                                <th title="Дата создания">Создано</th>
-                                <th title="Дата обновления">Обновлено</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for alarm in alarms %}
-                            <tr>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <a href="{% url 'alarms:alarm_edit' alarm.pk %}" 
-                                           class="btn btn-sm btn-outline-primary" 
-                                           title="Редактировать">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <a href="{% url 'alarms:alarm_delete' alarm.pk %}" 
-                                           class="btn btn-sm btn-outline-danger" 
-                                           title="Удалить"
-                                           onclick="return confirm('Вы уверены, что хотите удалить эту тревогу?')">
-                                            <i class="bi bi-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                                <td>{{ alarm.id }}</td>
-                                <td>
-                                    {% if alarm.channel %}
-                                        <code>{{ alarm.channel }}</code>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ alarm.msg }}</td>
-                                <td title="{{ alarm.table.description|default:'Описание отсутствует' }}">
-                                    {{ alarm.table.name }}
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if alarm.alarm_class.name == 'error' %}alarm-error{% elif alarm.alarm_class.name == 'warn' %}alarm-warn{% elif alarm.alarm_class.name == 'info' %}alarm-info{% else %}secondary{% endif %}">
-                                        {{ alarm.alarm_class.verbose_name_ru|default:"Не указан" }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-{% if alarm.logic.name == 'discrete' %}logic-discrete{% elif alarm.logic.name == 'analog' %}logic-analog{% elif alarm.logic.name == 'change' %}logic-change{% else %}secondary{% endif %}">{{ alarm.logic.verbose_name_ru|default:"Не указан" }}</span>
-                                </td>
-                                <td>
-                                    {% if alarm.confirm_method %}
-                                        <span class="badge bg-{% if alarm.confirm_method.name == 'rep_ack' %}confirm-rep-ack{% else %}secondary{% endif %}">{{ alarm.confirm_method.verbose_name_ru|default:"Не указан" }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary">{{ alarm.prior }}</span>
-                                </td>
-                                <td>
-                                    {% if alarm.limit_type %}
-                                        <span class="badge bg-{% if alarm.limit_type.name == 'low' %}limit-low{% elif alarm.limit_type.name == 'high' %}limit-high{% elif alarm.limit_type.name == 'low_high' %}limit-low-high{% else %}secondary{% endif %}">{{ alarm.limit_type.verbose_name_ru|default:"Не указан" }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.limit_config_type %}
-                                        <span class="badge bg-{% if alarm.limit_config_type.name == 'values' %}config-values{% elif alarm.limit_config_type.name == 'channels' %}config-channels{% else %}secondary{% endif %}">{{ alarm.limit_config_type.verbose_name_ru|default:"Не указан" }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.low is not None %}
-                                        {{ alarm.low }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.high is not None %}
-                                        {{ alarm.high }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.ch_low %}
-                                        <code>{{ alarm.ch_low }}</code>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.ch_high %}
-                                        <code>{{ alarm.ch_high }}</code>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.hyst_low is not None %}
-                                        {{ alarm.hyst_low }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.hyst_high is not None %}
-                                        {{ alarm.hyst_high }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if alarm.discrete_val is not None %}
-                                        {{ alarm.discrete_val }}
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
-                                <td>{{ alarm.created_at|date:"d.m.Y H:i" }}</td>
-                                <td>{{ alarm.updated_at|date:"d.m.Y H:i" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            
-            <!-- Пагинация -->
-            {% if is_paginated %}
-            <nav aria-label="Навигация по страницам">
-                <ul class="pagination justify-content-center">
-                    {% if page_obj.has_previous %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page=1{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
-                                <i class="bi bi-chevron-double-left"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
-                                <i class="bi bi-chevron-left"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                    
-                    <li class="page-item active">
-                        <span class="page-link">
-                            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
-                        </span>
-                    </li>
-                    
-                    {% if page_obj.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
-                                <i class="bi bi-chevron-right"></i>
-                            </a>
-                        </li>
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for field in sort_fields %}&sort_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for order in sort_orders %}&order_{{ forloop.counter0 }}={{ order }}{% endfor %}{% for field in filter_fields %}&filter_field_{{ forloop.counter0 }}={{ field }}{% endfor %}{% for op in filter_ops %}&filter_op_{{ forloop.counter0 }}={{ op }}{% endfor %}{% for value in filter_values %}&filter_value_{{ forloop.counter0 }}={{ value }}{% endfor %}">
-                                <i class="bi bi-chevron-double-right"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
-            {% endif %}
-        {% else %}
-            <div class="empty-state text-center">
-                <div>
-                    {% if has_active_filters %}
-                        {% include 'alarms/includes/empty_filtered.html' %}
-                    {% else %}
-                        <i class="bi bi-exclamation-triangle fs-1 text-muted"></i>
-                        <h4 class="mt-3">Тревоги не найдены</h4>
-                        <p class="text-muted">Создайте первую тревогу для начала работы</p>
-                        <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Создать первую тревогу
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-        {% endif %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="bi bi-exclamation-triangle me-2"></i>Тревоги
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Добавить тревогу
+            </a>
+        </div>
     </div>
 </div>
 
-<script src="{% static 'js/filters.js' %}"></script>
-<script src="{% static 'js/sort.js' %}"></script>
-<script src="{% static 'js/dynamic_filters.js' %}"></script>
+<!-- Контейнер для AG Grid -->
+<div id="alarmsGrid" class="ag-theme-alpine"></div>
+
+<!-- AG Grid JavaScript -->
+<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<script src="{% static 'js/ag-grid-common.js' %}"></script>
 
 <script>
+// Данные для AG Grid
+const alarmData = {{ alarm_data|safe }};
 
+// Справочные данные для фильтров
+const alarmClasses = {{ alarm_classes|safe }};
+const logics = {{ logics|safe }};
+const confirmMethods = {{ confirm_methods|safe }};
+const limitTypes = {{ limit_types|safe }};
+
+// Конфигурация колонок AG Grid
+const columnDefs = [
+    {
+        headerName: 'ID',
+        field: 'id',
+        width: 80,
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        pinned: 'left'
+    },
+    {
+        headerName: 'Канал',
+        field: 'channel',
+        width: 150,
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        filterParams: {
+            filterOptions: ['contains', 'startsWith', 'endsWith', 'equals']
+        },
+        cellRenderer: function(params) {
+            const value = params.value;
+            return value ? `<code>${value}</code>` : '<em class="text-muted">Не указан</em>';
+        }
+    },
+    {
+        headerName: 'Сообщение',
+        field: 'message',
+        width: 250,
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        cellRenderer: function(params) {
+            const value = params.value;
+            if (value) {
+                const shortValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
+                return `<div class="description-cell" title="${value}">${shortValue}</div>`;
+            }
+            return '<em class="text-muted">Не указано</em>';
+        }
+    },
+    {
+        headerName: 'Таблица',
+        field: 'table',
+        width: 200,
+        sortable: true,
+        filter: 'agTextColumnFilter',
+        cellRenderer: function(params) {
+            const value = params.value;
+            return value ? `<span class="badge bg-info">${value}</span>` : '<em class="text-muted">Не указана</em>';
+        }
+    },
+    {
+        headerName: 'Класс тревоги',
+        field: 'alarm_class',
+        width: 150,
+        sortable: true,
+        filter: 'agSetColumnFilter',
+        filterParams: {
+            values: alarmClasses
+        },
+        cellRenderer: function(params) {
+            const value = params.value;
+            if (!value) return '<em class="text-muted">Не указан</em>';
+            
+            let badgeClass = 'alarm-class-info';
+            if (value === 'Критическая' || value === 'Авария') {
+                badgeClass = 'alarm-class-critical';
+            } else if (value === 'Важная' || value === 'Предупреждение') {
+                badgeClass = 'alarm-class-warning';
+            }
+            
+            return `<span class="${badgeClass}">${value}</span>`;
+        }
+    },
+    {
+        headerName: 'Способ наблюдения',
+        field: 'logic',
+        width: 120,
+        sortable: true,
+        filter: 'agSetColumnFilter',
+        filterParams: {
+            values: logics
+        }
+    },
+    {
+        headerName: 'Метод подтверждения',
+        field: 'confirm_method',
+        width: 180,
+        sortable: true,
+        filter: 'agSetColumnFilter',
+        filterParams: {
+            values: confirmMethods
+        }
+    },
+    {
+        headerName: 'Приоритет',
+        field: 'priority',
+        width: 100,
+        sortable: true,
+        filter: 'agNumberColumnFilter',
+        cellRenderer: function(params) {
+            const priority = params.value;
+            let color = 'black';
+            if (priority >= 800) color = 'red';
+            else if (priority >= 500) color = 'orange';
+            else if (priority >= 300) color = 'blue';
+            return `<span style="color: ${color}; font-weight: bold;">${priority}</span>`;
+        }
+    },
+    {
+        headerName: 'Тип ограничения',
+        field: 'limit_type',
+        width: 150,
+        sortable: true,
+        filter: 'agSetColumnFilter',
+        filterParams: {
+            values: limitTypes
+        }
+    },
+    {
+        headerName: 'Пределы',
+        children: [
+            {
+                headerName: 'Нижний',
+                field: 'low_limit',
+                width: 100,
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value !== null ? value : '<em class="text-muted">-</em>';
+                }
+            },
+            {
+                headerName: 'Верхний',
+                field: 'high_limit',
+                width: 100,
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value !== null ? value : '<em class="text-muted">-</em>';
+                }
+            }
+        ]
+    },
+    {
+        headerName: 'Гистерезис',
+        children: [
+            {
+                headerName: 'Низкий',
+                field: 'hyst_low',
+                width: 100,
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value !== null ? value : '<em class="text-muted">-</em>';
+                }
+            },
+            {
+                headerName: 'Высокий',
+                field: 'hyst_high',
+                width: 100,
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value !== null ? value : '<em class="text-muted">-</em>';
+                }
+            }
+        ]
+    },
+    {
+        headerName: 'Дополнительно',
+        children: [
+            {
+                headerName: 'Дискретное значение',
+                field: 'discrete_val',
+                width: 120,
+                sortable: true,
+                filter: 'agNumberColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value !== null ? value : '<em class="text-muted">-</em>';
+                }
+            },
+            {
+                headerName: 'Канал низкий',
+                field: 'ch_low',
+                width: 120,
+                sortable: true,
+                filter: 'agTextColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
+                }
+            },
+            {
+                headerName: 'Канал высокий',
+                field: 'ch_high',
+                width: 120,
+                sortable: true,
+                filter: 'agTextColumnFilter',
+                cellRenderer: function(params) {
+                    const value = params.value;
+                    return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
+                }
+            }
+        ]
+    },
+    {
+        headerName: 'Даты',
+        children: [
+            {
+                headerName: 'Создан',
+                field: 'created_at',
+                width: 150,
+                sortable: true,
+                filter: 'agDateColumnFilter',
+                cellRenderer: function(params) {
+                    return `<div class="date-cell">${params.value}</div>`;
+                }
+            },
+            {
+                headerName: 'Обновлен',
+                field: 'updated_at',
+                width: 150,
+                sortable: true,
+                filter: 'agDateColumnFilter',
+                cellRenderer: function(params) {
+                    return `<div class="date-cell">${params.value}</div>`;
+                }
+            }
+        ]
+    },
+    {
+        headerName: 'Действия',
+        field: 'actions',
+        width: 100,
+        sortable: false,
+        filter: false,
+        cellRenderer: function(params) {
+            const alarmId = params.data.id;
+            return `
+                <div class="action-buttons">
+                    <a href="/alarms/${alarmId}/edit/" class="btn btn-sm btn-outline-primary me-1" title="Редактировать">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="/alarms/${alarmId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </a>
+                </div>
+            `;
+        }
+    }
+];
+
+// Создаем конфигурацию AG Grid
+const gridOptions = createGridConfig('alarms', columnDefs, alarmData);
+
+// Инициализация AG Grid
+document.addEventListener('DOMContentLoaded', function() {
+    initAgGrid('alarmsGrid', gridOptions);
+});
 </script>
 {% endblock %}

@@ -101,199 +101,88 @@ class AlarmTableDeleteView(View):
         return HttpResponseRedirect(reverse_lazy("alarms:table_list"))
 
 
-class AlarmConfigListView(FilterMixin, ListView):
-    """Представление для списка конфигураций аварий"""
+class AlarmConfigListView(ListView):
+    """Представление для списка конфигураций аварий с AG Grid"""
 
     model = AlarmConfig
     template_name = "alarms/alarm_list.html"
     context_object_name = "alarms"
-    paginate_by = 20
 
     def get_queryset(self):
-        """Получаем queryset с поддержкой сортировки и фильтрации по русским названиям"""
-        from django.db.models.functions import Lower
-
-        queryset = AlarmConfig.objects.all().select_related(
-            "table", "alarm_class", "logic", "limit_type", "confirm_method"
+        """Получаем queryset с оптимизированными запросами"""
+        return (
+            AlarmConfig.objects.all()
+            .select_related(
+                "alarm_class", "logic", "confirm_method", "limit_type", "table"
+            )
+            .order_by("alarm_class__verbose_name_ru", "prior", "channel")
         )
-
-        # Применяем фильтрацию через миксин
-        queryset = self.apply_filters(queryset)
-
-        # Получаем параметры сортировки
-        sort_fields = []
-        sort_orders = []
-
-        # Собираем все параметры сортировки с индексами
-        i = 0
-        while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
-                break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
-            i += 1
-
-        # Если нет параметров сортировки, используем значения по умолчанию
-        if not sort_fields:
-            sort_fields = ["id"]
-            sort_orders = ["asc"]
-
-        # Создаем аннотации для сортировки по русским названиям
-        queryset = queryset.annotate(
-            alarm_class_display=Lower("alarm_class__verbose_name_ru"),
-            logic_display=Lower("logic__verbose_name_ru"),
-            limit_type_display=Lower("limit_type__verbose_name_ru"),
-            limit_config_type_display=Lower("limit_config_type__verbose_name_ru"),
-            confirm_method_display=Lower("confirm_method__verbose_name_ru"),
-            channel_lower=Lower("channel"),
-        )
-
-        # Список разрешенных полей для сортировки с русскими названиями
-        allowed_fields = {
-            "id": "id",
-            "alarm_class": "alarm_class_display",
-            "table": "table__name",
-            "logic": "logic_display",
-            "channel": "channel_lower",
-            "msg": "msg",
-            "prior": "prior",
-            "limit_type": "limit_type_display",
-            "limit_config_type": "limit_config_type_display",
-            "confirm_method": "confirm_method_display",
-            "low": "low",
-            "high": "high",
-            "ch_low": "ch_low",
-            "ch_high": "ch_high",
-            "hyst_low": "hyst_low",
-            "hyst_high": "hyst_high",
-            "discrete_val": "discrete_val",
-            "created_at": "created_at",
-            "updated_at": "updated_at",
-        }
-
-        # Определяем вторичные поля для групповой сортировки
-        secondary_sort_fields = {
-            "alarm_class": ["id"],
-            "table": ["id"],
-            "logic": ["id"],
-            "channel": ["id"],
-            "msg": ["id"],
-            "prior": ["id"],
-            "limit_type": ["id"],
-            "limit_config_type": ["id"],
-            "confirm_method": ["id"],
-            "low": ["id"],
-            "high": ["id"],
-            "ch_low": ["id"],
-            "ch_high": ["id"],
-            "hyst_low": ["id"],
-            "hyst_high": ["id"],
-            "discrete_val": ["id"],
-            "created_at": ["id"],
-            "updated_at": ["id"],
-        }
-
-        # Создаем список полей для сортировки
-        order_fields = []
-        used_fields = set()  # Множество уже использованных полей
-
-        # Сначала добавляем все основные поля сортировки пользователя
-        for i, field in enumerate(sort_fields):
-            if field in allowed_fields:
-                db_field = allowed_fields[field]
-                order = sort_orders[i] if i < len(sort_orders) else "asc"
-                order_field = f"{'-' if order == 'desc' else ''}{db_field}"
-                order_fields.append(order_field)
-                used_fields.add(db_field)  # Добавляем поле без знака минус
-
-        # Затем добавляем вторичные поля, но только если они не совпадают
-        for i, field in enumerate(sort_fields):
-            if field in allowed_fields and field in secondary_sort_fields:
-                for secondary_field in secondary_sort_fields[field]:
-                    # Добавляем вторичное поле только если оно не совпадает
-                    if secondary_field not in used_fields:
-                        order_fields.append(secondary_field)
-                        used_fields.add(secondary_field)
-
-        # Применяем сортировку
-        if order_fields:
-            queryset = queryset.order_by(*order_fields)
-
-        return queryset
 
     def get_context_data(self, **kwargs):
-        """Добавляем параметры сортировки в контекст"""
+        """Добавляем данные для AG Grid в контекст"""
         context = super().get_context_data(**kwargs)
 
-        # Получаем параметры сортировки
-        sort_fields = []
-        sort_orders = []
+        # Подготавливаем данные для AG Grid
+        alarm_data = []
+        for alarm in self.get_queryset():
+            alarm_data.append(
+                {
+                    "id": alarm.id,
+                    "channel": alarm.channel or "",
+                    "message": alarm.msg or "",
+                    "table": (
+                        f"{alarm.table.table_number}: {alarm.table.name}"
+                        if alarm.table
+                        else ""
+                    ),
+                    "alarm_class": (
+                        alarm.alarm_class.verbose_name_ru if alarm.alarm_class else ""
+                    ),
+                    "logic": alarm.logic.verbose_name_ru if alarm.logic else "",
+                    "confirm_method": (
+                        alarm.confirm_method.verbose_name_ru
+                        if alarm.confirm_method
+                        else ""
+                    ),
+                    "priority": alarm.prior or 0,
+                    "limit_type": (
+                        alarm.limit_type.verbose_name_ru if alarm.limit_type else ""
+                    ),
+                    "low_limit": alarm.low,
+                    "high_limit": alarm.high,
+                    "hyst_low": alarm.hyst_low,
+                    "hyst_high": alarm.hyst_high,
+                    "discrete_val": alarm.discrete_val,
+                    "ch_low": alarm.ch_low or "",
+                    "ch_high": alarm.ch_high or "",
+                    "created_at": (
+                        alarm.created_at.strftime("%Y-%m-%d %H:%M")
+                        if alarm.created_at
+                        else ""
+                    ),
+                    "updated_at": (
+                        alarm.updated_at.strftime("%Y-%m-%d %H:%M")
+                        if alarm.updated_at
+                        else ""
+                    ),
+                }
+            )
 
-        # Собираем все параметры сортировки с индексами
-        i = 0
-        while True:
-            sort_field = self.request.GET.get(f"sort_{i}")
-            if not sort_field:
-                break
-            sort_fields.append(sort_field)
-            sort_order = self.request.GET.get(f"order_{i}", "asc")
-            sort_orders.append(sort_order)
-            i += 1
+        context["alarm_data"] = alarm_data
 
-        # Добавляем поля сортировки для тревог
-        context["sort_fields"] = get_sort_fields("alarms")
-        context["storage_key"] = "alarmsSortFields"
-
-        # Добавляем поля фильтров для тревог
-        context["filter_config"] = get_filter_fields("alarms")
-
-        # Для обратной совместимости
-        context["sort_orders"] = sort_orders[: len(sort_fields)]
-
-        # Создаем словарь для отображения стрелок в заголовках таблицы
-        context["sort_indicators"] = {}
-        for i, field in enumerate(sort_fields):
-            if field and i < len(sort_orders):
-                context["sort_indicators"][field] = sort_orders[i]
-
-        context["current_sort"] = self.request.GET.get("sort", "alarm_class")
-        context["current_order"] = self.request.GET.get("order", "asc")
-
-        # Добавляем параметры фильтров в контекст для ссылок пагинации
-        filter_fields = []
-        filter_ops = []
-        filter_values = []
-
-        # Собираем все параметры фильтров с индексами
-        i = 0
-        while True:
-            filter_field = self.request.GET.get(f"filter_field_{i}")
-            if not filter_field:
-                break
-            filter_fields.append(filter_field)
-            filter_op = self.request.GET.get(f"filter_op_{i}", "exact")
-            filter_ops.append(filter_op)
-            filter_value = self.request.GET.get(f"filter_value_{i}", "")
-            filter_values.append(filter_value)
-            i += 1
-
-        context["filter_fields"] = filter_fields
-        context["filter_ops"] = filter_ops
-        context["filter_values"] = filter_values
-
-        # Получаем отфильтрованный queryset для подсчета
-        filtered_queryset = AlarmConfig.objects.all()
-        filtered_queryset = self.apply_filters(filtered_queryset)
-        context["filtered_count"] = filtered_queryset.count()
-
-        # Проверяем, есть ли активные фильтры
-        has_active_filters = any(
-            field and value and value.strip()
-            for field, value in zip(filter_fields, filter_values)
+        # Справочные данные для фильтров
+        context["alarm_classes"] = list(
+            AlarmClass.objects.values_list("verbose_name_ru", flat=True)
         )
-        context["has_active_filters"] = has_active_filters
+        context["logics"] = list(
+            Logic.objects.values_list("verbose_name_ru", flat=True)
+        )
+        context["confirm_methods"] = list(
+            ConfirmMethod.objects.values_list("verbose_name_ru", flat=True)
+        )
+        context["limit_types"] = list(
+            LimitType.objects.values_list("verbose_name_ru", flat=True)
+        )
 
         return context
 

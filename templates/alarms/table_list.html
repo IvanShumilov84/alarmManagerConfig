@@ -67,6 +67,7 @@
 
 <!-- AG Grid JavaScript -->
 <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<script src="{% static 'js/ag-grid-common.js' %}"></script>
 
 <script>
 // Данные для AG Grid
@@ -121,7 +122,7 @@ const columnDefs = [
         filter: 'agTextColumnFilter',
         cellRenderer: function(params) {
             if (params.value) {
-                return `<div class="table-description" title="${params.value}">${params.value}</div>`;
+                return `<div class="description-cell" title="${params.value}">${params.value}</div>`;
             }
             return '<em class="text-muted">Не указано</em>';
         }
@@ -133,7 +134,7 @@ const columnDefs = [
         sortable: true,
         filter: 'agNumberColumnFilter',
         cellRenderer: function(params) {
-            return `<span class="alarms-count">${params.value}</span>`;
+            return `<span class="count-badge">${params.value}</span>`;
         }
     },
     {
@@ -169,7 +170,7 @@ const columnDefs = [
             let deleteButton = '';
             if (canDelete) {
                 deleteButton = `
-                    <a href="/alarms/tables/${tableId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
+                    <a href="/tables/${tableId}/delete/" class="btn btn-sm btn-outline-danger" title="Удалить">
                         <i class="bi bi-trash"></i>
                     </a>
                 `;
@@ -183,10 +184,10 @@ const columnDefs = [
             
             return `
                 <div class="action-buttons">
-                    <a href="/alarms/tables/${tableId}/" class="btn btn-sm btn-outline-info" title="Просмотр">
+                    <a href="/tables/${tableId}/" class="btn btn-sm btn-outline-info" title="Просмотр">
                         <i class="bi bi-eye"></i>
                     </a>
-                    <a href="/alarms/tables/${tableId}/edit/" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                    <a href="/tables/${tableId}/edit/" class="btn btn-sm btn-outline-primary" title="Редактировать">
                         <i class="bi bi-pencil"></i>
                     </a>
                     ${deleteButton}
@@ -196,136 +197,12 @@ const columnDefs = [
     }
 ];
 
-// Конфигурация AG Grid
-const gridOptions = {
-    columnDefs: columnDefs,
-    rowData: tableData,
-    
-    // Основные настройки
-    defaultColDef: {
-        sortable: true,
-        filter: true,
-        resizable: true,
-        minWidth: 100
-    },
-    
-    // Пагинация
-    pagination: true,
-    paginationPageSize: 20,
-    paginationPageSizeSelector: [10, 20, 50, 100],
-    
-    // Сортировка
-    multiSortKey: 'ctrl',
-    
-    // Выбор строк
-    rowSelection: 'multiple',
-    
-    // Экспорт
-    enableRangeSelection: true,
-    
-    // Производительность
-    animateRows: true,
-    
-    // События
-    onGridReady: function(params) {
-        // Автоматически подгоняем размер колонок под содержимое
-        params.api.sizeColumnsToFit();
-        
-        // Загружаем сохраненные настройки
-        loadGridSettings();
-    },
-    
-    onSortChanged: function(event) {
-        saveGridSettings();
-    },
-    
-    onFilterChanged: function(event) {
-        saveGridSettings();
-    },
-    
-    onColumnMoved: function(event) {
-        saveGridSettings();
-    },
-    
-    onColumnResized: function(event) {
-        saveGridSettings();
-    }
-};
-
-// Функции для работы с настройками
-function saveGridSettings() {
-    const settings = {
-        columnState: gridOptions.api.getColumnState(),
-        sortModel: gridOptions.api.getSortModel(),
-        filterModel: gridOptions.api.getFilterModel()
-    };
-    localStorage.setItem('tablesGridSettings', JSON.stringify(settings));
-}
-
-function loadGridSettings() {
-    const saved = localStorage.getItem('tablesGridSettings');
-    if (saved) {
-        try {
-            const settings = JSON.parse(saved);
-            
-            if (settings.columnState) {
-                gridOptions.api.applyColumnState({
-                    state: settings.columnState,
-                    applyOrder: true
-                });
-            }
-            
-            if (settings.sortModel) {
-                gridOptions.api.setSortModel(settings.sortModel);
-            }
-            
-            if (settings.filterModel) {
-                gridOptions.api.setFilterModel(settings.filterModel);
-            }
-        } catch (error) {
-            console.error('Ошибка загрузки настроек:', error);
-        }
-    }
-}
+// Создаем конфигурацию AG Grid
+const gridOptions = createGridConfig('tables', columnDefs, tableData);
 
 // Инициализация AG Grid
 document.addEventListener('DOMContentLoaded', function() {
-    const gridDiv = document.querySelector('#tablesGrid');
-    new agGrid.Grid(gridDiv, gridOptions);
-});
-
-// Функции экспорта
-function exportToExcel() {
-    gridOptions.api.exportDataAsExcel({
-        fileName: 'tables_export.xlsx'
-    });
-}
-
-function exportToCsv() {
-    gridOptions.api.exportDataAsCsv({
-        fileName: 'tables_export.csv'
-    });
-}
-
-// Добавляем кнопки экспорта в заголовок
-document.addEventListener('DOMContentLoaded', function() {
-    const header = document.querySelector('.btn-toolbar');
-    const exportGroup = document.createElement('div');
-    exportGroup.className = 'btn-group me-2';
-    exportGroup.innerHTML = `
-        <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="bi bi-download"></i> Экспорт
-        </button>
-        <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="exportToExcel()">
-                <i class="bi bi-file-earmark-excel"></i> Excel
-            </a></li>
-            <li><a class="dropdown-item" href="#" onclick="exportToCsv()">
-                <i class="bi bi-file-earmark-text"></i> CSV
-            </a></li>
-        </ul>
-    `;
-    header.insertBefore(exportGroup, header.firstChild);
+    initAgGrid('tablesGrid', gridOptions);
 });
 </script>
 {% endblock %} 
