@@ -1,3 +1,23 @@
+"""
+AlarmManagerConfig - Views для управления тревогами
+
+КОНТЕКСТ РАЗРАБОТКИ:
+- Мигрировали с кастомного JavaScript на AG Grid
+- Страница alarms отображает все 18 столбцов из модели AlarmConfig
+- Адаптивное отображение: 18 столбцов на desktop/tablet, 5 на mobile
+- Используется гибридное хранение настроек (localStorage + SQLite БД)
+
+ПОСЛЕДНИЕ ИЗМЕНЕНИЯ:
+- Добавлены все поля модели в AlarmConfigListView.get_context_data()
+- Исправлен импорт csrf_exempt
+- Обновлена конфигурация AG Grid для полного отображения данных
+
+СЛЕДУЮЩИЕ ШАГИ:
+- Реализовать UserColumnPreferences для сохранения настроек в БД
+- Добавить экспорт данных
+- Оптимизировать производительность AG Grid
+"""
+
 import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
