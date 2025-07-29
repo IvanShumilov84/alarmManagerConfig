@@ -38,8 +38,7 @@ urlpatterns = [
     # API endpoints
     path("api/export-json/", views.export_json, name="export_json"),
     path("api/get-logic-fields/", views.get_logic_fields, name="get_logic_fields"),
-    path("api/ajax-sort-alarms/", views.ajax_sort_alarms, name="ajax_sort_alarms"),
-    # API для справочников фильтров
+    # API для справочников
     path("api/alarm-classes/", views.api_alarm_classes, name="api_alarm_classes"),
     path("api/logics/", views.api_logics, name="api_logics"),
     path("api/confirm-methods/", views.api_confirm_methods, name="api_confirm_methods"),
@@ -58,26 +57,5 @@ urlpatterns = [
         "api/used-table-numbers/",
         views.api_used_table_numbers,
         name="api_used_table_numbers",
-    ),
-    path(
-        "api/sort-fields/",
-        views.api_sort_fields,
-        name="api_sort_fields",
-    ),
-    path(
-        "api/filter-fields/",
-        views.api_filter_fields,
-        name="api_filter_fields",
-    ),
-    # API для порядка столбцов
-    path(
-        "api/save-column-order/",
-        views.save_column_order,
-        name="save_column_order",
-    ),
-    path(
-        "api/get-column-order/",
-        views.get_column_order,
-        name="get_column_order",
     ),
 ]
