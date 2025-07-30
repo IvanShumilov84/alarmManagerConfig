@@ -14,20 +14,30 @@
         max-width: none !important;
         padding-left: 15px !important;
         padding-right: 15px !important;
+        height: 100vh; /* Полная высота экрана */
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* Основной контент занимает все доступное пространство */
+    .container-fluid > div:last-child {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
     
     /* Адаптивный контейнер для AG Grid */
     #alarmsGrid {
-        height: 600px;
-        width: 100%;
+        width: 100% !important;
         min-width: 0; /* Позволяет контейнеру сжиматься */
-        overflow: hidden; /* Предотвращает горизонтальный скролл контейнера */
+        overflow: auto; /* Разрешаем скролл для resize */
+        min-height: 400px; /* Минимальная высота */
     }
     
     /* Responsive стили для мобильных устройств */
     @media (max-width: 768px) {
         #alarmsGrid {
-            height: 500px;
+            min-height: 350px;
         }
         
         .btn-toolbar {
@@ -36,11 +46,11 @@
         }
         
         .btn-toolbar .btn-group {
-            width: 100%;
+
         }
         
         .btn-toolbar .btn {
-            width: 100%;
+
         }
         
         /* Уменьшаем отступы на планшетах */
@@ -52,7 +62,7 @@
     
     @media (max-width: 576px) {
         #alarmsGrid {
-            height: 400px;
+            min-height: 300px;
         }
         
         .d-flex.justify-content-between {
@@ -91,8 +101,69 @@
         }
         
         .action-buttons .btn {
-            width: 100%;
             text-align: center;
+        }
+        
+        /* Responsive заголовки на мобильных */
+        .h2 {
+            font-size: 1.5rem;
+        }
+        
+        /* Вертикальное выравнивание заголовков и кнопок */
+        .d-flex.align-items-center .h2 {
+            line-height: 1.2;
+            margin-bottom: 0;
+        }
+        
+        .d-flex.align-items-center .btn-toolbar {
+            margin-bottom: 0;
+        }
+        
+        /* Стили для хинтов (tooltips) */
+        .ag-cell[title] {
+            cursor: help;
+        }
+        
+        .description-cell[data-tooltip] {
+            cursor: help;
+            position: relative;
+        }
+        
+        /* Кастомные стили для хинтов */
+        .ag-cell[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            max-width: 300px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Стили для хинтов в ячейках описания */
+        .description-cell[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            max-width: 300px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            z-index: 1000;
+            pointer-events: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            top: 100%;
+            left: 0;
+            margin-top: 5px;
         }
     }
     
@@ -100,6 +171,40 @@
     .priority-high {
         color: #dc3545;
         font-weight: bold;
+    }
+    
+
+    
+    /* Стили для ячеек с длинным контентом */
+    .description-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+    
+    /* Убираем отступы у сообщений */
+    .alert {
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Убираем отступы у первого элемента в контейнере */
+    .container-fluid > *:first-child {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Убираем отступы у всех элементов в main-content */
+    .main-content > *:first-child {
+        margin-top: 0;
+        padding-top: 0;
+    }
+    
+    /* Стили для AG Grid ячеек */
+    .ag-cell {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .priority-medium {
@@ -184,11 +289,11 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-2 border-bottom" style="min-height: 80px;">
+    <h1 class="h2 mb-0 d-flex align-items-center">
         <i class="bi bi-exclamation-triangle me-2"></i>Тревоги
     </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
+    <div class="btn-toolbar mb-0 d-flex align-items-center">
         <div class="btn-group me-2">
             <a href="{% url 'alarms:alarm_create' %}" class="btn btn-primary">
                 <i class="bi bi-plus-circle"></i> Добавить тревогу
@@ -198,7 +303,7 @@
 </div>
 
 <!-- Контейнер для AG Grid -->
-<div id="alarmsGrid" class="ag-theme-alpine"></div>
+<div id="alarmsGrid" class="ag-theme-alpine" style="flex: 1;"></div>
 
 <!-- AG Grid JavaScript -->
 <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
@@ -207,34 +312,47 @@
 // Данные для AG Grid
 const alarmData = {{ alarm_data|safe }};
 
-console.log('Данные тревог загружены:', alarmData);
-console.log('Размер экрана:', window.innerWidth);
+
+
+// Функция для расчета оптимальной ширины столбца на основе данных
+function calculateColumnWidth(field, data, minWidth = 50, maxWidth = 300) {
+    if (!data || data.length === 0) return minWidth;
+    
+    let maxLength = 0;
+    data.forEach(row => {
+        if (row[field]) {
+            const length = String(row[field]).length;
+            maxLength = Math.max(maxLength, length);
+        }
+    });
+    
+    // Примерная ширина: 8px на символ + отступы
+    const calculatedWidth = Math.max(minWidth, Math.min(maxWidth, maxLength * 8 + 20));
+    return calculatedWidth;
+}
 
 // Функция для определения конфигурации столбцов в зависимости от размера экрана
 function getColumnDefs() {
     const isMobile = window.innerWidth <= 576;
     const isTablet = window.innerWidth <= 768;
     
-    console.log('Определение столбцов тревог:', { isMobile, isTablet, width: window.innerWidth });
-    
     return [
         { 
             headerName: 'ID', 
             field: 'id', 
-            width: isMobile ? 50 : 80, 
+            width: calculateColumnWidth('id', alarmData, 50, 80),
             sortable: true, 
             filter: true,
             pinned: 'left',
             hide: isMobile, // Скрываем ID на мобильных
-            flex: isMobile ? 0 : 0
+            suppressSizeToFit: false
         },
         { 
             headerName: 'Канал', 
             field: 'channel', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+            width: calculateColumnWidth('channel', alarmData, 80, 200),
             sortable: true, 
             filter: true,
-            flex: 1,
             cellRenderer: function(params) {
                 const value = params.value;
                 return value ? `<code>${value}</code>` : '<em class="text-muted">Не указан</em>';
@@ -243,15 +361,14 @@ function getColumnDefs() {
         { 
             headerName: 'Сообщение', 
             field: 'message', 
-            width: isMobile ? 120 : (isTablet ? 180 : 250), 
+            width: calculateColumnWidth('message', alarmData, 120, 300),
             sortable: true, 
             filter: true,
-            flex: 2,
             cellRenderer: function(params) {
                 const value = params.value;
                 if (value) {
                     const shortValue = value.length > 50 ? value.substring(0, 50) + '...' : value;
-                    return `<div class="description-cell" title="${value}">${shortValue}</div>`;
+                    return `<div class="description-cell" data-tooltip="${value}">${shortValue}</div>`;
                 }
                 return '<em class="text-muted">Не указано</em>';
             }
@@ -259,11 +376,11 @@ function getColumnDefs() {
         { 
             headerName: 'Таблица', 
             field: 'table', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем таблицу на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value ? `<span class="badge bg-info">${value}</span>` : '<em class="text-muted">Не указана</em>';
@@ -272,10 +389,10 @@ function getColumnDefs() {
         { 
             headerName: 'Класс тревоги', 
             field: 'alarm_class', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
-            flex: 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 if (!value) return '<em class="text-muted">Не указан</em>';
@@ -293,28 +410,28 @@ function getColumnDefs() {
         { 
             headerName: 'Способ наблюдения', 
             field: 'logic', 
-            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем способ наблюдения на мобильных
-            flex: isMobile ? 0 : 1
+
         },
         { 
             headerName: 'Способ подтверждения', 
             field: 'confirm_method', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем способ подтверждения на мобильных
-            flex: isMobile ? 0 : 1
+
         },
         { 
             headerName: 'Приоритет', 
             field: 'priority', 
-            width: isMobile ? 70 : (isTablet ? 80 : 100), 
+
             sortable: true, 
             filter: true,
-            flex: 1,
+
             cellRenderer: function(params) {
                 const priority = params.value;
                 let color = 'black';
@@ -327,29 +444,29 @@ function getColumnDefs() {
         { 
             headerName: 'Тип ограничения', 
             field: 'limit_type', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем тип ограничения на мобильных
-            flex: isMobile ? 0 : 1
+
         },
         { 
             headerName: 'Тип настройки пределов', 
             field: 'limit_config_type', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем тип настройки пределов на мобильных
-            flex: isMobile ? 0 : 1
+
         },
         { 
             headerName: 'Нижний предел', 
             field: 'low_limit', 
-            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем нижний предел на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
@@ -358,11 +475,11 @@ function getColumnDefs() {
         { 
             headerName: 'Верхний предел', 
             field: 'high_limit', 
-            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем верхний предел на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
@@ -371,11 +488,11 @@ function getColumnDefs() {
         { 
             headerName: 'Канал нижнего предела', 
             field: 'ch_low', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем канал нижнего предела на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
@@ -384,11 +501,11 @@ function getColumnDefs() {
         { 
             headerName: 'Канал верхнего предела', 
             field: 'ch_high', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем канал верхнего предела на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value ? `<code>${value}</code>` : '<em class="text-muted">-</em>';
@@ -397,11 +514,11 @@ function getColumnDefs() {
         { 
             headerName: 'Гистерезис нижний', 
             field: 'hyst_low', 
-            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем гистерезис нижний на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
@@ -410,11 +527,11 @@ function getColumnDefs() {
         { 
             headerName: 'Гистерезис верхний', 
             field: 'hyst_high', 
-            width: isMobile ? 80 : (isTablet ? 100 : 120), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем гистерезис верхний на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
@@ -423,11 +540,11 @@ function getColumnDefs() {
         { 
             headerName: 'Дискретное значение', 
             field: 'discrete_val', 
-            width: isMobile ? 80 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем дискретное значение на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 const value = params.value;
                 return value !== null && value !== undefined ? value : '<em class="text-muted">-</em>';
@@ -436,11 +553,11 @@ function getColumnDefs() {
         { 
             headerName: 'Дата создания', 
             field: 'created_at', 
-            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
             hide: isMobile, // Скрываем дату создания на мобильных
-            flex: isMobile ? 0 : 1,
+
             cellRenderer: function(params) {
                 return `<div class="date-cell">${params.value}</div>`;
             }
@@ -448,11 +565,11 @@ function getColumnDefs() {
         { 
             headerName: 'Дата обновления', 
             field: 'updated_at', 
-            width: isMobile ? 90 : (isTablet ? 120 : 150), 
+
             sortable: true, 
             filter: true,
-            hide: true, // Скрываем дату обновления на всех устройствах
-            flex: 0,
+            hide: isMobile, // Скрываем дату обновления только на мобильных
+
             cellRenderer: function(params) {
                 return `<div class="date-cell">${params.value}</div>`;
             }
@@ -460,10 +577,10 @@ function getColumnDefs() {
         {
             headerName: 'Действия',
             field: 'actions',
-            width: isMobile ? 100 : (isTablet ? 120 : 100),
+
             sortable: false,
             filter: false,
-            flex: 1,
+
             cellRenderer: function(params) {
                 const alarmId = params.data.id;
                 return `
@@ -481,16 +598,63 @@ function getColumnDefs() {
     ];
 }
 
+// Функция для создания кастомных хинтов
+function createCustomTooltips() {
+    const tooltipElements = document.querySelectorAll('[data-tooltip]');
+    tooltipElements.forEach(element => {
+        element.addEventListener('mouseenter', function(e) {
+            const tooltipText = this.getAttribute('data-tooltip');
+            if (!tooltipText) return;
+            
+            const tooltip = document.createElement('div');
+            tooltip.className = 'custom-tooltip';
+            tooltip.textContent = tooltipText;
+            tooltip.style.cssText = `
+                position: absolute;
+                background: rgba(0, 0, 0, 0.9);
+                color: white;
+                padding: 8px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                max-width: 300px;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                z-index: 1000;
+                pointer-events: none;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                top: ${e.pageY + 10}px;
+                left: ${e.pageX + 10}px;
+            `;
+            
+            document.body.appendChild(tooltip);
+            this._tooltip = tooltip;
+        });
+        
+        element.addEventListener('mouseleave', function() {
+            if (this._tooltip) {
+                this._tooltip.remove();
+                this._tooltip = null;
+            }
+        });
+    });
+}
+
 // Конфигурация AG Grid
 const gridOptions = {
     theme: 'legacy',
     columnDefs: getColumnDefs(),
     rowData: alarmData,
+    domLayout: 'normal', // Нормальный режим для адаптивной высоты под экран
+    suppressColumnVirtualisation: false,
+    suppressRowVirtualisation: false,
     defaultColDef: { 
         sortable: true, 
         filter: true, 
         resizable: true,
-        minWidth: 50
+        minWidth: 50,
+        maxWidth: 300, // Максимальная ширина столбцов
+        suppressSizeToFit: false,
+        autoHeight: true
     },
     pagination: true,
     paginationPageSize: 20,
@@ -498,15 +662,7 @@ const gridOptions = {
     multiSortKey: 'ctrl',
     rowSelection: 'multiRow',
     animateRows: true,
-    onGridReady: function(params) {
-        console.log('AG Grid тревог готов, применяем sizeColumnsToFit');
-        
-        // Применяем sizeColumnsToFit с задержкой для корректной работы
-        setTimeout(() => {
-            params.api.sizeColumnsToFit();
-            console.log('sizeColumnsToFit применен для тревог');
-        }, 100);
-        
+        onGridReady: function(params) {
         // Добавляем кнопки экспорта
         const header = document.querySelector('.btn-toolbar');
         if (header && !document.querySelector('.export-buttons')) {
@@ -527,7 +683,29 @@ const gridOptions = {
             `;
             header.insertBefore(exportGroup, header.firstChild);
         }
-    }
+    },
+    onFirstDataRendered: function(params) {
+        const rowCount = params.api.getDisplayedRowCount();
+        if (rowCount > 0) {
+            setTimeout(() => {
+                const columns = params.api.getAllDisplayedColumns();
+                if (columns.length > 0) {
+                    try {
+                        const columnIds = columns.map(col => col.getColId());
+                        params.api.autoSizeColumns(columnIds);
+                    } catch (error) {
+                        params.api.sizeColumnsToFit();
+                    }
+                }
+                
+                // Создаем кастомные хинты
+                setTimeout(() => {
+                    createCustomTooltips();
+                }, 100);
+            }, 200);
+        }
+    },
+
 };
 
 // Функции экспорта
@@ -545,28 +723,30 @@ function exportToCsv() {
 
 // Инициализация AG Grid
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM загружен, инициализируем AG Grid тревог');
     try {
         const gridDiv = document.querySelector('#alarmsGrid');
-        console.log('Контейнер тревог найден:', gridDiv);
         agGrid.createGrid(gridDiv, gridOptions);
         
         // Debounce функция для оптимизации resize
         let resizeTimeout;
         window.addEventListener('resize', function() {
-            console.log('Изменение размера окна для тревог:', window.innerWidth);
             clearTimeout(resizeTimeout);
             resizeTimeout = setTimeout(() => {
                 if (gridOptions.api) {
-                    console.log('Обновляем конфигурацию столбцов тревог');
-                    // Обновляем конфигурацию столбцов при изменении размера
+                    // Обновляем конфигурацию столбцов
                     gridOptions.api.setColumnDefs(getColumnDefs());
+                    
+                    // Обновляем размеры таблицы
+                    gridOptions.api.sizeColumnsToFit();
+                    
                     setTimeout(() => {
-                        gridOptions.api.sizeColumnsToFit();
-                        console.log('sizeColumnsToFit применен после resize для тревог');
+                        const columnIds = gridOptions.api.getAllDisplayedColumns().map(col => col.getColId());
+                        if (columnIds.length > 0) {
+                            gridOptions.api.autoSizeColumns(columnIds);
+                        }
                     }, 50);
                 }
-            }, 250); // Задержка 250ms для оптимизации
+            }, 250);
         });
     } catch (error) {
         console.error('Ошибка инициализации AG Grid тревог:', error);

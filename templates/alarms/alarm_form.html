@@ -397,19 +397,16 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    console.log('Form initialization started');
-    console.log('jQuery version:', $.fn.jquery);
+    
     
     // Проверяем наличие полей
-    console.log('limitTypeField exists:', $('#limitTypeField').length > 0);
-    console.log('limitConfigTypeField exists:', $('#limitConfigTypeField').length > 0);
+    
     
     // Функция для показа/скрытия полей в зависимости от логики
     function toggleFieldsByLogic() {
         const logicSelect = $('#id_logic');
         const logic = logicSelect.val();
-        console.log('Current logic value:', logic);
-        console.log('Current logic text:', logicSelect.find('option:selected').text());
+
         
         // Скрываем все условные поля
         $('#limitTypeField, #limitConfigTypeField, #limitValuesSection, #limitChannelsSection, #hysteresisSection, #discreteValField').hide();
@@ -419,7 +416,7 @@ $(document).ready(function() {
         
         // Проверяем по значению и по тексту для discrete
         if (logic === 'discrete' || logicSelect.find('option:selected').text().includes('Дискретное')) {
-            console.log('Showing discrete fields');
+
             $('#discreteValField').show();
         }
         
@@ -431,19 +428,18 @@ $(document).ready(function() {
         
         // Проверяем по значению и по тексту для analog
         if (logic === 'analog' || logicSelect.find('option:selected').text().includes('Аналоговое')) {
-            console.log('Showing analog fields');
+
             $('#limitTypeField, #hysteresisSection').show();
             $('#limitTypeField .form-label').addClass('required-field');
             $('#id_hyst_low').closest('.mb-3').find('.form-label').addClass('required-field');
             $('#id_hyst_high').closest('.mb-3').find('.form-label').addClass('required-field');
             
-            console.log('After show - limitTypeField visible:', $('#limitTypeField').is(':visible'));
-            console.log('After show - limitConfigTypeField visible:', $('#limitConfigTypeField').is(':visible'));
+            
             
             // Проверяем, есть ли уже выбранное значение в limit_type
             const limitType = $('#id_limit_type').val();
             if (limitType && limitType !== '') {
-                console.log('Limit type already selected:', limitType);
+    
                 toggleLimitConfigType();
             }
         }
@@ -452,24 +448,24 @@ $(document).ready(function() {
     // Функция для показа/скрытия поля limit_config_type
     function toggleLimitConfigType() {
         const limitType = $('#id_limit_type').val();
-        console.log('Toggle limit config type for limit type:', limitType);
+
         
         if (limitType && limitType !== '') {
-            console.log('Showing limit config type field');
+
             $('#limitConfigTypeField').show();
             $('#limitConfigTypeField .form-label').addClass('required-field');
             
             // Проверяем, есть ли уже выбранное значение в limit_config_type
             const limitConfigType = $('#id_limit_config_type').val();
             if (limitConfigType && limitConfigType !== '') {
-                console.log('Limit config type already selected:', limitConfigType);
+    
                 toggleLimitValues();
             } else {
                 // Если limit_config_type не выбран, все равно управляем состоянием полей
                 toggleFieldStates();
             }
         } else {
-            console.log('Hiding limit config type field');
+
             $('#limitConfigTypeField').hide();
             $('#limitConfigTypeField .form-label').removeClass('required-field');
             // Скрываем также поля значений
@@ -483,7 +479,7 @@ $(document).ready(function() {
     function toggleLimitValues() {
         const limitType = $('#id_limit_type').val();
         const limitConfigType = $('#id_limit_config_type').val();
-        console.log('Toggle limit values for limit type:', limitType, 'and config type:', limitConfigType);
+
         
         // Скрываем все секции значений
         $('#limitValuesSection, #limitChannelsSection').hide();
@@ -493,10 +489,10 @@ $(document).ready(function() {
             // Проверяем по значению и по тексту для values
             const limitConfigTypeText = $('#id_limit_config_type').find('option:selected').text();
             if (limitConfigType === 'values' || limitConfigTypeText.includes('Значения')) {
-                console.log('Showing limit values fields');
+    
                 $('#limitValuesSection').show();
             } else if (limitConfigType === 'channels' || limitConfigTypeText.includes('Каналы')) {
-                console.log('Showing limit channels fields');
+
                 $('#limitChannelsSection').show();
             }
         }
@@ -510,7 +506,7 @@ $(document).ready(function() {
         let isValid = true;
         let firstErrorField = null;
         
-        console.log('=== validateRequiredFields called ===');
+
         
         // Список всех обязательных полей (базовые)
         const requiredFields = [
@@ -529,7 +525,7 @@ $(document).ready(function() {
             const value = element.val();
             
             if (!value || value === '' || value === '---------') {
-                console.log('Required field empty:', field.name, 'value:', value);
+
                 element.addClass('is-invalid');
                 
                 // Создаем или обновляем сообщение об ошибке
@@ -554,11 +550,7 @@ $(document).ready(function() {
         const limitTypeText = $('#id_limit_type').find('option:selected').text();
         const limitConfigTypeText = $('#id_limit_config_type').find('option:selected').text();
         
-        console.log('=== VALIDATION DEBUG ===');
-        console.log('Logic value:', logicValue);
-        console.log('Logic text:', logicText);
-        console.log('Is discrete logic:', logicValue === 'discrete' || logicText.includes('Дискретное'));
-        console.log('Is analog logic:', logicValue === 'analog' || logicText.includes('Аналоговое'));
+
         
         // Для дискретной логики проверяем discrete_val
         const isDiscreteLogic = logicValue === 'discrete' || logicText.includes('Дискретное');
@@ -566,15 +558,12 @@ $(document).ready(function() {
         
         // Если логика не выбрана, не проверяем условные поля
         if (!logicValue || logicValue === '' || logicText === '---------') {
-            console.log('Logic not selected - skipping conditional validation');
             // Убираем все ошибки с условных полей
             $('#id_discrete_val, #id_limit_type, #id_limit_config_type, #id_low, #id_high, #id_ch_low, #id_ch_high, #id_hyst_low, #id_hyst_high').removeClass('is-invalid');
             $('#id_discrete_val-error, #id_limit_type-error, #id_limit_config_type-error, #id_low-error, #id_high-error, #id_ch_low-error, #id_ch_high-error, #id_hyst_low-error, #id_hyst_high-error').remove();
         } else if (isDiscreteLogic) {
-            console.log('Checking discrete_val for discrete logic');
             const discreteVal = $('#id_discrete_val').val();
             if (!discreteVal || discreteVal === '') {
-                console.log('Discrete value required but empty');
                 $('#id_discrete_val').addClass('is-invalid');
                 if (!$('#id_discrete_val-error').length) {
                     $('#discreteValField').append('<div id="id_discrete_val-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -592,9 +581,7 @@ $(document).ready(function() {
             $('#id_hyst_low, #id_hyst_high').removeClass('is-invalid');
             $('#id_hyst_low-error, #id_hyst_high-error').remove();
         } else if (isAnalogLogic) {
-            console.log('Checking analog fields for analog logic');
             if (!limitTypeText || limitTypeText === '---------') {
-                console.log('Limit type required but empty');
                 $('#id_limit_type').addClass('is-invalid');
                 if (!$('#id_limit_type-error').length) {
                     $('#limitTypeField').append('<div id="id_limit_type-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -613,7 +600,6 @@ $(document).ready(function() {
             const hystHigh = $('#id_hyst_high').val();
             
             if (!hystLow || hystLow === '') {
-                console.log('Hyst low required but empty');
                 $('#id_hyst_low').addClass('is-invalid');
                 if (!$('#id_hyst_low-error').length) {
                     $('#id_hyst_low').closest('.mb-3').append('<div id="id_hyst_low-error" class="invalid-feedback d-block">Обязательное поле для аналоговых событий</div>');
@@ -628,7 +614,6 @@ $(document).ready(function() {
             }
             
             if (!hystHigh || hystHigh === '') {
-                console.log('Hyst high required but empty');
                 $('#id_hyst_high').addClass('is-invalid');
                 if (!$('#id_hyst_high-error').length) {
                     $('#id_hyst_high').closest('.mb-3').append('<div id="id_hyst_high-error" class="invalid-feedback d-block">Обязательное поле для аналоговых событий</div>');
@@ -644,7 +629,6 @@ $(document).ready(function() {
             
             if (limitTypeText && limitTypeText !== '---------') {
                 if (!limitConfigTypeText || limitConfigTypeText === '---------') {
-                    console.log('Limit config type required but empty');
                     $('#id_limit_config_type').addClass('is-invalid');
                     if (!$('#id_limit_config_type-error').length) {
                         $('#limitConfigTypeField').append('<div id="id_limit_config_type-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -663,7 +647,6 @@ $(document).ready(function() {
             if (limitConfigTypeText && limitConfigTypeText.includes('Значения')) {
                 // Проверяем поля low и high в зависимости от типа ограничения
                 if (limitTypeText.includes('снизу') && (!$('#id_low').val() || $('#id_low').val() === '')) {
-                    console.log('Low value required but empty');
                     $('#id_low').addClass('is-invalid');
                     if (!$('#id_low-error').length) {
                         $('#lowField').append('<div id="id_low-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -678,7 +661,6 @@ $(document).ready(function() {
                 }
                 
                 if (limitTypeText.includes('сверху') && (!$('#id_high').val() || $('#id_high').val() === '')) {
-                    console.log('High value required but empty');
                     $('#id_high').addClass('is-invalid');
                     if (!$('#id_high-error').length) {
                         $('#highField').append('<div id="id_high-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -696,7 +678,6 @@ $(document).ready(function() {
             if (limitConfigTypeText && limitConfigTypeText.includes('Каналы')) {
                 // Проверяем поля ch_low и ch_high в зависимости от типа ограничения
                 if (limitTypeText.includes('снизу') && (!$('#id_ch_low').val() || $('#id_ch_low').val() === '')) {
-                    console.log('Ch_low value required but empty');
                     $('#id_ch_low').addClass('is-invalid');
                     if (!$('#id_ch_low-error').length) {
                         $('#chLowField').append('<div id="id_ch_low-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -711,7 +692,6 @@ $(document).ready(function() {
                 }
                 
                 if (limitTypeText.includes('сверху') && (!$('#id_ch_high').val() || $('#id_ch_high').val() === '')) {
-                    console.log('Ch_high value required but empty');
                     $('#id_ch_high').addClass('is-invalid');
                     if (!$('#id_ch_high-error').length) {
                         $('#chHighField').append('<div id="id_ch_high-error" class="invalid-feedback d-block">Обязательное поле</div>');
@@ -726,7 +706,6 @@ $(document).ready(function() {
                 }
             }
         } else {
-            console.log('Unknown logic type - removing all conditional field errors');
             // Для неизвестной логики убираем ошибки с условных полей
             $('#id_discrete_val, #id_limit_type, #id_limit_config_type, #id_low, #id_high, #id_ch_low, #id_ch_high').removeClass('is-invalid');
             $('#id_discrete_val-error, #id_limit_type-error, #id_limit_config_type-error, #id_low-error, #id_high-error, #id_ch_low-error, #id_ch_high-error').remove();
@@ -737,7 +716,7 @@ $(document).ready(function() {
             firstErrorField[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        console.log('Form validation result:', isValid);
+
         return isValid;
     }
     
@@ -748,24 +727,21 @@ $(document).ready(function() {
         const limitTypeText = $('#id_limit_type').find('option:selected').text();
         const limitConfigTypeText = $('#id_limit_config_type').find('option:selected').text();
         
-        console.log('=== validateLowHighValues called ===');
-        console.log('limit_type:', limitType, 'text:', limitTypeText);
-        console.log('limit_config_type:', limitConfigType, 'text:', limitConfigTypeText);
+
         
         // Проверяем условия для валидации
         const isLowHigh = limitTypeText.includes('снизу') && limitTypeText.includes('сверху');
         const isValues = limitConfigTypeText.includes('Значения') || limitConfigType === 'values';
         
-        console.log('isLowHigh:', isLowHigh, 'isValues:', isValues);
+
         
         if (isLowHigh && isValues) {
             const lowValue = parseFloat($('#id_low').val()) || 0;
             const highValue = parseFloat($('#id_high').val()) || 0;
             
-            console.log('lowValue:', lowValue, 'highValue:', highValue);
+
             
             if (lowValue >= highValue) {
-                console.log('*** VALIDATION ERROR: low >= high ***');
                 // Показываем ошибку
                 $('#id_low, #id_high').addClass('is-invalid');
                 
@@ -780,7 +756,6 @@ $(document).ready(function() {
                 
                 return false;
             } else {
-                console.log('*** VALIDATION OK: low < high ***');
                 // Убираем ошибку
                 $('#id_low, #id_high').removeClass('is-invalid');
                 $('#low-high-error').remove();
@@ -798,30 +773,18 @@ $(document).ready(function() {
     function toggleFieldStates() {
         const limitType = $('#id_limit_type').val();
         const limitTypeText = $('#id_limit_type').find('option:selected').text();
-        console.log('=== toggleFieldStates called ===');
-        console.log('limit_type value:', limitType);
-        console.log('limit_type text:', limitTypeText);
+
         
         // Проверяем существование полей
-        console.log('Fields exist check:');
-        console.log('id_low exists:', $('#id_low').length > 0);
-        console.log('id_high exists:', $('#id_high').length > 0);
-        console.log('id_ch_low exists:', $('#id_ch_low').length > 0);
-        console.log('id_ch_high exists:', $('#id_ch_high').length > 0);
         
         // Сначала разблокируем все поля и убираем обязательность
         $('#id_low, #id_high, #id_ch_low, #id_ch_high').prop('disabled', false);
         $('#lowField .form-label, #highField .form-label, #chLowField .form-label, #chHighField .form-label').removeClass('disabled required-field');
         
-        console.log('After enabling all fields:');
-        console.log('low disabled:', $('#id_low').prop('disabled'));
-        console.log('high disabled:', $('#id_high').prop('disabled'));
-        console.log('ch_low disabled:', $('#id_ch_low').prop('disabled'));
-        console.log('ch_high disabled:', $('#id_ch_high').prop('disabled'));
+
         
         // Простая логика: если текст содержит только "снизу" - блокируем high
         if (limitTypeText.includes('снизу') && !limitTypeText.includes('сверху')) {
-            console.log('*** LOW ONLY: Disabling high fields ***');
             $('#id_high, #id_ch_high').prop('disabled', true);
             $('#highField .form-label, #chHighField .form-label').addClass('disabled');
             // Делаем low поля обязательными
@@ -837,7 +800,6 @@ $(document).ready(function() {
         
         // Если текст содержит только "сверху" - блокируем low
         if (limitTypeText.includes('сверху') && !limitTypeText.includes('снизу')) {
-            console.log('*** HIGH ONLY: Disabling low fields ***');
             $('#id_low, #id_ch_low').prop('disabled', true);
             $('#lowField .form-label, #chLowField .form-label').addClass('disabled');
             // Делаем high поля обязательными
@@ -853,7 +815,6 @@ $(document).ready(function() {
         
         // Если содержит и "снизу" и "сверху" - ничего не блокируем, но делаем все обязательными
         if (limitTypeText.includes('снизу') && limitTypeText.includes('сверху')) {
-            console.log('*** BOTH: All fields enabled and required ***');
             $('#lowField .form-label, #highField .form-label, #chLowField .form-label, #chHighField .form-label').addClass('required-field');
             // Устанавливаем дефолтные значения для всех полей если они пустые
             if (!$('#id_low').val()) {
@@ -873,36 +834,26 @@ $(document).ready(function() {
         // Выполняем валидацию после установки значений
         validateLowHighValues();
         
-        console.log('Final state:');
-        console.log('low disabled:', $('#id_low').prop('disabled'));
-        console.log('high disabled:', $('#id_high').prop('disabled'));
-        console.log('ch_low disabled:', $('#id_ch_low').prop('disabled'));
-        console.log('ch_high disabled:', $('#id_ch_high').prop('disabled'));
-        console.log('=== toggleFieldStates finished ===');
+
     }
     
     // Обработчик изменения логики
-    $('#id_logic').on('change', function() {
-        console.log('Logic changed to:', $(this).val());
-        console.log('Logic text:', $(this).find('option:selected').text());
+            $('#id_logic').on('change', function() {
         toggleFieldsByLogic();
     });
     
     // Обработчик изменения типа ограничения
-    $('#id_limit_type').on('change', function() {
-        console.log('Limit type changed to:', $(this).val());
+            $('#id_limit_type').on('change', function() {
         toggleLimitConfigType();
     });
     
     // Обработчик изменения типа конфигурации ограничения
-    $('#id_limit_config_type').on('change', function() {
-        console.log('Limit config type changed to:', $(this).val());
+            $('#id_limit_config_type').on('change', function() {
         toggleLimitValues();
     });
     
     // Обработчики изменения значений полей low и high для валидации
     $('#id_low, #id_high').on('input', function() {
-        console.log('Field value changed:', $(this).attr('id'), 'value:', $(this).val());
         validateLowHighValues();
     });
     
@@ -911,7 +862,7 @@ $(document).ready(function() {
     
     // Обработчик отправки формы
     $('#alarmForm').on('submit', function(e) {
-        console.log('Form submit event triggered');
+
         
         // Предотвращаем браузерную валидацию
         e.stopImmediatePropagation();
@@ -922,19 +873,17 @@ $(document).ready(function() {
         
         // Выполняем валидацию обязательных полей
         if (!validateRequiredFields()) {
-            console.log('Form validation failed - preventing submit');
             e.preventDefault();
             return false;
         }
         
         // Дополнительная валидация для low < high
         if (!validateLowHighValues()) {
-            console.log('Low/High validation failed - preventing submit');
             e.preventDefault();
             return false;
         }
         
-        console.log('Form validation passed - allowing submit');
+
         return true;
     });
     
@@ -954,13 +903,11 @@ $(document).ready(function() {
     
     // Дополнительная проверка через 1 секунду
     setTimeout(function() {
-        console.log('Delayed initialization');
         toggleFieldsByLogic();
     }, 1000);
     
     // Еще одна проверка через 2 секунды
     setTimeout(function() {
-        console.log('Second delayed initialization');
         toggleFieldsByLogic();
     }, 2000);
 });

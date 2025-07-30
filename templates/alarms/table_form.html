@@ -227,32 +227,28 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    console.log('Table form initialization started');
+    
     
     // Проверяем существующие серверные ошибки при загрузке страницы
-    console.log('Checking for existing server errors...');
+    
     $('.invalid-feedback').each(function() {
         const errorText = $(this).text();
         const fieldId = $(this).attr('id');
-        console.log('Found error element:', fieldId, 'text:', errorText);
+        
         
         if (errorText.includes('уже существует')) {
             if (fieldId) {
                 const fieldElement = $('#' + fieldId.replace('-error', ''));
                 if (fieldElement.length > 0) {
                     fieldElement.addClass('is-invalid');
-                    console.log('Added is-invalid class to field:', fieldId.replace('-error', ''));
-                } else {
-                    console.log('Field element not found for:', fieldId.replace('-error', ''));
+    
                 }
             }
         }
     });
     
     // Проверяем все поля с ошибками
-    $('.is-invalid').each(function() {
-        console.log('Field with is-invalid class:', $(this).attr('id'));
-    });
+    
     
     // Загружаем занятые номера таблиц при загрузке страницы
     loadUsedTableNumbers();
@@ -270,7 +266,7 @@ $(document).ready(function() {
         $.get('{% url "alarms:api_next_table_number" %}')
             .done(function(data) {
                 input.val(data.next_number);
-                console.log('Auto-filled table number:', data.next_number);
+
                 
                 // Убираем ошибки с поля
                 input.removeClass('is-invalid');
@@ -280,7 +276,7 @@ $(document).ready(function() {
                 showNotification('Номер таблицы автоматически заполнен: ' + data.next_number, 'success');
             })
             .fail(function(xhr, status, error) {
-                console.error('Failed to get next table number:', error);
+                // Ошибка получения следующего номера
                 showNotification('Ошибка при получении номера таблицы', 'error');
             })
             .always(function() {
@@ -301,11 +297,11 @@ $(document).ready(function() {
         
         $.get(apiUrl)
             .done(function(data) {
-                console.log('Loaded used table numbers:', data);
+
                 displayUsedNumbers(data.used_numbers);
             })
             .fail(function(xhr, status, error) {
-                console.error('Failed to load used table numbers:', error);
+                // Ошибка загрузки занятых номеров
             });
     }
     
@@ -372,7 +368,7 @@ $(document).ready(function() {
         let isValid = true;
         let firstErrorField = null;
         
-        console.log('=== validateRequiredFields called ===');
+
         
         // Список всех обязательных полей с их валидаторами
         const requiredFields = [
@@ -413,7 +409,7 @@ $(document).ready(function() {
             
             // Проверяем наличие значения
             if (!value || value === '' || value === '---------') {
-                console.log('Required field empty:', field.name, 'value:', value);
+
                 element.addClass('is-invalid');
                 
                 // Создаем или обновляем сообщение об ошибке
@@ -431,7 +427,7 @@ $(document).ready(function() {
                 // Проверяем валидность значения
                 const validationError = field.validator(value);
                 if (validationError) {
-                    console.log('Validation error for', field.name, ':', validationError);
+    
                     element.addClass('is-invalid');
                     
                     let errorId = field.id + '-error';
@@ -461,31 +457,29 @@ $(document).ready(function() {
             firstErrorField[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
-        console.log('Form validation result:', isValid);
+
         // Не возвращаем false, чтобы форма всегда отправлялась
         return true;
     }
     
     // Обработчик отправки формы
     $('form').on('submit', function(e) {
-        console.log('Form submit event triggered');
+
         
         // Полностью предотвращаем стандартную валидацию браузера
         e.preventDefault();
         e.stopImmediatePropagation();
         
         // Показываем клиентские ошибки пользователю, но не блокируем отправку
-        console.log('Showing client validation errors...');
+        
         validateRequiredFields();
         
         // Выполняем валидацию обязательных полей
-        console.log('Running client validation...');
         const validationResult = validateRequiredFields();
-        console.log('Client validation result:', validationResult);
         
         // Всегда отправляем форму на сервер, даже при клиентских ошибках
         // Сервер проверит все ошибки и вернет их
-        console.log('Sending form to server for validation...');
+
         this.submit();
         return true;
     });
