@@ -285,6 +285,112 @@
             font-size: 10px;
         }
     }
+    
+    /* Стили для закрепленных столбцов */
+    .ag-pinned-left-header,
+    .ag-pinned-right-header {
+        background-color: #f8f9fa !important;
+        border-right: 2px solid #dee2e6 !important;
+        border-left: 2px solid #dee2e6 !important;
+    }
+    
+    .ag-pinned-left-cols-container,
+    .ag-pinned-right-cols-container {
+        background-color: #f8f9fa !important;
+        border-right: 2px solid #dee2e6 !important;
+        border-left: 2px solid #dee2e6 !important;
+    }
+    
+    /* Разделители между закрепленными и обычными столбцами */
+    .ag-pinned-left-cols-container::after {
+        content: '';
+        position: absolute;
+        right: -2px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #dee2e6, #adb5bd);
+        z-index: 10;
+    }
+    
+    .ag-pinned-right-cols-container::before {
+        content: '';
+        position: absolute;
+        left: -2px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(to bottom, #dee2e6, #adb5bd);
+        z-index: 10;
+    }
+    
+    /* Стили для контекстного меню */
+    .custom-context-menu {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+    }
+    
+    .context-menu-item:hover {
+        background-color: #e9ecef !important;
+    }
+    
+    /* Индикаторы закрепления в заголовках */
+    .ag-header-cell-pinned-left::after {
+        content: '📌';
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        opacity: 0.7;
+    }
+    
+    .ag-header-cell-pinned-right::after {
+        content: '📌';
+        position: absolute;
+        left: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        opacity: 0.7;
+    }
+    
+    /* Анимация при закреплении/откреплении */
+    .ag-pinned-left-cols-container,
+    .ag-pinned-right-cols-container {
+        transition: all 0.3s ease;
+    }
+    
+    /* Стили для кнопок закрепления */
+    .pin-buttons .btn {
+        transition: all 0.2s ease;
+    }
+    
+    .pin-buttons .btn:hover {
+        background-color: #6c757d;
+        border-color: #6c757d;
+        color: white;
+    }
+    
+    /* Адаптивность для закрепленных столбцов */
+    @media (max-width: 768px) {
+        .ag-pinned-left-cols-container,
+        .ag-pinned-right-cols-container {
+            max-width: 200px;
+        }
+    }
+    
+    @media (max-width: 576px) {
+        .ag-pinned-left-cols-container,
+        .ag-pinned-right-cols-container {
+            max-width: 150px;
+        }
+        
+        .ag-header-cell-pinned-left::after,
+        .ag-header-cell-pinned-right::after {
+            font-size: 10px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -656,17 +762,19 @@ const gridOptions = {
         minWidth: 50,
         maxWidth: 300, // Максимальная ширина столбцов
         suppressSizeToFit: false,
-        autoHeight: true
+        autoHeight: true,
+        // Включаем возможность закрепления столбцов
+        lockPinned: false
     },
     pagination: true,
     paginationPageSize: 20,
     paginationPageSizeSelector: [10, 20, 50, 100],
     multiSortKey: 'ctrl',
-    rowSelection: 'multiRow',
+    rowSelection: { type: 'multiple' }, // Исправляем deprecated warning
     animateRows: true,
     // Применяем русскую локализацию
     localeText: agGridRussianLocale,
-        onGridReady: function(params) {
+    onGridReady: function(params) {
         // Добавляем кнопки экспорта
         const header = document.querySelector('.btn-toolbar');
         if (header && !document.querySelector('.export-buttons')) {
@@ -687,6 +795,73 @@ const gridOptions = {
             `;
             header.insertBefore(exportGroup, header.firstChild);
         }
+        
+        // Добавляем кнопки управления закреплением столбцов
+        if (header && !document.querySelector('.pin-buttons')) {
+            const pinGroup = document.createElement('div');
+            pinGroup.className = 'btn-group me-2 pin-buttons';
+            pinGroup.innerHTML = `
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    <i class="bi bi-pin-angle"></i> Закрепление
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="pinAllLeft()">
+                        <i class="bi bi-pin-angle-fill"></i> Закрепить все слева
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="pinAllRight()">
+                        <i class="bi bi-pin-angle-fill"></i> Закрепить все справа
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="unpinAll()">
+                        <i class="bi bi-pin-angle"></i> Открепить все
+                    </a></li>
+                </ul>
+            `;
+            const exportGroup = document.querySelector('.export-buttons');
+            if (exportGroup) {
+                header.insertBefore(pinGroup, exportGroup);
+            } else {
+                header.insertBefore(pinGroup, header.firstChild);
+            }
+        }
+        
+        // Добавляем тестовую кнопку для проверки контекстного меню
+        if (header && !document.querySelector('.test-menu-button')) {
+            const testButton = document.createElement('button');
+            testButton.className = 'btn btn-outline-warning me-2 test-menu-button';
+            testButton.innerHTML = '<i class="bi bi-bug"></i> Тест меню';
+            testButton.onclick = function() {
+                console.log('🧪 Тестовая кнопка нажата');
+                const columns = gridOptions.api.getAllDisplayedColumns();
+                if (columns.length > 0) {
+                    const firstColumn = columns[0];
+                    console.log('🧪 Тестируем меню для столбца:', firstColumn.getColId());
+                    
+                    // Создаем фейковое событие
+                    const fakeEvent = {
+                        pageX: 100,
+                        pageY: 100,
+                        preventDefault: () => {},
+                        stopPropagation: () => {}
+                    };
+                    
+                    showColumnContextMenu(fakeEvent, firstColumn);
+                } else {
+                    console.warn('⚠️ Нет доступных столбцов для тестирования');
+                }
+            };
+            const exportGroup = document.querySelector('.export-buttons');
+            if (exportGroup) {
+                header.insertBefore(testButton, exportGroup);
+            } else {
+                header.insertBefore(testButton, header.firstChild);
+            }
+        }
+        
+        // Добавляем обработчик контекстного меню для заголовков столбцов
+        setTimeout(() => {
+            addColumnHeaderContextMenu();
+        }, 500);
     },
     onFirstDataRendered: function(params) {
         const rowCount = params.api.getDisplayedRowCount();
@@ -709,8 +884,305 @@ const gridOptions = {
             }, 200);
         }
     },
-
+    // Добавляем обработчик изменения закрепления столбцов
+    onColumnPinned: function(params) {
+        console.log('Столбец закреплен:', params.column.getColId(), 'позиция:', params.pinned);
+        // Здесь можно добавить сохранение состояния в localStorage
+        saveColumnPinningState();
+    }
 };
+
+// Функция для добавления контекстного меню к заголовкам столбцов
+function addColumnHeaderContextMenu() {
+    console.log('🔍 Добавляем контекстное меню для заголовков столбцов...');
+    
+    const gridElement = document.querySelector('#alarmsGrid');
+    if (!gridElement) {
+        console.error('❌ Элемент #alarmsGrid не найден');
+        return;
+    }
+    
+    console.log('✅ Элемент #alarmsGrid найден');
+    
+    // Находим все заголовки столбцов
+    const headerCells = gridElement.querySelectorAll('.ag-header-cell');
+    console.log(`📊 Найдено заголовков столбцов: ${headerCells.length}`);
+    
+    headerCells.forEach((headerCell, index) => {
+        console.log(`📌 Обрабатываем заголовок ${index + 1}:`, headerCell);
+        
+        // Контекстное меню по правому клику
+        headerCell.addEventListener('contextmenu', function(event) {
+            console.log('🖱️ Правый клик на заголовке столбца');
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Получаем ID столбца из заголовка
+            const columnId = this.getAttribute('col-id');
+            console.log('🔍 ID столбца:', columnId);
+            
+            if (!columnId) {
+                console.warn('⚠️ ID столбца не найден');
+                return;
+            }
+            
+            // Находим столбец в AG Grid
+            const column = gridOptions.api.getColumn(columnId);
+            if (!column) {
+                console.warn('⚠️ Столбец не найден в API');
+                return;
+            }
+            
+            console.log('✅ Столбец найден, показываем меню');
+            showColumnContextMenu(event, column);
+        });
+        
+        // Альтернативное меню по двойному клику
+        headerCell.addEventListener('dblclick', function(event) {
+            console.log('🖱️ Двойной клик на заголовке столбца');
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Получаем ID столбца из заголовка
+            const columnId = this.getAttribute('col-id');
+            console.log('🔍 ID столбца:', columnId);
+            
+            if (!columnId) {
+                console.warn('⚠️ ID столбца не найден');
+                return;
+            }
+            
+            // Находим столбец в AG Grid
+            const column = gridOptions.api.getColumn(columnId);
+            if (!column) {
+                console.warn('⚠️ Столбец не найден в API');
+                return;
+            }
+            
+            console.log('✅ Столбец найден, показываем меню');
+            showColumnContextMenu(event, column);
+        });
+        
+        // Добавляем визуальную подсказку
+        headerCell.title = 'Правый клик или двойной клик для меню закрепления';
+        headerCell.style.cursor = 'pointer';
+    });
+    
+    // Также добавляем обработчик для динамически создаваемых заголовков
+    const observer = new MutationObserver(function(mutations) {
+        console.log('🔄 Обнаружены изменения в DOM');
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1 && node.classList && node.classList.contains('ag-header-cell')) {
+                        console.log('📌 Добавлен новый заголовок столбца');
+                        
+                        // Контекстное меню по правому клику
+                        node.addEventListener('contextmenu', function(event) {
+                            console.log('🖱️ Правый клик на новом заголовке');
+                            event.preventDefault();
+                            event.stopPropagation();
+                            
+                            const columnId = this.getAttribute('col-id');
+                            if (columnId) {
+                                const column = gridOptions.api.getColumn(columnId);
+                                if (column) {
+                                    showColumnContextMenu(event, column);
+                                }
+                            }
+                        });
+                        
+                        // Альтернативное меню по двойному клику
+                        node.addEventListener('dblclick', function(event) {
+                            console.log('🖱️ Двойной клик на новом заголовке');
+                            event.preventDefault();
+                            event.stopPropagation();
+                            
+                            const columnId = this.getAttribute('col-id');
+                            if (columnId) {
+                                const column = gridOptions.api.getColumn(columnId);
+                                if (column) {
+                                    showColumnContextMenu(event, column);
+                                }
+                            }
+                        });
+                        
+                        // Добавляем визуальную подсказку
+                        node.title = 'Правый клик или двойной клик для меню закрепления';
+                        node.style.cursor = 'pointer';
+                    }
+                });
+            }
+        });
+    });
+    
+    observer.observe(gridElement, { childList: true, subtree: true });
+    console.log('✅ MutationObserver настроен');
+}
+
+// Функции для управления закреплением столбцов
+function showColumnContextMenu(event, column) {
+    console.log('🎯 showColumnContextMenu вызвана');
+    console.log('📊 Столбец:', column);
+    console.log('🖱️ Событие:', event);
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const menu = document.createElement('div');
+    menu.className = 'custom-context-menu';
+    menu.style.cssText = `
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        z-index: 1000;
+        padding: 5px 0;
+        min-width: 150px;
+        top: ${event.pageY}px;
+        left: ${event.pageX}px;
+    `;
+    
+    const currentPinned = column.getPinned();
+    console.log('📌 Текущее состояние закрепления:', currentPinned);
+    
+    const menuItems = [
+        { text: 'Закрепить слева', action: () => pinColumn(column, 'left'), 
+          disabled: currentPinned === 'left', icon: 'bi-pin-angle-fill' },
+        { text: 'Закрепить справа', action: () => pinColumn(column, 'right'), 
+          disabled: currentPinned === 'right', icon: 'bi-pin-angle-fill' },
+        { text: 'Открепить', action: () => pinColumn(column, null), 
+          disabled: currentPinned === null, icon: 'bi-pin-angle' }
+    ];
+    
+    console.log('📋 Создаем элементы меню:', menuItems.length);
+    
+    menuItems.forEach((item, index) => {
+        console.log(`📌 Создаем элемент меню ${index + 1}:`, item.text);
+        
+        const menuItem = document.createElement('div');
+        menuItem.className = 'context-menu-item';
+        menuItem.style.cssText = `
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            ${item.disabled ? 'opacity: 0.5; cursor: not-allowed;' : ''}
+        `;
+        menuItem.innerHTML = `
+            <i class="bi ${item.icon}"></i>
+            <span>${item.text}</span>
+        `;
+        
+        if (!item.disabled) {
+            menuItem.addEventListener('click', () => {
+                console.log('🖱️ Клик по элементу меню:', item.text);
+                item.action();
+                document.body.removeChild(menu);
+            });
+        }
+        
+        menuItem.addEventListener('mouseenter', function() {
+            if (!item.disabled) {
+                this.style.backgroundColor = '#f8f9fa';
+            }
+        });
+        
+        menuItem.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+        
+        menu.appendChild(menuItem);
+    });
+    
+    console.log('✅ Меню создано, добавляем в DOM');
+    document.body.appendChild(menu);
+    
+    // Закрываем меню при клике вне его
+    setTimeout(() => {
+        document.addEventListener('click', function closeMenu() {
+            console.log('🖱️ Клик вне меню, закрываем');
+            if (document.body.contains(menu)) {
+                document.body.removeChild(menu);
+            }
+            document.removeEventListener('click', closeMenu);
+        });
+    }, 0);
+    
+    console.log('✅ Контекстное меню показано');
+}
+
+function pinColumn(column, pinned) {
+    if (gridOptions.api) {
+        gridOptions.api.setColumnPinned(column, pinned);
+    }
+}
+
+function pinAllLeft() {
+    if (gridOptions.api) {
+        const columns = gridOptions.api.getAllDisplayedColumns();
+        columns.forEach(column => {
+            if (!column.getColId().includes('actions')) { // Не закрепляем столбец действий
+                gridOptions.api.setColumnPinned(column, 'left');
+            }
+        });
+    }
+}
+
+function pinAllRight() {
+    if (gridOptions.api) {
+        const columns = gridOptions.api.getAllDisplayedColumns();
+        columns.forEach(column => {
+            if (!column.getColId().includes('actions')) { // Не закрепляем столбец действий
+                gridOptions.api.setColumnPinned(column, 'right');
+            }
+        });
+    }
+}
+
+function unpinAll() {
+    if (gridOptions.api) {
+        const columns = gridOptions.api.getAllDisplayedColumns();
+        columns.forEach(column => {
+            gridOptions.api.setColumnPinned(column, null);
+        });
+    }
+}
+
+function saveColumnPinningState() {
+    if (gridOptions.api) {
+        const columns = gridOptions.api.getAllDisplayedColumns();
+        const pinningState = {};
+        
+        columns.forEach(column => {
+            const pinned = column.getPinned();
+            if (pinned) {
+                pinningState[column.getColId()] = pinned;
+            }
+        });
+        
+        localStorage.setItem('alarmGridPinningState', JSON.stringify(pinningState));
+    }
+}
+
+function loadColumnPinningState() {
+    const savedState = localStorage.getItem('alarmGridPinningState');
+    if (savedState && gridOptions.api) {
+        try {
+            const pinningState = JSON.parse(savedState);
+            Object.keys(pinningState).forEach(colId => {
+                const column = gridOptions.api.getColumn(colId);
+                if (column) {
+                    gridOptions.api.setColumnPinned(column, pinningState[colId]);
+                }
+            });
+        } catch (error) {
+            console.error('Ошибка загрузки состояния закрепления:', error);
+        }
+    }
+}
 
 // Функции экспорта
 function exportToExcel() {
@@ -752,6 +1224,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 250);
         });
+
+        // Загружаем сохраненное состояние закрепления столбцов при загрузке страницы
+        loadColumnPinningState();
     } catch (error) {
         console.error('Ошибка инициализации AG Grid тревог:', error);
     }
