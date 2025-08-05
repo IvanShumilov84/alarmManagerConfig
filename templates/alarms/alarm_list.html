@@ -307,6 +307,8 @@
 
 <!-- AG Grid JavaScript -->
 <script src="{% static 'libs/ag-grid/js/ag-grid-community.min.js' %}"></script>
+<!-- Русская локализация AG Grid -->
+<script src="{% static 'js/ag-grid-russian-locale.js' %}"></script>
 
 <script>
 // Данные для AG Grid
@@ -662,6 +664,8 @@ const gridOptions = {
     multiSortKey: 'ctrl',
     rowSelection: 'multiRow',
     animateRows: true,
+    // Применяем русскую локализацию
+    localeText: agGridRussianLocale,
         onGridReady: function(params) {
         // Добавляем кнопки экспорта
         const header = document.querySelector('.btn-toolbar');
