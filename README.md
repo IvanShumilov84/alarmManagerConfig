@@ -46,7 +46,7 @@ alarmManagerConfig/
 │   ├── alarm_list.html    # Список тревог (AG Grid)
 │   └── table_list.html    # Список таблиц (AG Grid)
 ├── static/js/
-│   └── ag-grid-common.js  # Общие функции AG Grid
+
 └── templates/base.html    # Базовый шаблон
 ```
 
