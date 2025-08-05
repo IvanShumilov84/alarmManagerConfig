@@ -5,8 +5,8 @@
 
 {% block extra_css %}
 <!-- AG Grid CSS -->
-<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
-<link rel="stylesheet" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
+<link rel="stylesheet" href="{% static 'libs/ag-grid/css/ag-grid.css' %}">
+<link rel="stylesheet" href="{% static 'libs/ag-grid/css/ag-theme-alpine.css' %}">
 
 <style>
     /* Основной контент занимает все доступное пространство */
@@ -258,7 +258,7 @@
 <div id="tablesGrid" class="ag-theme-alpine" style="flex: 1;"></div>
 
 <!-- AG Grid JavaScript -->
-<script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<script src="{% static 'libs/ag-grid/js/ag-grid-community.min.js' %}"></script>
 
 <script>
 // Данные для AG Grid
